@@ -52,7 +52,7 @@ export const BacktestingPanel: React.FC<BacktestingPanelProps> = ({ input, onInp
             <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '1rem' }}>
                 <h3 style={{ margin: 0, display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
                     📊 역사적 백테스팅
-                    <Tooltip text="실제 1985~2024 시장 데이터로 은퇴 계획을 테스트합니다. 몬테카를로보다 더 현실적인 결과를 제공합니다." />
+                    <Tooltip content="실제 1985~2024 시장 데이터로 은퇴 계획을 테스트합니다. 몬테카를로보다 더 현실적인 결과를 제공합니다." />
                 </h3>
                 <button
                     className={`btn ${isHistoricalMode ? 'btn-primary' : ''}`}

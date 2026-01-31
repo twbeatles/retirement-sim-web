@@ -75,7 +75,23 @@ export function exportSimulationResult(result: SimulationResult) {
         // For MC, usually we export the "Mean" path or "Summary" path?
         // Or just the first path as sample?
         // Let's export the first path timeline for detailed view.
-        csvContent += "Note: Timeline data is from the first sample path of the Monte Carlo simulation.\n\n";
+        if (result.trajectoryStats) {
+            csvContent += "\n\n=== Monte Carlo Trajectory Statistics (Real Assets) ===\n";
+            csvContent += "Month,P10 (Worst 10%),P50 (Median),P90 (Best 10%)\n";
+
+            const stats = result.trajectoryStats;
+            const rows = stats.month.map((m, i) => [
+                m,
+                Math.round(stats.p10[i]),
+                Math.round(stats.p50[i]),
+                Math.round(stats.p90[i])
+            ].join(","));
+
+            csvContent += rows.join("\n");
+            csvContent += "\n\n=== Sample Path Details (Path #1) ===\n";
+        } else {
+            csvContent += "Note: Timeline data is from the first sample path of the Monte Carlo simulation.\n\n";
+        }
 
         // We assume sampleTimelines[0] exists
         if (result.sampleTimelines && result.sampleTimelines.length > 0) {

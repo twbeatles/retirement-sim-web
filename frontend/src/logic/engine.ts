@@ -74,6 +74,11 @@ function calculatePortfolioMetrics(input: SimulationInput) {
         }
     }
 
+    // NOTE: This calculation assumes "Constant Mix" (Continuous Rebalancing).
+    // The portfolio is assumed to be constantly rebalanced to maintain these target weights.
+    // Thus, the drift of asset weights is not simulated in the main stochastic process.
+    // The "Rebalancing Cost" in simulateOnePath aims to capture the friction of this maintenance.
+
     // Normalize: If allocation is not 1.0, technically we should normalize weights.
     // Sim assumes "Cash" for unallocated portion with 0 return/0 vol? 
     // Usually UI enforces 100%. Let's normalize weights mathematically if total != 1.
@@ -282,7 +287,9 @@ function simulateOnePath(
         // Apply trading cost when rebalancing occurs
         if (ctx.rebalanceMonths?.has(m) && ctx.tradingCostRate && balGeneral > 0) {
             // Simplified rebalancing: deduct trading cost from balance
-            // In a full implementation, we'd track individual asset class balances
+            // NOTE: Since the main simulation assumes Constant Mix (implicit rebalancing),
+            // this deduction represents the "friction" of maintaining that mix.
+            // A precise simulation would track individual asset drifts and calculate turnover.
             const tradingCost = balGeneral * ctx.tradingCostRate;
             balGeneral -= tradingCost;
         }

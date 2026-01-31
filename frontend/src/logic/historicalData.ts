@@ -274,18 +274,30 @@ export function annualToMonthlyReturns(
         if (stochastic) {
             // Add some monthly variation while maintaining annual total
             // This simulates intra-year volatility
+            // FIX: Use geometric product to ensure exact compounding match
             const monthlyReturns: number[] = [];
-            let remaining = annualReturn;
+            let currentProduct = 1.0;
+            const targetProduct = 1.0 + annualReturn;
 
             for (let m = 0; m < 11; m++) {
                 // Random variation around monthly rate
                 const variation = (Math.random() - 0.5) * 0.04; // ±2% variation
+
+                // Ensure the return doesn't go below -100% (unlikely with this variation but safe)
+                // and try to keep it reasonable.
+                // We centre the random walk around the 'monthlyRate'.
                 const monthReturn = monthlyRate + variation;
+
                 monthlyReturns.push(monthReturn);
-                remaining -= monthReturn;
+                currentProduct *= (1.0 + monthReturn);
             }
-            // Last month absorbs the remainder to match annual
-            monthlyReturns.push(remaining);
+
+            // Last month ensures we hit the target exact annual return
+            // target = current * (1 + last)
+            // (1 + last) = target / current
+            // last = (target / current) - 1
+            const lastMonthReturn = (targetProduct / currentProduct) - 1.0;
+            monthlyReturns.push(lastMonthReturn);
 
             monthly.push(...monthlyReturns);
         } else {
@@ -298,3 +310,4 @@ export function annualToMonthlyReturns(
 
     return monthly;
 }
+
