@@ -29,6 +29,7 @@ import {
     calculateVPWRate,
     setSeed,
 } from "./math";
+import { calculateRegionalHealthInsurance } from "./koreaTax";
 
 // Helper to calculate portfolio metrics
 function calculatePortfolioMetrics(input: SimulationInput) {
@@ -109,7 +110,9 @@ interface SimulationContext {
 
     // New feature contexts
     inflationByMonth?: Float64Array;     // Dynamic inflation (for spike scenarios)
-    healthInsuranceBase?: number;        // Base health insurance premium
+    // [MODIFIED] healthInsuranceBase removed, we prefer checking input.health_insurance directly or pre-calc logic
+    // But for Simple Mode efficiency, we can keep using it or just use input.
+    // Let's refine: Detailed Mode needs dynamic income, so it must be calculated inside loop.
     severanceMonth?: number;             // Month when severance is received
     severanceAmount?: number;            // Severance amount (lump_sum or annualized)
     severanceMonthlyPayout?: number;     // If annuity type
@@ -230,10 +233,17 @@ function simulateOnePath(
         const effectiveInflM = ctx.inflationByMonth ? ctx.inflationByMonth[m] : infl_m;
         cpi *= (1.0 + effectiveInflM);
 
-        // 1. One-off events
-        const eventAmount = eventsMap.get(m);
-        if (eventAmount) { // check undefined
-            balGeneral += eventAmount;
+        // 1. One-off events (Inflation Adjusted)
+        const eventAmountRaw = eventsMap.get(m);
+        if (eventAmountRaw) {
+            // Assume event amounts are in "Present Value" (Current purchasing power)
+            // So we inflate them by CPI to get Nominal amount at time m.
+            // Exception: If user intends "Nominal", this might over-inflate. 
+            // But standard planning assumes PV.
+            // For negative amounts (Expense), this increases the cost.
+            // For positive amounts (Windfall), this increases the gain.
+            // We use cpi (which is 1.0 at start).
+            balGeneral += eventAmountRaw * cpi;
         }
 
         // 2. Debt
@@ -550,11 +560,59 @@ function simulateOnePath(
             balGeneral -= withdrawalGross;
 
             // NEW: Health Insurance Deduction (건강보험료)
+            // NEW: Health Insurance Deduction (건강보험료)
             let healthInsurancePremium = 0;
-            if (input.health_insurance?.enabled && ctx.healthInsuranceBase) {
-                healthInsurancePremium = input.health_insurance.inflationLinked
-                    ? ctx.healthInsuranceBase * cpi
-                    : ctx.healthInsuranceBase;
+            if (input.health_insurance?.enabled) {
+                const hi = input.health_insurance;
+
+                if (hi.mode === 'detailed') {
+                    // 1. Calculate Income (Pension + Withdrawal)
+                    // Note: Withdrawal is NOT always considered income for Health Insurance (e.g. consuming principal is not income).
+                    // Taxable Income usually includes: National Pension, Private Pension (Taxable part), Interest/Dividend.
+                    // Consuming Savings (Withdrawal of principal) is NOT income.
+                    // We will simplify: National Pension + Annuitized Private Pension + Business Income
+                    // We exclude pure "Capital Withdrawal" for simplicity, or assume a portion is taxable?
+                    // Safe approximation: NatPension + PrivPension + (Withdrawal * 0.1 Interest portion?)
+
+                    // For 'taxable' income in KR Health Insurance:
+                    // - National Pension: 100%
+                    // - Private Pension: If strictly annuity? (Complex). Let's assume 100% for now to be conservative.
+                    // - Financial Income (Interest/Div): > 10M separate? 
+
+                    const consideredIncomeAnnual = (natPension + privPension + additionalPensionPayout) * 12;
+
+                    // Property Value: Real Estate + (Maybe simulated House value)
+                    // If input.realEstate exists, sum it up? 
+                    // Or just use hi.propertyValue as a fixed base?
+                    // Let's use hi.propertyValue (Static Base) + Dynamic Real Estate (if any)
+                    // Let's use hi.propertyValue (Static Base) * CPI + Dynamic Real Estate (if any)
+                    // We inflate the static property value manually since real estate assets inflate via growthRate
+                    let totalProperty = (hi.propertyValue || 0) * cpi;
+                    if (realEstateTotal > 0) totalProperty += realEstateTotal; // Add simulated real estate
+
+                    // Calculate
+                    const basePremium = calculateRegionalHealthInsurance(
+                        consideredIncomeAnnual,
+                        totalProperty,
+                        hi.carValue || 0
+                    );
+
+                    // Inflation link? 
+                    // Usually bracket thresholds rise with inflation, effectively neutralizing it?
+                    // Or premium rises with income/asset growth?
+                    // We will assume "Inflation Linked" means premium grows with CPI
+                    healthInsurancePremium = hi.inflationLinked
+                        ? basePremium * cpi
+                        : basePremium;
+
+                } else {
+                    // Simple Mode
+                    const base = hi.monthlyPremium || 0;
+                    healthInsurancePremium = hi.inflationLinked
+                        ? base * cpi
+                        : base;
+                }
+
                 balGeneral = Math.max(0, balGeneral - healthInsurancePremium);
             }
 
@@ -706,11 +764,10 @@ export function runSimulation(input: SimulationInput): SimulationResult {
         reverseAnnuityPayment = input.reverse_annuity.monthlyPayment;
     }
 
-    // NEW: Health insurance base
-    let healthInsuranceBase: number | undefined;
-    if (input.health_insurance?.enabled) {
-        healthInsuranceBase = input.health_insurance.monthlyPremium;
-    }
+    // NEW: Health insurance base (Legacy/Simple support)
+    // let healthInsuranceBase: number | undefined; 
+    // Handled dynamically in loop now for both modes to unify logic location
+
 
     // NEW: Prepare contribution array based on Salary/Savings Rate
     let contributionByMonth: Float64Array | undefined;
@@ -784,11 +841,6 @@ export function runSimulation(input: SimulationInput): SimulationResult {
         debtMonthlyRate: monthlyRateFromAnnual(input.debt.annual_interest),
         // New feature contexts
         inflationByMonth,
-        healthInsuranceBase,
-        severanceMonth,
-        severanceAmount,
-        severanceMonthlyPayout,
-        reverseAnnuityStartMonth,
         reverseAnnuityPayment,
         medicalShockMonths,
         contributionByMonth,

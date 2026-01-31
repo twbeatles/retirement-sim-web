@@ -12,6 +12,8 @@ import { ScenarioComparison } from '../ScenarioComparison';
 import { WhatIfSlider } from '../WhatIfSlider';
 import { FavoriteAssets } from '../FavoriteAssets';
 import { IncomeManager } from '../IncomeManager';
+import { ExpenseManager } from '../ExpenseManager';
+import { PensionOptimizer } from '../PensionOptimizer';
 import { GoalPlanner } from '../GoalPlanner';
 import { BacktestingPanel } from '../BacktestingPanel';
 import { Section, Field, SummaryCard } from '../common/UIComponents';
@@ -121,6 +123,7 @@ export function DesktopLayout({
                                 </div>
                             </Section>
 
+                            <ExpenseManager input={input} onChange={setInput} />
                             <IncomeManager input={input} onChange={setInput} />
                             <PortfolioEditor
                                 portfolio={input.portfolio}
@@ -159,6 +162,8 @@ export function DesktopLayout({
                                     </label>
                                 </div>
                             </Section>
+
+                            <PensionOptimizer input={input} />
 
                             <Section title="💼 개인연금 (연금저축/IRP)">
                                 <div className="grid-2-cols">
@@ -295,9 +300,14 @@ export function DesktopLayout({
                     </div>
                 )}
 
-                {/* Export Button */}
                 {result && (
-                    <div className="text-right">
+                    <div className="text-right flex gap-2 justify-end">
+                        <button
+                            className="btn btn-secondary"
+                            onClick={() => window.print()}
+                        >
+                            🖨️ 리포트 인쇄 (PDF)
+                        </button>
                         <button
                             className="btn btn-secondary"
                             onClick={() => exportSimulationResult(result)}

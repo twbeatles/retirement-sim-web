@@ -278,8 +278,16 @@ export type InflationScenario = {
 // 건강보험료 (지역가입자)
 export type HealthInsurance = {
     enabled: boolean;
+    mode: 'simple' | 'detailed'; // [NEW] Mode selector
+
+    // Simple Mode
     monthlyPremium: number;     // 월 보험료 (은퇴 후)
     inflationLinked: boolean;   // 물가 연동 여부
+
+    // Detailed Mode
+    propertyValue?: number;     // 주택/건물 과세표준액 (시세의 약 60~70%)
+    carValue?: number;          // 차량 가액
+    isDependent?: boolean;      // 피부양자 자격 여부 (True면 0원)
 };
 
 // 세액공제 설정

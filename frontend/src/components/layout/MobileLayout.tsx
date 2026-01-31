@@ -12,6 +12,8 @@ import { ScenarioComparison } from '../ScenarioComparison';
 import { WhatIfSlider } from '../WhatIfSlider';
 import { FavoriteAssets } from '../FavoriteAssets';
 import { IncomeManager } from '../IncomeManager';
+import { ExpenseManager } from '../ExpenseManager';
+import { PensionOptimizer } from '../PensionOptimizer';
 import { GoalPlanner } from '../GoalPlanner';
 import { BacktestingPanel } from '../BacktestingPanel';
 import { Section, Field, SummaryCard } from '../common/UIComponents';
@@ -126,6 +128,7 @@ export function MobileLayout({
                             </div>
                         </Section>
 
+                        <ExpenseManager input={input} onChange={setInput} />
                         <IncomeManager input={input} onChange={setInput} />
                         <PortfolioEditor
                             portfolio={input.portfolio}
@@ -164,6 +167,8 @@ export function MobileLayout({
                                 </label>
                             </div>
                         </Section>
+
+                        <PensionOptimizer input={input} />
 
                         <Section title="💼 개인연금 (연금저축/IRP)">
                             <div className="grid-2-cols">
@@ -301,7 +306,13 @@ export function MobileLayout({
                         )}
 
                         {result && (
-                            <div className="text-right">
+                            <div className="text-right flex gap-2 justify-end">
+                                <button
+                                    className="btn btn-secondary btn-sm"
+                                    onClick={() => window.print()}
+                                >
+                                    🖨️ PDF
+                                </button>
                                 <button
                                     className="btn btn-secondary btn-sm"
                                     onClick={() => exportSimulationResult(result)}

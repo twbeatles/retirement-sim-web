@@ -164,17 +164,87 @@ export function AdvancedSettings({ input, onChange }: Props) {
                     은퇴 후 건강보험료 지출 반영
                 </label>
                 {input.health_insurance?.enabled && (
-                    <div className="grid-2-cols" style={{ gap: 8 }}>
-                        <div>
-                            <label className="label text-xs">월 보험료</label>
-                            <input
-                                type="number"
-                                className="input"
-                                value={input.health_insurance.monthlyPremium || 200000}
-                                onChange={e => updateHealthInsurance({ monthlyPremium: Number(e.target.value) })}
-                            />
+                    <div className="flex flex-col gap-3">
+                        <div className="flex-row" style={{ gap: 12 }}>
+                            <label className="checkbox-label text-sm">
+                                <input
+                                    type="radio"
+                                    name="hi_mode"
+                                    checked={input.health_insurance.mode !== 'detailed'}
+                                    onChange={() => updateHealthInsurance({ mode: 'simple' })}
+                                />
+                                간편 입력
+                            </label>
+                            <label className="checkbox-label text-sm">
+                                <input
+                                    type="radio"
+                                    name="hi_mode"
+                                    checked={input.health_insurance.mode === 'detailed'}
+                                    onChange={() => updateHealthInsurance({ mode: 'detailed' })}
+                                />
+                                상세 계산 (지역가입자)
+                            </label>
                         </div>
-                        <div className="flex items-center">
+
+                        {input.health_insurance.mode === 'detailed' ? (
+                            <div className="grid-2-cols" style={{ gap: 8 }}>
+                                <div className="col-span-2">
+                                    <label className="checkbox-label text-sm mb-2">
+                                        <input
+                                            type="checkbox"
+                                            checked={input.health_insurance.isDependent ?? false}
+                                            onChange={e => updateHealthInsurance({ isDependent: e.target.checked })}
+                                        />
+                                        피부양자 자격 유지 (보험료 0원)
+                                    </label>
+                                </div>
+                                {!input.health_insurance.isDependent && (
+                                    <>
+                                        <div>
+                                            <label className="label text-xs">주택/건물 과세표준액 (시세의 약 60%)</label>
+                                            <div className="input-with-unit">
+                                                <input
+                                                    type="number"
+                                                    className="input"
+                                                    value={input.health_insurance.propertyValue || 0}
+                                                    onChange={e => updateHealthInsurance({ propertyValue: Number(e.target.value) })}
+                                                />
+                                                <span className="input-unit text-xs">원</span>
+                                            </div>
+                                        </div>
+                                        <div>
+                                            <label className="label text-xs">차량 가액 (4천만원 이상만 반영)</label>
+                                            <div className="input-with-unit">
+                                                <input
+                                                    type="number"
+                                                    className="input"
+                                                    value={input.health_insurance.carValue || 0}
+                                                    onChange={e => updateHealthInsurance({ carValue: Number(e.target.value) })}
+                                                />
+                                                <span className="input-unit text-xs">원</span>
+                                            </div>
+                                        </div>
+                                        <div className="col-span-2 text-xs text-sub">
+                                            * 소득 점수는 시뮬레이션 된 연금/이자 소득으로 자동 계산됩니다.
+                                        </div>
+                                    </>
+                                )}
+                            </div>
+                        ) : (
+                            <div className="grid-2-cols" style={{ gap: 8 }}>
+                                <div>
+                                    <label className="label text-xs">월 보험료</label>
+                                    <input
+                                        type="number"
+                                        className="input"
+                                        value={input.health_insurance.monthlyPremium || 200000}
+                                        onChange={e => updateHealthInsurance({ monthlyPremium: Number(e.target.value) })}
+                                    />
+                                </div>
+                            </div>
+                        )}
+
+                        <div className="flex items-center mt-1">
                             <label className="checkbox-label text-sm">
                                 <input
                                     type="checkbox"

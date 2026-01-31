@@ -6,6 +6,7 @@ import { validateSimulationInput } from "./logic/validation";
 import { Onboarding } from "./components/Onboarding";
 import { SimpleDashboard } from "./components/SimpleDashboard";
 import { Layout } from "./components/layout/Layout";
+import { ReportPrintView } from "./components/ReportPrintView";
 import { useMediaQuery } from "./hooks/useMediaQuery";
 import { AnalysisTabType } from "./logic/uiConstants";
 
@@ -98,6 +99,9 @@ export default function App() {
 
       {/* Onboarding Modal - Global */}
       <Onboarding />
+
+      {/* Hidden Print View */}
+      <ReportPrintView input={input} result={result} />
     </div >
   );
 }
