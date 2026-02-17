@@ -1,55 +1,62 @@
-import React, { useMemo, useState, useEffect } from "react";
+﻿import React, { Suspense, lazy, useMemo, useState, useEffect, useCallback } from "react";
 import { useSimulation } from "./hooks/useSimulation";
 import type { SimulationInput, ValidationWarning } from "./logic/types";
 import { INITIAL_INPUT } from "./logic/constants";
 import { validateSimulationInput } from "./logic/validation";
 import { Onboarding } from "./components/Onboarding";
 import { SimpleDashboard } from "./components/SimpleDashboard";
-import { Layout } from "./components/layout/Layout";
-import { ReportPrintView } from "./components/ReportPrintView";
-import { useMediaQuery } from "./hooks/useMediaQuery";
 import { AnalysisTabType } from "./logic/uiConstants";
+
+const ReportPrintView = lazy(() => import("./components/ReportPrintView").then((m) => ({ default: m.ReportPrintView })));
+const Layout = lazy(() => import("./components/layout/Layout").then((m) => ({ default: m.Layout })));
 
 export default function App() {
   const [input, setInput] = useState<SimulationInput>(INITIAL_INPUT);
 
-  // View State
   const [analysisTab, setAnalysisTab] = useState<AnalysisTabType>('charts');
   const [viewMode, setViewMode] = useState<'simple' | 'pro'>('simple');
   const [sidebarTab, setSidebarTab] = useState('basic');
   const [theme, setTheme] = useState<'light' | 'dark'>('light');
+  const [showPrintView, setShowPrintView] = useState(false);
 
-  // Theme Effect
   useEffect(() => {
     document.documentElement.setAttribute('data-theme', theme);
   }, [theme]);
 
-  // Mobile Detection (used for Header adjustments if needed)
-  const isMobile = useMediaQuery('(max-width: 768px)');
+  useEffect(() => {
+    const handleAfterPrint = () => setShowPrintView(false);
+    window.addEventListener('afterprint', handleAfterPrint);
+    return () => window.removeEventListener('afterprint', handleAfterPrint);
+  }, []);
 
-  // Input Validation
   const validationWarnings = useMemo<ValidationWarning[]>(() => {
     return validateSimulationInput(input);
   }, [input]);
 
-  // Use custom hook for simulation
   const { runSimulation, isCalculating, result } = useSimulation();
 
-  // Debounced simulation run
   useEffect(() => {
     const timer = setTimeout(() => {
-      runSimulation(input);
+      void runSimulation(input, { detailLevel: 'full', includeSampleTimelines: true })
+        .catch((error) => console.error("Simulation failed:", error));
     }, 400);
 
     return () => clearTimeout(timer);
   }, [input, runSimulation]);
+
+  const handlePrint = useCallback(() => {
+    setShowPrintView(true);
+    setTimeout(() => {
+      window.print();
+    }, 0);
+  }, []);
 
   return (
     <div className="app-container">
       <header className="header">
         <div className="flex-row" style={{ alignItems: 'center', gap: '0.5rem' }}>
           <div className="brand">
-            <span>📈</span> 은퇴 자산 시뮬레이터 Pro
+            <span>?뱢</span> ????먯궛 ?쒕??덉씠??Pro
             {isCalculating && <span className="text-xs text-muted ml-2 animate-pulse">Running...</span>}
           </div>
         </div>
@@ -60,48 +67,54 @@ export default function App() {
               className={viewMode === 'simple' ? 'active' : ''}
               onClick={() => setViewMode('simple')}
             >
-              🐣 간편 모드
+              ?맋 媛꾪렪 紐⑤뱶
             </button>
             <button
               className={viewMode === 'pro' ? 'active' : ''}
               onClick={() => setViewMode('pro')}
             >
-              🦅 전문가 모드
+              ?쫭 ?꾨Ц媛 紐⑤뱶
             </button>
           </div>
           <button
             className="btn-icon"
-            onClick={() => setTheme(t => t === 'light' ? 'dark' : 'light')}
-            title={theme === 'light' ? "다크 모드 켜기" : "라이트 모드 켜기"}
+            onClick={() => setTheme((t) => (t === 'light' ? 'dark' : 'light'))}
+            title={theme === 'light' ? "?ㅽ겕 紐⑤뱶 耳쒓린" : "?쇱씠??紐⑤뱶 耳쒓린"}
             style={{ fontSize: '1.2rem', padding: '8px', background: 'none', border: 'none', cursor: 'pointer' }}
           >
             {theme === 'light' ? '🌙' : '☀️'}
           </button>
         </div>
-      </header >
+      </header>
 
       {viewMode === 'simple' ? (
         <div className="simple-mode-container">
           <SimpleDashboard input={input} result={result} onInputChange={setInput} />
         </div>
       ) : (
-        <Layout
-          input={input}
-          setInput={setInput}
-          result={result}
-          validationWarnings={validationWarnings}
-          sidebarTab={sidebarTab}
-          setSidebarTab={setSidebarTab}
-          analysisTab={analysisTab}
-          setAnalysisTab={setAnalysisTab}
-        />
+        <Suspense fallback={<div className="text-center text-muted py-8">Loading layout...</div>}>
+          <Layout
+            input={input}
+            setInput={setInput}
+            result={result}
+            validationWarnings={validationWarnings}
+            sidebarTab={sidebarTab}
+            setSidebarTab={setSidebarTab}
+            analysisTab={analysisTab}
+            setAnalysisTab={setAnalysisTab}
+            onPrint={handlePrint}
+          />
+        </Suspense>
       )}
 
-      {/* Onboarding Modal - Global */}
       <Onboarding />
 
-      {/* Hidden Print View */}
-      <ReportPrintView input={input} result={result} />
-    </div >
+      {showPrintView && result && (
+        <Suspense fallback={null}>
+          <ReportPrintView input={input} result={result} />
+        </Suspense>
+      )}
+    </div>
   );
 }
+

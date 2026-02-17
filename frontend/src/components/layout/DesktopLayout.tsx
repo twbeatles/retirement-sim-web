@@ -1,24 +1,28 @@
-import React, { useMemo } from 'react';
+import React, { Suspense, lazy, useMemo } from 'react';
 import type { SimulationInput, SimulationResult, ValidationWarning } from '../../logic/types';
 import { exportSimulationResult } from '../../logic/export';
-import { AssetChart, RetirementCashflowChart, FanChart, AssetBreakdownChart, CashflowStackChart, SurvivalChart } from '../Charts';
-import { YearlyReportTable } from '../YearlyReportTable';
 import { PortfolioEditor } from '../PortfolioEditor';
 import { WithdrawalSettings } from '../WithdrawalSettings';
 import { ScenarioManager } from '../ScenarioManager';
 import { AdvancedSettings } from '../AdvancedSettings';
-import { RiskDashboard } from '../RiskDashboard';
-import { ScenarioComparison } from '../ScenarioComparison';
-import { WhatIfSlider } from '../WhatIfSlider';
 import { FavoriteAssets } from '../FavoriteAssets';
 import { IncomeManager } from '../IncomeManager';
 import { ExpenseManager } from '../ExpenseManager';
-import { PensionOptimizer } from '../PensionOptimizer';
 import { GoalPlanner } from '../GoalPlanner';
-import { BacktestingPanel } from '../BacktestingPanel';
 import { Section, Field, SummaryCard } from '../common/UIComponents';
 import { SIDEBAR_TABS, AnalysisTabType, ANALYSIS_TABS } from '../../logic/uiConstants';
 import { formatMoney, num } from '../../utils/format';
+
+const RiskDashboard = lazy(() => import('../RiskDashboard').then((m) => ({ default: m.RiskDashboard })));
+const ScenarioComparison = lazy(() => import('../ScenarioComparison').then((m) => ({ default: m.ScenarioComparison })));
+const WhatIfSlider = lazy(() => import('../WhatIfSlider').then((m) => ({ default: m.WhatIfSlider })));
+const PensionOptimizer = lazy(() => import('../PensionOptimizer').then((m) => ({ default: m.PensionOptimizer })));
+const BacktestingPanel = lazy(() => import('../BacktestingPanel').then((m) => ({ default: m.BacktestingPanel })));
+const FanChart = lazy(() => import('../Charts').then((m) => ({ default: m.FanChart })));
+const AssetBreakdownChart = lazy(() => import('../Charts').then((m) => ({ default: m.AssetBreakdownChart })));
+const CashflowStackChart = lazy(() => import('../Charts').then((m) => ({ default: m.CashflowStackChart })));
+const SurvivalChart = lazy(() => import('../Charts').then((m) => ({ default: m.SurvivalChart })));
+const YearlyReportTable = lazy(() => import('../YearlyReportTable').then((m) => ({ default: m.YearlyReportTable })));
 
 interface DesktopLayoutProps {
     input: SimulationInput;
@@ -29,6 +33,7 @@ interface DesktopLayoutProps {
     setSidebarTab: (tab: string) => void;
     analysisTab: AnalysisTabType;
     setAnalysisTab: (tab: AnalysisTabType) => void;
+    onPrint: () => void;
 }
 
 export function DesktopLayout({
@@ -39,7 +44,8 @@ export function DesktopLayout({
     sidebarTab,
     setSidebarTab,
     analysisTab,
-    setAnalysisTab
+    setAnalysisTab,
+    onPrint
 }: DesktopLayoutProps) {
 
     const timeline = useMemo(() => {
@@ -163,7 +169,9 @@ export function DesktopLayout({
                                 </div>
                             </Section>
 
-                            <PensionOptimizer input={input} />
+                            <Suspense fallback={<div className="text-center text-muted py-4">Loading...</div>}>
+                                <PensionOptimizer input={input} />
+                            </Suspense>
 
                             <Section title="💼 개인연금 (연금저축/IRP)">
                                 <div className="grid-2-cols">
@@ -205,7 +213,9 @@ export function DesktopLayout({
 
                     {sidebarTab === 'advanced' && (
                         <div className="animate-fadeIn">
-                            <BacktestingPanel input={input} onInputChange={setInput} />
+                            <Suspense fallback={<div className="text-center text-muted py-4">Loading...</div>}>
+                                <BacktestingPanel input={input} onInputChange={setInput} />
+                            </Suspense>
                             <WithdrawalSettings
                                 withdrawal={input.withdrawal}
                                 onChange={w => setInput({ ...input, withdrawal: w })}
@@ -304,7 +314,7 @@ export function DesktopLayout({
                     <div className="text-right flex gap-2 justify-end">
                         <button
                             className="btn btn-secondary"
-                            onClick={() => window.print()}
+                            onClick={onPrint}
                         >
                             🖨️ 리포트 인쇄 (PDF)
                         </button>
@@ -324,7 +334,9 @@ export function DesktopLayout({
                         은퇴 후 나이가 들면서 자산이 남아있을 확률을 보여줍니다. (몬테카를로 분석)
                     </p>
                     {result ? (
-                        <SurvivalChart result={result} />
+                        <Suspense fallback={<div className="text-center text-muted py-4">Loading chart...</div>}>
+                            <SurvivalChart result={result} />
+                        </Suspense>
                     ) : (
                         <div className="text-center text-muted py-8">시뮬레이션 결과를 기다리는 중...</div>
                     )}
@@ -336,9 +348,13 @@ export function DesktopLayout({
                         부동산, 연금, 일반 자산이 어떻게 변화하는지 보여줍니다.
                     </p>
                     {result?.mode === 'deterministic' ? (
-                        <AssetBreakdownChart data={timeline} />
+                        <Suspense fallback={<div className="text-center text-muted py-4">Loading chart...</div>}>
+                            <AssetBreakdownChart data={timeline} />
+                        </Suspense>
                     ) : result?.mode === 'montecarlo' && result.trajectoryStats ? (
-                        <FanChart stats={result.trajectoryStats} />
+                        <Suspense fallback={<div className="text-center text-muted py-4">Loading chart...</div>}>
+                            <FanChart stats={result.trajectoryStats} />
+                        </Suspense>
                     ) : (
                         <div className="text-center text-muted py-8">시뮬레이션 결과를 기다리는 중...</div>
                     )}
@@ -349,12 +365,16 @@ export function DesktopLayout({
                     <p className="text-sub text-sm mb-4">
                         연금 소득과 자산 인출이 생활비를 어떻게 충당하는지 보여줍니다.
                     </p>
-                    <CashflowStackChart data={timeline} />
+                    <Suspense fallback={<div className="text-center text-muted py-4">Loading chart...</div>}>
+                        <CashflowStackChart data={timeline} />
+                    </Suspense>
                 </div>
 
                 <div className="card">
                     <h3 className="card-header">📋 연도별 상세 리포트</h3>
-                    <YearlyReportTable data={timeline} />
+                    <Suspense fallback={<div className="text-center text-muted py-4">Loading table...</div>}>
+                        <YearlyReportTable data={timeline} />
+                    </Suspense>
                 </div>
 
                 {/* Analysis Tabs */}
@@ -372,13 +392,19 @@ export function DesktopLayout({
                     </div>
 
                     {analysisTab === 'risk' && (
-                        <RiskDashboard input={input} result={result} onInputChange={setInput} />
+                        <Suspense fallback={<div className="text-center text-muted py-4">Loading...</div>}>
+                            <RiskDashboard input={input} result={result} onInputChange={setInput} />
+                        </Suspense>
                     )}
                     {analysisTab === 'compare' && (
-                        <ScenarioComparison currentInput={input} currentResult={result} />
+                        <Suspense fallback={<div className="text-center text-muted py-4">Loading...</div>}>
+                            <ScenarioComparison currentInput={input} currentResult={result} />
+                        </Suspense>
                     )}
                     {analysisTab === 'whatif' && (
-                        <WhatIfSlider input={input} onInputChange={setInput} />
+                        <Suspense fallback={<div className="text-center text-muted py-4">Loading...</div>}>
+                            <WhatIfSlider input={input} onInputChange={setInput} />
+                        </Suspense>
                     )}
                 </div>
 
@@ -393,3 +419,4 @@ export function DesktopLayout({
         </>
     );
 }
+

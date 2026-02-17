@@ -14,6 +14,7 @@ export interface LayoutProps {
     setSidebarTab: (tab: string) => void;
     analysisTab: AnalysisTabType;
     setAnalysisTab: (tab: AnalysisTabType) => void;
+    onPrint: () => void;
     isMobileOverride?: boolean; // For testing or manual override
 }
 

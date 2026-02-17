@@ -219,18 +219,37 @@ export type TimelineRow = {
     };
 };
 
+export type SimulationDetailLevel = "full" | "preview";
+
+export type SimulationRunOptions = {
+    detailLevel?: SimulationDetailLevel;
+    // Upper bound for preview Monte Carlo paths
+    previewPathCap?: number;
+    // Skip timeline payload for lightweight preview responses
+    includeSampleTimelines?: boolean;
+};
+
+export type SurvivalSeries = {
+    month: number[];
+    age: number[];
+    survivalRate: number[]; // 0..100
+};
+
 export type SimulationResult =
     | {
         mode: "deterministic";
+        detailLevel: SimulationDetailLevel;
         timeline: TimelineRow[];
         summary: SimulationSummary;
     }
     | {
         mode: "montecarlo";
+        detailLevel: SimulationDetailLevel;
         pathCount: number;
         sampleTimelines: TimelineRow[][]; // Subset of paths for visualization (e.g. first 5)
         summary: SimulationSummary; // Statistical summary
         trajectoryStats?: SimulationTrajectoryStats; // Fan Chart Data
+        survivalSeries?: SurvivalSeries; // Pre-computed series for survival chart
     };
 
 export type SimulationSummary = {

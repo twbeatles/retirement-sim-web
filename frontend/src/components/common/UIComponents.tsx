@@ -1,4 +1,4 @@
-import React from 'react';
+﻿import React, { useEffect, useState } from 'react';
 
 // Helper Components
 export function Section({ title, children }: { title: string; children: React.ReactNode }) {
@@ -11,6 +11,19 @@ export function Section({ title, children }: { title: string; children: React.Re
 }
 
 export function Field(props: { label: string; value: any; step?: string; onChange: (v: string) => void; suffix?: string }) {
+    const [draftValue, setDraftValue] = useState(String(props.value ?? ''));
+    const [isFocused, setIsFocused] = useState(false);
+
+    useEffect(() => {
+        if (!isFocused) {
+            setDraftValue(String(props.value ?? ''));
+        }
+    }, [props.value, isFocused]);
+
+    const commit = () => {
+        props.onChange(draftValue);
+    };
+
     return (
         <div className="input-group">
             <label className="label">{props.label}</label>
@@ -18,19 +31,31 @@ export function Field(props: { label: string; value: any; step?: string; onChang
                 <input
                     className="input"
                     type="number"
-                    value={props.value}
+                    value={draftValue}
                     step={props.step}
-                    onChange={(e) => props.onChange(e.target.value)}
+                    onFocus={() => setIsFocused(true)}
+                    onChange={(e) => setDraftValue(e.target.value)}
+                    onBlur={() => {
+                        setIsFocused(false);
+                        commit();
+                    }}
+                    onKeyDown={(e) => {
+                        if (e.key === 'Enter') {
+                            (e.currentTarget as HTMLInputElement).blur();
+                        }
+                    }}
                     style={{ paddingRight: props.suffix ? '45px' : undefined }}
                 />
                 {props.suffix && (
-                    <span style={{
-                        position: 'absolute',
-                        right: '12px',
-                        color: 'var(--text-sub)',
-                        fontWeight: 600,
-                        fontSize: '0.85rem'
-                    }}>
+                    <span
+                        style={{
+                            position: 'absolute',
+                            right: '12px',
+                            color: 'var(--text-sub)',
+                            fontWeight: 600,
+                            fontSize: '0.85rem'
+                        }}
+                    >
                         {props.suffix}
                     </span>
                 )}
@@ -48,3 +73,4 @@ export function SummaryCard({ title, value, desc, color }: { title: string; valu
         </div>
     );
 }
+

@@ -1,4 +1,4 @@
-import React from 'react';
+﻿import React, { useEffect, useState } from 'react';
 
 interface InputSliderProps {
     label: string;
@@ -23,8 +23,20 @@ export function InputSlider({
     hint,
     formatValue
 }: InputSliderProps) {
-    const displayValue = formatValue ? formatValue(value) : value.toLocaleString();
-    const percentage = ((value - min) / (max - min)) * 100;
+    const [draftValue, setDraftValue] = useState(value);
+
+    useEffect(() => {
+        setDraftValue(value);
+    }, [value]);
+
+    const commit = () => {
+        if (draftValue !== value) {
+            onChange(draftValue);
+        }
+    };
+
+    const displayValue = formatValue ? formatValue(draftValue) : draftValue.toLocaleString();
+    const percentage = ((draftValue - min) / (max - min)) * 100;
 
     return (
         <div className="input-slider">
@@ -40,8 +52,16 @@ export function InputSlider({
                     min={min}
                     max={max}
                     step={step}
-                    value={value}
-                    onChange={(e) => onChange(Number(e.target.value))}
+                    value={draftValue}
+                    onChange={(e) => setDraftValue(Number(e.target.value))}
+                    onMouseUp={commit}
+                    onTouchEnd={commit}
+                    onKeyUp={(e) => {
+                        if (e.key === 'ArrowLeft' || e.key === 'ArrowRight' || e.key === 'Home' || e.key === 'End') {
+                            commit();
+                        }
+                    }}
+                    onBlur={commit}
                     className="input-slider-range"
                     style={{
                         background: `linear-gradient(to right, var(--primary) 0%, var(--primary) ${percentage}%, var(--border) ${percentage}%, var(--border) 100%)`
@@ -122,3 +142,4 @@ export function InputSlider({
 }
 
 export default InputSlider;
+

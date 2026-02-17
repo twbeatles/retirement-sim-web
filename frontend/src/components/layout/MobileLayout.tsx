@@ -1,24 +1,28 @@
-import React, { useState, useMemo } from 'react';
+import React, { Suspense, lazy, useState, useMemo } from 'react';
 import type { SimulationInput, SimulationResult, ValidationWarning } from '../../logic/types';
 import { exportSimulationResult } from '../../logic/export';
-import { AssetChart, RetirementCashflowChart, FanChart, AssetBreakdownChart, CashflowStackChart, SurvivalChart } from '../Charts';
-import { YearlyReportTable } from '../YearlyReportTable';
 import { PortfolioEditor } from '../PortfolioEditor';
 import { WithdrawalSettings } from '../WithdrawalSettings';
 import { ScenarioManager } from '../ScenarioManager';
 import { AdvancedSettings } from '../AdvancedSettings';
-import { RiskDashboard } from '../RiskDashboard';
-import { ScenarioComparison } from '../ScenarioComparison';
-import { WhatIfSlider } from '../WhatIfSlider';
 import { FavoriteAssets } from '../FavoriteAssets';
 import { IncomeManager } from '../IncomeManager';
 import { ExpenseManager } from '../ExpenseManager';
-import { PensionOptimizer } from '../PensionOptimizer';
 import { GoalPlanner } from '../GoalPlanner';
-import { BacktestingPanel } from '../BacktestingPanel';
 import { Section, Field, SummaryCard } from '../common/UIComponents';
 import { SIDEBAR_TABS, AnalysisTabType, ANALYSIS_TABS } from '../../logic/uiConstants';
 import { formatMoney, num } from '../../utils/format';
+
+const RiskDashboard = lazy(() => import('../RiskDashboard').then((m) => ({ default: m.RiskDashboard })));
+const ScenarioComparison = lazy(() => import('../ScenarioComparison').then((m) => ({ default: m.ScenarioComparison })));
+const WhatIfSlider = lazy(() => import('../WhatIfSlider').then((m) => ({ default: m.WhatIfSlider })));
+const PensionOptimizer = lazy(() => import('../PensionOptimizer').then((m) => ({ default: m.PensionOptimizer })));
+const BacktestingPanel = lazy(() => import('../BacktestingPanel').then((m) => ({ default: m.BacktestingPanel })));
+const FanChart = lazy(() => import('../Charts').then((m) => ({ default: m.FanChart })));
+const AssetBreakdownChart = lazy(() => import('../Charts').then((m) => ({ default: m.AssetBreakdownChart })));
+const CashflowStackChart = lazy(() => import('../Charts').then((m) => ({ default: m.CashflowStackChart })));
+const SurvivalChart = lazy(() => import('../Charts').then((m) => ({ default: m.SurvivalChart })));
+const YearlyReportTable = lazy(() => import('../YearlyReportTable').then((m) => ({ default: m.YearlyReportTable })));
 
 interface MobileLayoutProps {
     input: SimulationInput;
@@ -29,6 +33,7 @@ interface MobileLayoutProps {
     setSidebarTab: (tab: string) => void;
     analysisTab: AnalysisTabType;
     setAnalysisTab: (tab: AnalysisTabType) => void;
+    onPrint: () => void;
 }
 
 export function MobileLayout({
@@ -39,7 +44,8 @@ export function MobileLayout({
     sidebarTab,
     setSidebarTab,
     analysisTab,
-    setAnalysisTab
+    setAnalysisTab,
+    onPrint
 }: MobileLayoutProps) {
 
     // Local state for mobile navigation (includes 'results')
@@ -168,7 +174,9 @@ export function MobileLayout({
                             </div>
                         </Section>
 
-                        <PensionOptimizer input={input} />
+                        <Suspense fallback={<div className="text-center text-muted py-4">Loading...</div>}>
+                            <PensionOptimizer input={input} />
+                        </Suspense>
 
                         <Section title="💼 개인연금 (연금저축/IRP)">
                             <div className="grid-2-cols">
@@ -210,7 +218,9 @@ export function MobileLayout({
 
                 {activeTab === 'advanced' && (
                     <div className="p-3 animate-fadeIn space-y-3">
-                        <BacktestingPanel input={input} onInputChange={setInput} />
+                        <Suspense fallback={<div className="text-center text-muted py-4">Loading...</div>}>
+                            <BacktestingPanel input={input} onInputChange={setInput} />
+                        </Suspense>
                         <WithdrawalSettings
                             withdrawal={input.withdrawal}
                             onChange={w => setInput({ ...input, withdrawal: w })}
@@ -309,7 +319,7 @@ export function MobileLayout({
                             <div className="text-right flex gap-2 justify-end">
                                 <button
                                     className="btn btn-secondary btn-sm"
-                                    onClick={() => window.print()}
+                                    onClick={onPrint}
                                 >
                                     🖨️ PDF
                                 </button>
@@ -324,15 +334,23 @@ export function MobileLayout({
 
                         <div className="card">
                             <h3 className="card-header">📊 자산 생존 확률</h3>
-                            {result ? <SurvivalChart result={result} /> : <div>로딩중...</div>}
+                            {result ? (
+                                <Suspense fallback={<div className="text-center text-muted py-4">Loading chart...</div>}>
+                                    <SurvivalChart result={result} />
+                                </Suspense>
+                            ) : <div>로딩중...</div>}
                         </div>
 
                         <div className="card">
                             <h3 className="card-header">📈 자산 구성 추이</h3>
                             {result?.mode === 'deterministic' ? (
-                                <AssetBreakdownChart data={timeline} />
+                                <Suspense fallback={<div className="text-center text-muted py-4">Loading chart...</div>}>
+                                    <AssetBreakdownChart data={timeline} />
+                                </Suspense>
                             ) : result?.mode === 'montecarlo' && result.trajectoryStats ? (
-                                <FanChart stats={result.trajectoryStats} />
+                                <Suspense fallback={<div className="text-center text-muted py-4">Loading chart...</div>}>
+                                    <FanChart stats={result.trajectoryStats} />
+                                </Suspense>
                             ) : (
                                 <div>로딩중...</div>
                             )}
@@ -340,13 +358,17 @@ export function MobileLayout({
 
                         <div className="card">
                             <h3 className="card-header">💵 현금 흐름</h3>
-                            <CashflowStackChart data={timeline} />
+                            <Suspense fallback={<div className="text-center text-muted py-4">Loading chart...</div>}>
+                                <CashflowStackChart data={timeline} />
+                            </Suspense>
                         </div>
 
                         <div className="card">
                             <h3 className="card-header">📋 연도별 상세</h3>
                             <div style={{ overflowX: 'auto' }}>
-                                <YearlyReportTable data={timeline} />
+                                <Suspense fallback={<div className="text-center text-muted py-4">Loading table...</div>}>
+                                    <YearlyReportTable data={timeline} />
+                                </Suspense>
                             </div>
                         </div>
 
@@ -366,13 +388,19 @@ export function MobileLayout({
 
                             <div className="mt-3">
                                 {analysisTab === 'risk' && (
-                                    <RiskDashboard input={input} result={result} onInputChange={setInput} />
+                                    <Suspense fallback={<div className="text-center text-muted py-4">Loading...</div>}>
+                                        <RiskDashboard input={input} result={result} onInputChange={setInput} />
+                                    </Suspense>
                                 )}
                                 {analysisTab === 'compare' && (
-                                    <ScenarioComparison currentInput={input} currentResult={result} />
+                                    <Suspense fallback={<div className="text-center text-muted py-4">Loading...</div>}>
+                                        <ScenarioComparison currentInput={input} currentResult={result} />
+                                    </Suspense>
                                 )}
                                 {analysisTab === 'whatif' && (
-                                    <WhatIfSlider input={input} onInputChange={setInput} />
+                                    <Suspense fallback={<div className="text-center text-muted py-4">Loading...</div>}>
+                                        <WhatIfSlider input={input} onInputChange={setInput} />
+                                    </Suspense>
                                 )}
                             </div>
                         </div>
@@ -467,3 +495,4 @@ export function MobileLayout({
         </div>
     );
 }
+

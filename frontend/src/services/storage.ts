@@ -118,7 +118,7 @@ class ScenarioStorage {
         const defaults = {
             guardrails: { baseRate: 0.04, upperThreshold: 0.05, lowerThreshold: 0.03, adjustmentRate: 0.10 },
             bucket: { shortTermYears: 2, midTermYears: 5, shortTermReturn: 0.02, midTermReturn: 0.04, rebalanceFrequency: 'annual' },
-            health_insurance: { enabled: false, monthlyPremium: 200000, inflationLinked: true },
+            health_insurance: { enabled: false, mode: 'simple', monthlyPremium: 200000, inflationLinked: true },
             severance: { enabled: false, estimatedAmount: 50000000, payoutType: 'lump_sum', annuityYears: 10 },
             realEstate: [],
             additionalPensions: [],
@@ -133,7 +133,14 @@ class ScenarioStorage {
             tax_credit: { enabled: false, pensionSavingsContribution: 0, irpContribution: 0, creditRate: 0.15 }
         };
 
-        return { ...defaults, ...input };
+        return {
+            ...defaults,
+            ...input,
+            health_insurance: {
+                ...defaults.health_insurance,
+                ...(input.health_insurance ?? {})
+            }
+        };
     }
 
     async deleteScenario(id: number): Promise<void> {

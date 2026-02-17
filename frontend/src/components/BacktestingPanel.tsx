@@ -4,7 +4,11 @@
  */
 import React, { useState } from 'react';
 import type { SimulationInput } from '../logic/types';
-import { HISTORICAL_SCENARIOS, HISTORICAL_YEARS } from '../logic/historicalData';
+import {
+    HISTORICAL_SCENARIOS,
+    HISTORICAL_YEAR_MAX,
+    HISTORICAL_YEAR_MIN
+} from '../logic/historicalScenarioMeta';
 import { Tooltip } from './Tooltip';
 
 interface BacktestingPanelProps {
@@ -135,8 +139,8 @@ export const BacktestingPanel: React.FC<BacktestingPanelProps> = ({ input, onInp
                         </div>
                         <input
                             type="range"
-                            min={1985}
-                            max={2020}
+                            min={HISTORICAL_YEAR_MIN}
+                            max={HISTORICAL_YEAR_MAX}
                             value={startYear}
                             onChange={(e) => {
                                 setSelectedScenario(null);
@@ -150,8 +154,8 @@ export const BacktestingPanel: React.FC<BacktestingPanelProps> = ({ input, onInp
                             fontSize: '0.75rem',
                             color: 'var(--text-sub)'
                         }}>
-                            <span>1985</span>
-                            <span>2020</span>
+                            <span>{HISTORICAL_YEAR_MIN}</span>
+                            <span>{HISTORICAL_YEAR_MAX}</span>
                         </div>
                     </div>
 

@@ -1,4 +1,4 @@
-import React from "react";
+import React from 'react';
 import {
     LineChart,
     Line,
@@ -9,45 +9,51 @@ import {
     ResponsiveContainer,
     Legend,
     ReferenceLine
-} from "recharts";
-import type { SimulationResult } from "../../logic/types";
+} from 'recharts';
+import type { SimulationResult } from '../../logic/types';
 
 export const SurvivalChart = React.memo(function SurvivalChart({ result }: { result: SimulationResult }) {
-    if (result.mode === "deterministic" || !result.sampleTimelines.length) {
-        return <div>ëª¬í…Œì¹´ë¥¼ë¡œ ì‹œë®¬ë ˆì´ì…˜ ê²°ê³¼ê°€ í•„ìš”í•©ë‹ˆë‹¤.</div>;
+    if (result.mode === 'deterministic') {
+        return <div>Monte Carlo result is required for survival analysis.</div>;
     }
 
-    // Calculate Survival Probability over time
-    // Iterating all paths is expensive in UI thread if paths > 1000.
-    // Ideally this should be computed in engine/worker and passed as 'stats'.
-    // But for Phase 3, let's compute it here or assume engine provides it.
-    // Engine provides 'trajectoryStats': p10, p25, p50... but not 'survivalRate' per month.
-
-    // Let's implement client-side calculation (memoized) for now.
-    // If performance issue, move to engine.
-
     const survivalData = React.useMemo(() => {
+        if (result.survivalSeries && result.survivalSeries.month.length > 0) {
+            const step = result.survivalSeries.month.length > 200 ? 12 : 6;
+            const data = [] as Array<{ month: number; age: number; survivalRate: number }>;
+
+            for (let i = 0; i < result.survivalSeries.month.length; i += step) {
+                data.push({
+                    month: result.survivalSeries.month[i],
+                    age: result.survivalSeries.age[i],
+                    survivalRate: result.survivalSeries.survivalRate[i]
+                });
+            }
+
+            return data;
+        }
+
+        if (!result.sampleTimelines.length) {
+            return [];
+        }
+
+        // Fallback for legacy payloads
         const timelines = result.sampleTimelines;
         const totalPaths = timelines.length;
-        if (totalPaths === 0) return [];
-
         const months = timelines[0].length;
-        const data = [];
+        const data = [] as Array<{ month: number; age: number; survivalRate: number }>;
 
-        // Sampling rate to reduce points
-        const step = 12; // Yearly points
-
-        for (let m = 0; m < months; m += step) {
+        for (let month = 0; month < months; month += 12) {
             let aliveCount = 0;
-            for (let p = 0; p < totalPaths; p++) {
-                if (timelines[p][m].totalAssets > 0) {
+            for (let path = 0; path < totalPaths; path++) {
+                if (timelines[path][month].totalAssets > 0) {
                     aliveCount++;
                 }
             }
 
             data.push({
-                month: timelines[0][m].month,
-                age: Math.floor(timelines[0][m].age),
+                month: timelines[0][month].month,
+                age: Math.floor(timelines[0][month].age),
                 survivalRate: (aliveCount / totalPaths) * 100
             });
         }
@@ -55,28 +61,35 @@ export const SurvivalChart = React.memo(function SurvivalChart({ result }: { res
         return data;
     }, [result]);
 
+    if (survivalData.length === 0) {
+        return <div>No survival data available.</div>;
+    }
+
     return (
-        <div style={{ width: "100%", height: 320 }}>
+        <div style={{ width: '100%', height: 320 }}>
             <ResponsiveContainer>
                 <LineChart data={survivalData}>
                     <CartesianGrid strokeDasharray="3 3" />
-                    <XAxis dataKey="age" tickFormatter={(a) => `${a}ì„¸`} />
-                    <YAxis domain={[0, 100]} tickFormatter={(v) => `${v}%`} />
-                    <Tooltip formatter={(v: any) => `${Number(v).toFixed(1)}%`} labelFormatter={(l) => `${l}ì„¸ ì‹œì `} />
+                    <XAxis dataKey="age" tickFormatter={(age) => `${age}¼¼`} />
+                    <YAxis domain={[0, 100]} tickFormatter={(value) => `${value}%`} />
+                    <Tooltip
+                        formatter={(value: any) => `${Number(value).toFixed(1)}%`}
+                        labelFormatter={(label) => `${label}¼¼ ½ÃÁ¡`}
+                    />
                     <Legend />
-                    <ReferenceLine y={90} stroke="red" strokeDasharray="3 3" label="90% ì•ˆì „ì„ " />
+                    <ReferenceLine y={90} stroke="red" strokeDasharray="3 3" label="90%" />
                     <Line
                         type="stepAfter"
                         dataKey="survivalRate"
                         stroke="#10B981"
                         strokeWidth={3}
                         dot={false}
-                        name="ìì‚° ìƒì¡´ í™•ë¥ "
+                        name="ÀÚ»ê »ıÁ¸ È®·ü"
                     />
                 </LineChart>
             </ResponsiveContainer>
             <div className="text-center text-xs text-sub mt-2">
-                * í•´ë‹¹ ì—°ë ¹ê¹Œì§€ ìì‚°ì´ ê³ ê°ˆë˜ì§€ ì•Šê³  ë‚¨ì•„ìˆì„ í™•ë¥ ì…ë‹ˆë‹¤.
+                * ÇØ´ç ³ªÀÌ±îÁö ÀÚ»êÀÌ ³²¾ÆÀÖÀ» È®·üÀÔ´Ï´Ù.
             </div>
         </div>
     );

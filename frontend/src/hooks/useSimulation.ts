@@ -1,12 +1,27 @@
-import { useEffect, useRef, useState, useCallback } from 'react';
-import { SimulationInput, SimulationResult, SensitivityResult } from '../logic/types';
-import { WorkerRequest, WorkerResponse } from '../logic/workerTypes';
+import { useRef, useState, useCallback } from "react";
+import {
+    SensitivityResult,
+    SimulationInput,
+    SimulationResult,
+    SimulationRunOptions
+} from "../logic/types";
+import {
+    requestSensitivityAnalysis,
+    requestSimulation,
+    requestSolveContribution,
+    requestSolveRetireAge
+} from "../logic/simulationClient";
 
 type SimulationHookReturn = {
-    runSimulation: (input: SimulationInput) => void;
-    solveContribution: (input: SimulationInput, targetSuccessRate: number) => void;
-    solveRetireAge: (input: SimulationInput, targetSuccessRate: number) => void;
-    runSensitivityAnalysis: (input: SimulationInput, parameter: 'annual_return' | 'annual_inflation' | 'withdrawal_rate', variations: number[]) => void;
+    runSimulation: (input: SimulationInput, options?: SimulationRunOptions) => Promise<SimulationResult>;
+    runSimulationPreview: (input: SimulationInput, previewPathCap?: number) => Promise<SimulationResult>;
+    solveContribution: (input: SimulationInput, targetSuccessRate: number) => Promise<number | null>;
+    solveRetireAge: (input: SimulationInput, targetSuccessRate: number) => Promise<number | null>;
+    runSensitivityAnalysis: (
+        input: SimulationInput,
+        parameter: "annual_return" | "annual_inflation" | "withdrawal_rate",
+        variations: number[]
+    ) => Promise<SensitivityResult>;
     isCalculating: boolean;
     result: SimulationResult | null;
     sensitivityResults: SensitivityResult[] | null;
@@ -14,86 +29,74 @@ type SimulationHookReturn = {
 };
 
 export function useSimulation(): SimulationHookReturn {
-    const workerRef = useRef<Worker | null>(null);
+    const latestSimulationSeq = useRef(0);
     const [result, setResult] = useState<SimulationResult | null>(null);
     const [sensitivityResults, setSensitivityResults] = useState<SensitivityResult[] | null>(null);
     const [isCalculating, setIsCalculating] = useState(false);
     const [error, setError] = useState<string | null>(null);
 
-    // Initialize Worker
-    useEffect(() => {
-        // Create worker instance
-        // Note: URL path depends on bundler (Vite).
-        workerRef.current = new Worker(new URL('../logic/simulation.worker.ts', import.meta.url), { type: 'module' });
+    const runSimulation = useCallback(async (input: SimulationInput, options?: SimulationRunOptions) => {
+        const seq = ++latestSimulationSeq.current;
+        setIsCalculating(true);
 
-        workerRef.current.onmessage = (event: MessageEvent<WorkerResponse>) => {
-            const { type, payload } = event.data;
-
-            if (type === 'SUCCESS') {
-                setIsCalculating(false);
+        try {
+            const response = await requestSimulation(input, options);
+            if (seq === latestSimulationSeq.current) {
+                setResult(response);
                 setError(null);
-
-                // Distinguish between result types
-                if (typeof payload === 'object' && payload !== null) {
-                    if ('summary' in payload) {
-                        // SimulationResult
-                        setResult(payload as SimulationResult);
-                    } else if (Array.isArray(payload) && payload.length > 0 && 'parameter' in payload[0]) {
-                        // SensitivityResult[]
-                        setSensitivityResults(payload as SensitivityResult[]);
-                        window.dispatchEvent(new CustomEvent('SENSITIVITY_RESULT', { detail: payload }));
-                    } else {
-                        // Could be solver result (number) wrapped in object - dispatch event
-                        window.dispatchEvent(new CustomEvent('SOLVER_RESULT', { detail: payload }));
-                    }
-                } else if (typeof payload === 'number') {
-                    // Solver result
-                    window.dispatchEvent(new CustomEvent('SOLVER_RESULT', { detail: payload }));
-                }
-            } else if (type === 'ERROR') {
-                console.error("Simulation Worker Error:", payload);
-                setError(typeof payload === 'string' ? payload : JSON.stringify(payload));
+            }
+            return response;
+        } catch (err) {
+            const message = err instanceof Error ? err.message : String(err);
+            if (seq === latestSimulationSeq.current) {
+                setError(message);
+            }
+            throw err;
+        } finally {
+            if (seq === latestSimulationSeq.current) {
                 setIsCalculating(false);
             }
-        };
-
-        return () => {
-            workerRef.current?.terminate();
-            workerRef.current = null;
-        };
-    }, []);
-
-    const postMessage = useCallback((message: WorkerRequest) => {
-        if (workerRef.current) {
-            setIsCalculating(true);
-            workerRef.current.postMessage(message);
-        } else {
-            console.error("Worker is not initialized");
         }
     }, []);
 
-    const runSimulation = useCallback((input: SimulationInput) => {
-        postMessage({ type: 'SIMULATION', input });
-    }, [postMessage]);
+    const runSimulationPreview = useCallback((input: SimulationInput, previewPathCap = 80) => {
+        return requestSimulation(input, {
+            detailLevel: "preview",
+            previewPathCap,
+            includeSampleTimelines: false
+        });
+    }, []);
 
     const solveContribution = useCallback((input: SimulationInput, targetSuccessRate: number) => {
-        postMessage({ type: 'SOLVE_CONTRIBUTION', input, targetSuccessRate });
-    }, [postMessage]);
+        return requestSolveContribution(input, targetSuccessRate);
+    }, []);
 
     const solveRetireAge = useCallback((input: SimulationInput, targetSuccessRate: number) => {
-        postMessage({ type: 'SOLVE_RETIRE_AGE', input, targetSuccessRate });
-    }, [postMessage]);
+        return requestSolveRetireAge(input, targetSuccessRate);
+    }, []);
 
-    const runSensitivityAnalysisFunc = useCallback((
-        input: SimulationInput,
-        parameter: 'annual_return' | 'annual_inflation' | 'withdrawal_rate',
-        variations: number[]
-    ) => {
-        postMessage({ type: 'SENSITIVITY_ANALYSIS', input, parameter, variations });
-    }, [postMessage]);
+    const runSensitivityAnalysisFunc = useCallback(
+        async (
+            input: SimulationInput,
+            parameter: "annual_return" | "annual_inflation" | "withdrawal_rate",
+            variations: number[]
+        ) => {
+            const sensitivity = await requestSensitivityAnalysis(input, parameter, variations);
+            setSensitivityResults((prev) => {
+                if (!prev) {
+                    return [sensitivity];
+                }
+                const rest = prev.filter((item) => item.parameter !== sensitivity.parameter);
+                return [...rest, sensitivity];
+            });
+            return sensitivity;
+        },
+        []
+    );
 
     return {
         runSimulation,
+        runSimulationPreview,
         solveContribution,
         solveRetireAge,
         runSensitivityAnalysis: runSensitivityAnalysisFunc,
@@ -103,3 +106,4 @@ export function useSimulation(): SimulationHookReturn {
         error
     };
 }
+

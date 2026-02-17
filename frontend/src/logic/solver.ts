@@ -155,6 +155,7 @@ export function optimizePensionStartAge(
         }
 
         const monthlyAmt = baseAmount * multiplier;
+        const totalPayout = monthlyAmt * yearsReceiving * 12;
         // Calculate NPV (Net Present Value)
         // Discount Rate = Portfolio Expected Return (Nominal)
         // This represents the "Opportunity Cost" of not investing the money.

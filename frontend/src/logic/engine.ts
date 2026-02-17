@@ -8,6 +8,7 @@
 import {
     SimulationInput,
     SimulationResult,
+    SimulationRunOptions,
     TimelineRow,
     SimulationSummary,
     HistoricalAssetType,
@@ -690,7 +691,15 @@ function simulateOnePath(
     return timeline;
 }
 
-export function runSimulation(input: SimulationInput): SimulationResult {
+export function runSimulation(
+    input: SimulationInput,
+    options?: SimulationRunOptions
+): SimulationResult {
+    const detailLevel = options?.detailLevel ?? "full";
+    const isPreview = detailLevel === "preview";
+    const includeSampleTimelines = options?.includeSampleTimelines ?? !isPreview;
+    const previewPathCap = options?.previewPathCap ?? 80;
+
     // Initialize seed for reproducible simulations
     setSeed(input.simulation_settings.seed);
 
@@ -916,7 +925,7 @@ export function runSimulation(input: SimulationInput): SimulationResult {
     if (isHistorical) {
         // Run multiple rolling window scenarios
         const numScenarios = 20; // 20 rolling windows (1985-2005 start years)
-        const MAX_SAMPLE_PATHS = 5;
+        const MAX_SAMPLE_PATHS = includeSampleTimelines ? (isPreview ? 1 : 5) : 0;
         const sampleTimelines: TimelineRow[][] = [];
         const finalAssets = new Float64Array(numScenarios);
         const finalAssetsReal = new Float64Array(numScenarios);
@@ -927,7 +936,7 @@ export function runSimulation(input: SimulationInput): SimulationResult {
             finalAssets[p] = last.totalAssets;
             finalAssetsReal[p] = last.totalAssetsReal;
 
-            if (p < MAX_SAMPLE_PATHS) {
+            if (MAX_SAMPLE_PATHS > 0 && p < MAX_SAMPLE_PATHS) {
                 sampleTimelines.push(timeline);
             }
         }
@@ -965,6 +974,7 @@ export function runSimulation(input: SimulationInput): SimulationResult {
 
         return {
             mode: "montecarlo", // Return as montecarlo for UI compatibility
+            detailLevel,
             pathCount: numScenarios,
             sampleTimelines,
             summary
@@ -985,16 +995,18 @@ export function runSimulation(input: SimulationInput): SimulationResult {
 
         return {
             mode: "deterministic",
+            detailLevel,
             timeline,
             summary
         };
     } else {
         // Monte Carlo Run
-        const paths = input.simulation_settings.mc_paths || 100;
+        const configuredPaths = input.simulation_settings.mc_paths || 100;
+        const paths = isPreview ? Math.min(configuredPaths, previewPathCap) : configuredPaths;
 
         // Memory Optimization: Store only sample timelines
         // We'll store up to 5 complete timelines for visualization
-        const MAX_SAMPLE_PATHS = 5;
+        const MAX_SAMPLE_PATHS = includeSampleTimelines ? (isPreview ? 1 : 5) : 0;
         const sampleTimelines: TimelineRow[][] = [];
 
         // Store only final values for stats
@@ -1005,7 +1017,7 @@ export function runSimulation(input: SimulationInput): SimulationResult {
         // Index = path * totalMonths + month
         // To be safer for memory with high path counts, we could only store percentiles on the fly.
         // But 1000 paths * 720 months = 720k doubles = ~5.7MB. Totally fine.
-        const allTraj = new Float64Array(paths * totalMonths);
+        const allTraj = isPreview ? null : new Float64Array(paths * totalMonths);
 
         let successCount = 0;
 
@@ -1027,15 +1039,17 @@ export function runSimulation(input: SimulationInput): SimulationResult {
             const tl = simulateOnePath(input, pathCtx, true);
 
             // Store sample
-            if (i < MAX_SAMPLE_PATHS) {
+            if (MAX_SAMPLE_PATHS > 0 && i < MAX_SAMPLE_PATHS) {
                 sampleTimelines.push(tl);
             }
 
             // Store Trajectory Data (use original totalMonths for consistent array size)
-            for (let m = 0; m < totalMonths; m++) {
-                // If path ended earlier, use final value for remaining months
-                const tlIndex = Math.min(m, tl.length - 1);
-                allTraj[i * totalMonths + m] = tl[tlIndex]?.totalAssetsReal || 0;
+            if (allTraj) {
+                for (let m = 0; m < totalMonths; m++) {
+                    // If path ended earlier, use final value for remaining months
+                    const tlIndex = Math.min(m, tl.length - 1);
+                    allTraj[i * totalMonths + m] = tl[tlIndex]?.totalAssetsReal || 0;
+                }
             }
 
             const last = tl[tl.length - 1];
@@ -1059,27 +1073,42 @@ export function runSimulation(input: SimulationInput): SimulationResult {
             p75: [] as number[],
             p90: [] as number[]
         };
+        const survivalSeries = {
+            month: [] as number[],
+            age: [] as number[],
+            survivalRate: [] as number[]
+        };
+        if (allTraj) {
+            // Reuse buffer for sorting column
+            const column = new Float64Array(paths);
 
-        // Reuse buffer for sorting column
-        const column = new Float64Array(paths);
+            // Sample every 12 months (Annual) OR every month? 
+            // Showing every month is heavy for chart. Let's do every 6 or 12 months?
+            // Charts.tsx can sample. Let's provide raw monthly data (computation is cheap here).
+            // Actually, sorting 1000 items 720 times is 720k * log(1000) ~ 7M ops. Fast.
+            for (let m = 0; m < totalMonths; m++) {
+                // Extract column
+                let aliveCount = 0;
+                for (let p = 0; p < paths; p++) {
+                    const value = allTraj[p * totalMonths + m];
+                    column[p] = value;
+                    if (value > 0) {
+                        aliveCount++;
+                    }
+                }
+                column.sort((a, b) => a - b);
 
-        // Sample every 12 months (Annual) OR every month? 
-        // Showing every month is heavy for chart. Let's do every 6 or 12 months?
-        // Charts.tsx can sample. Let's provide raw monthly data (computation is cheap here).
-        // Actually, sorting 1000 items 720 times is 720k * log(1000) ~ 7M ops. Fast.
-        for (let m = 0; m < totalMonths; m++) {
-            // Extract column
-            for (let p = 0; p < paths; p++) {
-                column[p] = allTraj[p * totalMonths + m];
+                trajStats.month.push(m);
+                trajStats.p10.push(column[Math.floor(paths * 0.10)]);
+                trajStats.p25.push(column[Math.floor(paths * 0.25)]);
+                trajStats.p50.push(column[Math.floor(paths * 0.50)]);
+                trajStats.p75.push(column[Math.floor(paths * 0.75)]);
+                trajStats.p90.push(column[Math.floor(paths * 0.90)]);
+
+                survivalSeries.month.push(m);
+                survivalSeries.age.push(Math.floor(input.current_age + m / 12));
+                survivalSeries.survivalRate.push((aliveCount / paths) * 100);
             }
-            column.sort((a, b) => a - b);
-
-            trajStats.month.push(m);
-            trajStats.p10.push(column[Math.floor(paths * 0.10)]);
-            trajStats.p25.push(column[Math.floor(paths * 0.25)]);
-            trajStats.p50.push(column[Math.floor(paths * 0.50)]);
-            trajStats.p75.push(column[Math.floor(paths * 0.75)]);
-            trajStats.p90.push(column[Math.floor(paths * 0.90)]);
         }
 
         const summary: SimulationSummary = {
@@ -1106,10 +1135,12 @@ export function runSimulation(input: SimulationInput): SimulationResult {
 
         return {
             mode: "montecarlo",
+            detailLevel,
             pathCount: paths,
             sampleTimelines,
             summary,
-            trajectoryStats: trajStats
+            trajectoryStats: allTraj ? trajStats : undefined,
+            survivalSeries: allTraj ? survivalSeries : undefined
         };
     }
 }

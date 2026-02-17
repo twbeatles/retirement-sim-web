@@ -98,6 +98,7 @@ export const INITIAL_INPUT: SimulationInput = {
     // Phase 1: Health & Retirement
     health_insurance: {
         enabled: false,
+        mode: "simple",
         monthlyPremium: 200000,
         inflationLinked: true
     },
