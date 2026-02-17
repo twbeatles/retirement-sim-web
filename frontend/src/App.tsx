@@ -4,11 +4,11 @@ import type { SimulationInput, ValidationWarning } from "./logic/types";
 import { INITIAL_INPUT } from "./logic/constants";
 import { validateSimulationInput } from "./logic/validation";
 import { Onboarding } from "./components/Onboarding";
-import { SimpleDashboard } from "./components/SimpleDashboard";
 import type { AnalysisTabType, SidebarSectionId } from "./components/layout/types";
 
 const ReportPrintView = lazy(() => import("./components/ReportPrintView").then((m) => ({ default: m.ReportPrintView })));
 const Layout = lazy(() => import("./components/layout/Layout").then((m) => ({ default: m.Layout })));
+const SimpleDashboard = lazy(() => import("./components/SimpleDashboard").then((m) => ({ default: m.SimpleDashboard })));
 
 export default function App() {
     const [input, setInput] = useState<SimulationInput>(INITIAL_INPUT);
@@ -95,9 +95,11 @@ export default function App() {
             )}
 
             {viewMode === "simple" ? (
-                <div className="simple-mode-container">
-                    <SimpleDashboard input={input} result={result} onInputChange={setInput} />
-                </div>
+                <Suspense fallback={<div className="text-center text-muted py-8">Loading dashboard...</div>}>
+                    <div className="simple-mode-container">
+                        <SimpleDashboard input={input} result={result} onInputChange={setInput} />
+                    </div>
+                </Suspense>
             ) : (
                 <Suspense fallback={<div className="text-center text-muted py-8">레이아웃 로딩 중...</div>}>
                     <Layout
@@ -124,4 +126,3 @@ export default function App() {
         </div>
     );
 }
-
