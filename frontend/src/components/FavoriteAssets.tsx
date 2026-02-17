@@ -30,13 +30,13 @@ const CATEGORY_LABELS: Record<FavoriteAsset['category'], string> = {
     other: '📦 기타'
 };
 
-const CATEGORY_COLORS: Record<FavoriteAsset['category'], string> = {
-    stock: 'var(--primary)',
-    bond: 'var(--success)',
-    reit: '#9C27B0',
-    commodity: '#FF9800',
-    cash: 'var(--text-sub)',
-    other: 'var(--border)'
+const CATEGORY_CLASS: Record<FavoriteAsset['category'], string> = {
+    stock: 'favorite-stock',
+    bond: 'favorite-bond',
+    reit: 'favorite-reit',
+    commodity: 'favorite-commodity',
+    cash: 'favorite-cash',
+    other: 'favorite-other'
 };
 
 interface Props {
@@ -145,17 +145,12 @@ export function FavoriteAssets({ portfolio, onChange }: Props) {
                     <div className="text-xs font-bold text-sub mb-2">
                         {CATEGORY_LABELS[category as FavoriteAsset['category']] || category}
                     </div>
-                    <div className="flex-row flex-wrap" style={{ gap: 6 }}>
+                    <div className="flex-row flex-wrap favorite-chip-group">
                         {assets.map(fav => (
                             <button
                                 key={fav.id}
                                 onClick={() => addToPortfolio(fav)}
-                                className="btn btn-pill"
-                                style={{
-                                    borderColor: CATEGORY_COLORS[fav.category],
-                                    fontSize: '0.8rem',
-                                    padding: '4px 10px'
-                                }}
+                                className={`btn btn-pill favorite-chip ${CATEGORY_CLASS[fav.category]}`}
                                 title={`수익률: ${(fav.expectedAnnualReturn * 100).toFixed(1)}%, 변동성: ${(fav.annualVolatility * 100).toFixed(1)}%`}
                             >
                                 {fav.name}
@@ -165,11 +160,7 @@ export function FavoriteAssets({ portfolio, onChange }: Props) {
                                             e.stopPropagation();
                                             removeCustomFavorite(fav.id);
                                         }}
-                                        style={{
-                                            marginLeft: 6,
-                                            color: 'var(--danger)',
-                                            cursor: 'pointer'
-                                        }}
+                                        className="favorite-chip-remove"
                                     >
                                         ✕
                                     </span>
@@ -182,12 +173,9 @@ export function FavoriteAssets({ portfolio, onChange }: Props) {
 
             {/* Add Custom Form */}
             {showAddForm ? (
-                <div className="mt-4 p-3" style={{
-                    background: 'var(--bg-secondary)',
-                    borderRadius: 'var(--radius)'
-                }}>
+                <div className="mt-4 p-3 favorite-add-form">
                     <div className="text-sm font-bold mb-2">커스텀 자산 추가</div>
-                    <div className="flex-col" style={{ gap: 8 }}>
+                    <div className="flex-col gap-2">
                         <input
                             type="text"
                             className="input"
@@ -195,7 +183,7 @@ export function FavoriteAssets({ portfolio, onChange }: Props) {
                             value={newAsset.name || ''}
                             onChange={e => setNewAsset({ ...newAsset, name: e.target.value })}
                         />
-                        <div className="flex-row" style={{ gap: 8 }}>
+                        <div className="flex-row gap-2">
                             <div className="flex-1">
                                 <label className="text-xs text-sub">기대수익률</label>
                                 <input
@@ -226,7 +214,7 @@ export function FavoriteAssets({ portfolio, onChange }: Props) {
                                 <option key={key} value={key}>{label}</option>
                             ))}
                         </select>
-                        <div className="flex-row" style={{ gap: 8 }}>
+                        <div className="flex-row gap-2">
                             <button onClick={addCustomFavorite} className="btn btn-primary btn-sm flex-1">
                                 추가
                             </button>

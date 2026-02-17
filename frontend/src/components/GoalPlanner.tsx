@@ -57,7 +57,7 @@ export const GoalPlanner: React.FC<GoalPlannerProps> = ({ input, onApply }) => {
                         {[0.8, 0.9, 0.95, 1.0].map((r) => (
                             <button
                                 key={r}
-                                className={`btn-sm ${targetRate === r ? 'btn-primary' : 'btn-outline'}`}
+                                className={`btn btn-sm ${targetRate === r ? 'btn-primary' : 'btn-outline'}`}
                                 onClick={() => setTargetRate(r)}
                             >
                                 {r * 100}%
@@ -120,34 +120,10 @@ export const GoalPlanner: React.FC<GoalPlannerProps> = ({ input, onApply }) => {
             )}
 
             {result === null && !isSolving && mode === 'contribution' && (
-                <div className="mt-4 p-3 bg-github-subtle rounded text-xs text-sub">
+                <div className="mt-4 p-3 planner-note text-xs text-sub">
                     Search range: 0 ~ 5,000만원/month.
                 </div>
             )}
-
-            <style>{`
-                .btn-sm {
-                    padding: 4px 8px;
-                    font-size: 0.8rem;
-                    border-radius: var(--radius);
-                }
-                .btn-outline {
-                    border: 1px solid var(--border);
-                    background: transparent;
-                    color: var(--text-sub);
-                }
-                .btn-primary {
-                    background: var(--primary);
-                    color: white;
-                    border: 1px solid var(--primary);
-                }
-                .result-box {
-                    background: var(--bg-hover);
-                    padding: var(--space-md);
-                    border-radius: var(--radius);
-                    border: 2px solid var(--primary-light);
-                }
-            `}</style>
         </div>
     );
 };

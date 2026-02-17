@@ -2,19 +2,9 @@ import React from 'react';
 import { useMediaQuery } from '../../hooks/useMediaQuery';
 import { MobileLayout } from './MobileLayout';
 import { DesktopLayout } from './DesktopLayout';
-import type { SimulationInput, SimulationResult, ValidationWarning } from '../../logic/types';
-import type { AnalysisTabType } from '../../logic/uiConstants';
+import type { LayoutSharedProps } from './types';
 
-export interface LayoutProps {
-    input: SimulationInput;
-    setInput: (input: SimulationInput) => void;
-    result: SimulationResult | null;
-    validationWarnings: ValidationWarning[];
-    sidebarTab: string;
-    setSidebarTab: (tab: string) => void;
-    analysisTab: AnalysisTabType;
-    setAnalysisTab: (tab: AnalysisTabType) => void;
-    onPrint: () => void;
+export interface LayoutProps extends LayoutSharedProps {
     isMobileOverride?: boolean; // For testing or manual override
 }
 

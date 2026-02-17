@@ -122,9 +122,9 @@ export function WithdrawalSettings({ withdrawal, onChange }: Props) {
                 </div>
             )}
 
-            <hr style={{ margin: "20px 0", borderTop: "1px dashed var(--border)", borderBottom: "none" }} />
+            <hr className="withdrawal-divider" />
 
-            <h4 className="text-main font-bold mb-4" style={{ fontSize: "0.9rem" }}>세금 설정</h4>
+            <h4 className="text-main font-bold mb-4 withdrawal-subtitle">세금 설정</h4>
             <div>
                 <div className="input-group">
                     <label className="label">세금 방식</label>

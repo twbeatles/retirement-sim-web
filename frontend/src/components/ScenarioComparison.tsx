@@ -9,6 +9,14 @@ import { requestSimulationBatch } from '../logic/simulationClient';
 
 const STORAGE_KEY = 'retirement_sim_scenarios_v1';
 const COLORS = ['#8884d8', '#82ca9d', '#ffc658', '#ff7300', '#00C49F', '#FFBB28'];
+const COLOR_CLASS_MAP: Record<string, string> = {
+    '#8884d8': 'comparison-color-0',
+    '#82ca9d': 'comparison-color-1',
+    '#ffc658': 'comparison-color-2',
+    '#ff7300': 'comparison-color-3',
+    '#00C49F': 'comparison-color-4',
+    '#FFBB28': 'comparison-color-5'
+};
 
 type SavedScenario = {
     id: string;
@@ -196,28 +204,10 @@ export function ScenarioComparison({ currentInput, currentResult }: Props) {
                                         {comparisonData.map((item) => (
                                             <tr key={item.id}>
                                                 <td>
-                                                    <span
-                                                        style={{
-                                                            display: 'inline-block',
-                                                            width: 12,
-                                                            height: 12,
-                                                            background: item.color,
-                                                            borderRadius: '50%',
-                                                            marginRight: 8
-                                                        }}
-                                                    />
+                                                    <span className={`comparison-color-dot ${COLOR_CLASS_MAP[item.color] || ''}`} />
                                                     {item.name}
                                                 </td>
-                                                <td
-                                                    style={{
-                                                        color: item.result.summary.successRate > 0.8
-                                                            ? 'var(--success)'
-                                                            : item.result.summary.successRate > 0.5
-                                                                ? 'var(--warning)'
-                                                                : 'var(--danger)',
-                                                        fontWeight: 'bold'
-                                                    }}
-                                                >
+                                                <td className={`comparison-rate-cell ${item.result.summary.successRate > 0.8 ? "text-success" : item.result.summary.successRate > 0.5 ? "text-warning" : "text-danger"}`}>
                                                     {(item.result.summary.successRate * 100).toFixed(1)}%
                                                 </td>
                                                 <td>
@@ -229,7 +219,7 @@ export function ScenarioComparison({ currentInput, currentResult }: Props) {
                                 </table>
                             </div>
 
-                            <div style={{ width: '100%', height: 350 }}>
+                            <div className="chart-box chart-box-lg">
                                 <ResponsiveContainer>
                                     <LineChart data={chartData}>
                                         <CartesianGrid strokeDasharray="3 3" />

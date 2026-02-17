@@ -1,4 +1,4 @@
-import React from 'react';
+ï»¿import React from 'react';
 import {
     LineChart,
     Line,
@@ -66,15 +66,15 @@ export const SurvivalChart = React.memo(function SurvivalChart({ result }: { res
     }
 
     return (
-        <div style={{ width: '100%', height: 320 }}>
+        <div className="chart-box chart-box-md">
             <ResponsiveContainer>
                 <LineChart data={survivalData}>
                     <CartesianGrid strokeDasharray="3 3" />
-                    <XAxis dataKey="age" tickFormatter={(age) => `${age}¼¼`} />
+                    <XAxis dataKey="age" tickFormatter={(age) => `${age}ì„¸`} />
                     <YAxis domain={[0, 100]} tickFormatter={(value) => `${value}%`} />
                     <Tooltip
                         formatter={(value: any) => `${Number(value).toFixed(1)}%`}
-                        labelFormatter={(label) => `${label}¼¼ ½ÃÁ¡`}
+                        labelFormatter={(label) => `${label}ì„¸ ì‹œì `}
                     />
                     <Legend />
                     <ReferenceLine y={90} stroke="red" strokeDasharray="3 3" label="90%" />
@@ -84,13 +84,14 @@ export const SurvivalChart = React.memo(function SurvivalChart({ result }: { res
                         stroke="#10B981"
                         strokeWidth={3}
                         dot={false}
-                        name="ÀÚ»ê »ıÁ¸ È®·ü"
+                        name="ìì‚° ìƒì¡´ í™•ë¥ "
                     />
                 </LineChart>
             </ResponsiveContainer>
             <div className="text-center text-xs text-sub mt-2">
-                * ÇØ´ç ³ªÀÌ±îÁö ÀÚ»êÀÌ ³²¾ÆÀÖÀ» È®·üÀÔ´Ï´Ù.
+                * í•´ë‹¹ ë‚˜ì´ê¹Œì§€ ìì‚°ì´ ë‚¨ì•„ìˆì„ í™•ë¥ ì…ë‹ˆë‹¤.
             </div>
         </div>
     );
 });
+

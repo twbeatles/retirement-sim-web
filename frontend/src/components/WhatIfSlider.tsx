@@ -148,12 +148,20 @@ export function WhatIfSlider({ input, onInputChange }: Props) {
         onInputChange(newInput);
     };
 
-    const getSuccessRateColor = (rate: number | null) => {
-        if (rate === null) return 'var(--text-sub)';
-        if (rate >= 0.9) return 'var(--success)';
-        if (rate >= 0.7) return '#4CAF50';
-        if (rate >= 0.5) return 'var(--warning)';
-        return 'var(--danger)';
+    const getSuccessRateToneClass = (rate: number | null) => {
+        if (rate === null) return 'text-sub';
+        if (rate >= 0.9) return 'text-success';
+        if (rate >= 0.7) return 'whatif-good';
+        if (rate >= 0.5) return 'text-warning';
+        return 'text-danger';
+    };
+
+    const getProgressClass = (rate: number | null) => {
+        if (rate === null) return "whatif-progress-neutral";
+        if (rate >= 0.9) return "whatif-progress-success";
+        if (rate >= 0.7) return "whatif-progress-good";
+        if (rate >= 0.5) return "whatif-progress-warning";
+        return "whatif-progress-danger";
     };
 
     return (
@@ -163,47 +171,15 @@ export function WhatIfSlider({ input, onInputChange }: Props) {
                 파라미터를 조정하면 실시간으로 성공 확률 변화를 확인할 수 있습니다.
             </p>
 
-            <div
-                className="text-center mb-4"
-                style={{
-                    padding: '20px',
-                    background: 'var(--bg-secondary)',
-                    borderRadius: 'var(--radius)'
-                }}
-            >
+            <div className="text-center mb-4 whatif-summary">
                 <div className="text-sm text-sub mb-2">예상 성공 확률</div>
-                <div
-                    style={{
-                        fontSize: '3rem',
-                        fontWeight: 'bold',
-                        color: getSuccessRateColor(successRate),
-                        transition: 'color 0.3s'
-                    }}
-                >
+                <div className={`whatif-rate-value ${getSuccessRateToneClass(successRate)}`}>
                     {isCalculating ? '...' : successRate !== null ? `${(successRate * 100).toFixed(1)}%` : '-'}
                 </div>
-                <div
-                    style={{
-                        width: '100%',
-                        height: 8,
-                        background: 'var(--border)',
-                        borderRadius: 4,
-                        marginTop: 12,
-                        overflow: 'hidden'
-                    }}
-                >
-                    <div
-                        style={{
-                            width: `${(successRate || 0) * 100}%`,
-                            height: '100%',
-                            background: getSuccessRateColor(successRate),
-                            transition: 'width 0.3s, background 0.3s'
-                        }}
-                    />
-                </div>
+                <progress className={`whatif-progress ${getProgressClass(successRate)}`} max={100} value={(successRate || 0) * 100} />
             </div>
 
-            <div className="flex-col" style={{ gap: 16 }}>
+            <div className="flex-col gap-4">
                 {SLIDERS.map((slider) => {
                     const value = tempValues[slider.id];
                     const originalValue = slider.getValue(input);
@@ -214,10 +190,7 @@ export function WhatIfSlider({ input, onInputChange }: Props) {
                             <div className="flex-between mb-1">
                                 <label className="text-sm font-bold">{slider.label}</label>
                                 <span
-                                    className="text-sm"
-                                    style={{
-                                        color: hasChanged ? 'var(--primary)' : 'var(--text-main)'
-                                    }}
+                                    className={`text-sm ${hasChanged ? 'text-primary' : 'text-main'}`}
                                 >
                                     {slider.format(value)}
                                     {hasChanged && (
@@ -232,7 +205,7 @@ export function WhatIfSlider({ input, onInputChange }: Props) {
                                 step={slider.step}
                                 value={value}
                                 onChange={(e) => handleChange(slider.id, Number(e.target.value))}
-                                style={{ width: '100%', accentColor: 'var(--primary)' }}
+                                className="whatif-range"
                             />
                             <div className="flex-between text-xs text-sub">
                                 <span>{slider.format(slider.min)}</span>
@@ -243,7 +216,7 @@ export function WhatIfSlider({ input, onInputChange }: Props) {
                 })}
             </div>
 
-            <button onClick={applyChanges} className="btn btn-primary mt-4" style={{ width: '100%' }}>
+            <button onClick={applyChanges} className="btn btn-primary mt-4 w-full">
                 변경사항 적용
             </button>
         </div>

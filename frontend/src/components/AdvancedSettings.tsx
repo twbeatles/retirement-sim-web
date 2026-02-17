@@ -1,4 +1,4 @@
-/**
+﻿/**
  * Advanced Settings Component
  * Contains settings for Phase 1-2 features:
  * - Inflation scenarios
@@ -103,7 +103,7 @@ export function AdvancedSettings({ input, onChange }: Props) {
                 isOpen={isExpanded('inflation')}
                 onToggle={() => toggleSection('inflation')}
             >
-                <div className="flex-row flex-wrap mb-3" style={{ gap: 8 }}>
+                <div className="flex-row flex-wrap mb-3 gap-2">
                     {INFLATION_PRESETS.map(preset => (
                         <button
                             key={preset.type}
@@ -116,7 +116,7 @@ export function AdvancedSettings({ input, onChange }: Props) {
                 </div>
 
                 {input.inflation_scenario?.type === 'spike' && (
-                    <div className="grid-2-cols" style={{ gap: 8 }}>
+                    <div className="grid-2-cols gap-2">
                         <div>
                             <label className="label text-xs">스파이크 시작 연령</label>
                             <input
@@ -165,7 +165,7 @@ export function AdvancedSettings({ input, onChange }: Props) {
                 </label>
                 {input.health_insurance?.enabled && (
                     <div className="flex flex-col gap-3">
-                        <div className="flex-row" style={{ gap: 12 }}>
+                        <div className="flex-row gap-3">
                             <label className="checkbox-label text-sm">
                                 <input
                                     type="radio"
@@ -187,7 +187,7 @@ export function AdvancedSettings({ input, onChange }: Props) {
                         </div>
 
                         {input.health_insurance.mode === 'detailed' ? (
-                            <div className="grid-2-cols" style={{ gap: 8 }}>
+                            <div className="grid-2-cols gap-2">
                                 <div className="col-span-2">
                                     <label className="checkbox-label text-sm mb-2">
                                         <input
@@ -231,7 +231,7 @@ export function AdvancedSettings({ input, onChange }: Props) {
                                 )}
                             </div>
                         ) : (
-                            <div className="grid-2-cols" style={{ gap: 8 }}>
+                            <div className="grid-2-cols gap-2">
                                 <div>
                                     <label className="label text-xs">월 보험료</label>
                                     <input
@@ -286,7 +286,7 @@ export function AdvancedSettings({ input, onChange }: Props) {
                                 onChange={e => updateSeverance({ estimatedAmount: Number(e.target.value) })}
                             />
                         </div>
-                        <div className="flex-row mb-3" style={{ gap: 12 }}>
+                        <div className="flex-row mb-3 gap-3">
                             <label className="checkbox-label text-sm">
                                 <input
                                     type="radio"
@@ -336,7 +336,7 @@ export function AdvancedSettings({ input, onChange }: Props) {
                     주택연금 활용
                 </label>
                 {input.reverse_annuity?.enabled && (
-                    <div className="grid-2-cols" style={{ gap: 8 }}>
+                    <div className="grid-2-cols gap-2">
                         <div>
                             <label className="label text-xs">주택 시가</label>
                             <input
@@ -378,7 +378,7 @@ export function AdvancedSettings({ input, onChange }: Props) {
                     isOpen={isExpanded('guardrails')}
                     onToggle={() => toggleSection('guardrails')}
                 >
-                    <div className="grid-2-cols" style={{ gap: 8 }}>
+                    <div className="grid-2-cols gap-2">
                         <div>
                             <label className="label text-xs">기본 인출률</label>
                             <input
@@ -465,7 +465,7 @@ export function AdvancedSettings({ input, onChange }: Props) {
                                 />
                             </div>
                         )}
-                        <div className="grid-2-cols" style={{ gap: 8 }}>
+                        <div className="grid-2-cols gap-2">
                             <div>
                                 <label className="label text-xs">거래 비용 (%)</label>
                                 <input
@@ -509,7 +509,7 @@ export function AdvancedSettings({ input, onChange }: Props) {
                     확률적 기대 수명 적용
                 </label>
                 {input.longevity_risk?.useDistribution && (
-                    <div className="grid-2-cols" style={{ gap: 8 }}>
+                    <div className="grid-2-cols gap-2">
                         <div>
                             <label className="label text-xs">평균 기대 수명</label>
                             <input
@@ -551,25 +551,13 @@ function CollapsibleSection({
     children: React.ReactNode;
 }) {
     return (
-        <div style={{ borderBottom: '1px solid var(--border)', paddingBottom: 12, marginBottom: 12 }}>
+        <div className="advanced-section">
             <button
                 onClick={onToggle}
-                style={{
-                    display: 'flex',
-                    justifyContent: 'space-between',
-                    alignItems: 'center',
-                    width: '100%',
-                    background: 'transparent',
-                    border: 'none',
-                    padding: '8px 0',
-                    cursor: 'pointer',
-                    fontWeight: 'bold',
-                    color: 'var(--text-main)',
-                    fontSize: '0.95rem'
-                }}
+                className="advanced-section-toggle"
             >
                 {title}
-                <span style={{ fontSize: '0.8rem' }}>{isOpen ? '▼' : '▶'}</span>
+                <span className="advanced-section-arrow">{isOpen ? '▼' : '▶'}</span>
             </button>
             {isOpen && <div className="mt-2">{children}</div>}
         </div>

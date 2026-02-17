@@ -30,20 +30,21 @@ function fmtFull(n: number) {
 // Using a simple style prop check or CSS.
 
 const axisStyle = { fontSize: '0.75rem' };
+const legendStyle = { fontSize: "0.8rem" };
 
 export const AssetChart = React.memo(function AssetChart({ data }: { data: TimelineRow[] }) {
   const samplingRate = data.length > 200 ? 6 : 1;
   const sampled = data.filter((_, i) => i % samplingRate === 0);
 
   return (
-    <div style={{ width: "100%", height: 320 }}>
+    <div className="chart-box chart-box-md">
       <ResponsiveContainer>
         <LineChart data={sampled} margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>
           <CartesianGrid strokeDasharray="3 3" />
           <XAxis dataKey="month" tickFormatter={(m) => `${Math.floor(m / 12)}y`} style={axisStyle} />
           <YAxis tickFormatter={fmt} width={60} style={axisStyle} />
           <Tooltip formatter={(v: any) => fmtFull(Number(v))} labelFormatter={(l) => Math.floor(Number(l) / 12) + "년차"} />
-          <Legend wrapperStyle={{ fontSize: '0.8rem' }} />
+          <Legend wrapperStyle={legendStyle} />
           <Line type="monotone" dataKey="totalAssets" dot={false} stroke="#8884d8" name="총자산(명목)" />
           <Line type="monotone" dataKey="totalAssetsReal" dot={false} stroke="#82ca9d" name="총자산(실질)" />
         </LineChart>
@@ -67,15 +68,15 @@ export const RetirementCashflowChart = React.memo(function RetirementCashflowCha
   }));
 
   return (
-    <div style={{ width: "100%", height: 320 }}>
-      {stack.length === 0 ? <div style={{ textAlign: "center", padding: 50 }}>은퇴 구간 데이터가 없습니다.</div> : (
+    <div className="chart-box chart-box-md">
+      {stack.length === 0 ? <div className="chart-empty">은퇴 구간 데이터가 없습니다.</div> : (
         <ResponsiveContainer>
           <AreaChart data={stack} margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>
             <CartesianGrid strokeDasharray="3 3" />
             <XAxis dataKey="year" tickFormatter={(y) => y + "세"} style={axisStyle} />
             <YAxis tickFormatter={fmt} width={60} style={axisStyle} />
             <Tooltip formatter={(v: any) => fmtFull(Number(v))} />
-            <Legend wrapperStyle={{ fontSize: '0.8rem' }} />
+            <Legend wrapperStyle={legendStyle} />
             <Area type="monotone" dataKey="national" stackId="1" stroke="#ffc658" fill="#ffc658" name="국민연금" />
             <Area type="monotone" dataKey="private" stackId="1" stroke="#8884d8" fill="#8884d8" name="개인연금" />
             <Area type="monotone" dataKey="withdrawalNet" stackId="1" stroke="#82ca9d" fill="#82ca9d" name="자산인출(세후)" />
@@ -103,14 +104,14 @@ export const FanChart = React.memo(function FanChart({ stats }: { stats: Simulat
   }, [stats]);
 
   return (
-    <div style={{ width: "100%", height: 320 }}>
+    <div className="chart-box chart-box-md">
       <ResponsiveContainer>
         <AreaChart data={data} margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>
           <CartesianGrid strokeDasharray="3 3" />
           <XAxis dataKey="month" tickFormatter={(m) => `${Math.floor(m / 12)}y`} style={axisStyle} />
           <YAxis tickFormatter={fmt} width={60} domain={['auto', 'auto']} style={axisStyle} />
           <Tooltip formatter={(v: any) => Array.isArray(v) ? v.map(n => fmtFull(n)).join(" ~ ") : fmtFull(Number(v))} />
-          <Legend wrapperStyle={{ fontSize: '0.8rem' }} />
+          <Legend wrapperStyle={legendStyle} />
 
           <Area type="monotone" dataKey="range90" stroke="#8884d8" fill="#8884d8" fillOpacity={0.2} strokeOpacity={0} name="상위 10%~90%" />
           <Area type="monotone" dataKey="range50" stroke="#8884d8" fill="#8884d8" fillOpacity={0.4} strokeOpacity={0} name="상위 25%~75%" />

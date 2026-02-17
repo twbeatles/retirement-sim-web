@@ -1,120 +1,127 @@
-﻿import React, { Suspense, lazy, useMemo, useState, useEffect, useCallback } from "react";
+import React, { Suspense, lazy, useMemo, useState, useEffect, useCallback } from "react";
 import { useSimulation } from "./hooks/useSimulation";
 import type { SimulationInput, ValidationWarning } from "./logic/types";
 import { INITIAL_INPUT } from "./logic/constants";
 import { validateSimulationInput } from "./logic/validation";
 import { Onboarding } from "./components/Onboarding";
 import { SimpleDashboard } from "./components/SimpleDashboard";
-import { AnalysisTabType } from "./logic/uiConstants";
+import type { AnalysisTabType, SidebarSectionId } from "./components/layout/types";
 
 const ReportPrintView = lazy(() => import("./components/ReportPrintView").then((m) => ({ default: m.ReportPrintView })));
 const Layout = lazy(() => import("./components/layout/Layout").then((m) => ({ default: m.Layout })));
 
 export default function App() {
-  const [input, setInput] = useState<SimulationInput>(INITIAL_INPUT);
+    const [input, setInput] = useState<SimulationInput>(INITIAL_INPUT);
+    const [analysisTab, setAnalysisTab] = useState<AnalysisTabType>("risk");
+    const [viewMode, setViewMode] = useState<"simple" | "pro">("simple");
+    const [sidebarTab, setSidebarTab] = useState<SidebarSectionId>("basic");
+    const [theme, setTheme] = useState<"light" | "dark">("light");
+    const [showPrintView, setShowPrintView] = useState(false);
 
-  const [analysisTab, setAnalysisTab] = useState<AnalysisTabType>('charts');
-  const [viewMode, setViewMode] = useState<'simple' | 'pro'>('simple');
-  const [sidebarTab, setSidebarTab] = useState('basic');
-  const [theme, setTheme] = useState<'light' | 'dark'>('light');
-  const [showPrintView, setShowPrintView] = useState(false);
+    useEffect(() => {
+        document.documentElement.setAttribute("data-theme", theme);
+    }, [theme]);
 
-  useEffect(() => {
-    document.documentElement.setAttribute('data-theme', theme);
-  }, [theme]);
+    useEffect(() => {
+        const handleAfterPrint = () => setShowPrintView(false);
+        window.addEventListener("afterprint", handleAfterPrint);
+        return () => window.removeEventListener("afterprint", handleAfterPrint);
+    }, []);
 
-  useEffect(() => {
-    const handleAfterPrint = () => setShowPrintView(false);
-    window.addEventListener('afterprint', handleAfterPrint);
-    return () => window.removeEventListener('afterprint', handleAfterPrint);
-  }, []);
+    const validationWarnings = useMemo<ValidationWarning[]>(() => validateSimulationInput(input), [input]);
+    const { runSimulation, isCalculating, result, error } = useSimulation();
 
-  const validationWarnings = useMemo<ValidationWarning[]>(() => {
-    return validateSimulationInput(input);
-  }, [input]);
+    useEffect(() => {
+        const timer = setTimeout(() => {
+            void runSimulation(input, { detailLevel: "full", includeSampleTimelines: true }).catch((runError) =>
+                console.error("Simulation failed:", runError)
+            );
+        }, 400);
+        return () => clearTimeout(timer);
+    }, [input, runSimulation]);
 
-  const { runSimulation, isCalculating, result } = useSimulation();
+    const handlePrint = useCallback(() => {
+        setShowPrintView(true);
+        setTimeout(() => {
+            window.print();
+        }, 0);
+    }, []);
 
-  useEffect(() => {
-    const timer = setTimeout(() => {
-      void runSimulation(input, { detailLevel: 'full', includeSampleTimelines: true })
-        .catch((error) => console.error("Simulation failed:", error));
-    }, 400);
+    return (
+        <div className="app-container">
+            <header className="header">
+                <div className="header-left">
+                    <div className="brand">
+                        <span>🏦</span> 은퇴 자산 시뮬레이터 Pro
+                    </div>
+                    {isCalculating && <span className="status-running animate-pulse">계산 중...</span>}
+                </div>
 
-    return () => clearTimeout(timer);
-  }, [input, runSimulation]);
+                <div className="header-right">
+                    <div className="view-toggle" role="tablist" aria-label="모드 전환">
+                        <button
+                            type="button"
+                            className={viewMode === "simple" ? "active" : ""}
+                            onClick={() => setViewMode("simple")}
+                            aria-pressed={viewMode === "simple"}
+                        >
+                            🧭 간편 모드
+                        </button>
+                        <button
+                            type="button"
+                            className={viewMode === "pro" ? "active" : ""}
+                            onClick={() => setViewMode("pro")}
+                            aria-pressed={viewMode === "pro"}
+                        >
+                            🧠 전문가 모드
+                        </button>
+                    </div>
+                    <button
+                        type="button"
+                        className="theme-toggle"
+                        onClick={() => setTheme((prev) => (prev === "light" ? "dark" : "light"))}
+                        aria-label={theme === "light" ? "다크 모드 켜기" : "라이트 모드 켜기"}
+                        title={theme === "light" ? "다크 모드 켜기" : "라이트 모드 켜기"}
+                    >
+                        {theme === "light" ? "🌙" : "☀️"}
+                    </button>
+                </div>
+            </header>
 
-  const handlePrint = useCallback(() => {
-    setShowPrintView(true);
-    setTimeout(() => {
-      window.print();
-    }, 0);
-  }, []);
+            {error && (
+                <div className="alert alert-danger app-alert" role="alert">
+                    ⚠️ 시뮬레이션 실행 중 오류가 발생했습니다: {error}
+                </div>
+            )}
 
-  return (
-    <div className="app-container">
-      <header className="header">
-        <div className="flex-row" style={{ alignItems: 'center', gap: '0.5rem' }}>
-          <div className="brand">
-            <span>?뱢</span> ????먯궛 ?쒕??덉씠??Pro
-            {isCalculating && <span className="text-xs text-muted ml-2 animate-pulse">Running...</span>}
-          </div>
+            {viewMode === "simple" ? (
+                <div className="simple-mode-container">
+                    <SimpleDashboard input={input} result={result} onInputChange={setInput} />
+                </div>
+            ) : (
+                <Suspense fallback={<div className="text-center text-muted py-8">레이아웃 로딩 중...</div>}>
+                    <Layout
+                        input={input}
+                        setInput={setInput}
+                        result={result}
+                        validationWarnings={validationWarnings}
+                        sidebarTab={sidebarTab}
+                        setSidebarTab={setSidebarTab}
+                        analysisTab={analysisTab}
+                        setAnalysisTab={setAnalysisTab}
+                        onPrint={handlePrint}
+                    />
+                </Suspense>
+            )}
+
+            <Onboarding />
+
+            {showPrintView && result && (
+                <Suspense fallback={null}>
+                    <ReportPrintView input={input} result={result} />
+                </Suspense>
+            )}
         </div>
-
-        <div className="flex-row" style={{ gap: '1rem', alignItems: 'center' }}>
-          <div className="view-toggle">
-            <button
-              className={viewMode === 'simple' ? 'active' : ''}
-              onClick={() => setViewMode('simple')}
-            >
-              ?맋 媛꾪렪 紐⑤뱶
-            </button>
-            <button
-              className={viewMode === 'pro' ? 'active' : ''}
-              onClick={() => setViewMode('pro')}
-            >
-              ?쫭 ?꾨Ц媛 紐⑤뱶
-            </button>
-          </div>
-          <button
-            className="btn-icon"
-            onClick={() => setTheme((t) => (t === 'light' ? 'dark' : 'light'))}
-            title={theme === 'light' ? "?ㅽ겕 紐⑤뱶 耳쒓린" : "?쇱씠??紐⑤뱶 耳쒓린"}
-            style={{ fontSize: '1.2rem', padding: '8px', background: 'none', border: 'none', cursor: 'pointer' }}
-          >
-            {theme === 'light' ? '🌙' : '☀️'}
-          </button>
-        </div>
-      </header>
-
-      {viewMode === 'simple' ? (
-        <div className="simple-mode-container">
-          <SimpleDashboard input={input} result={result} onInputChange={setInput} />
-        </div>
-      ) : (
-        <Suspense fallback={<div className="text-center text-muted py-8">Loading layout...</div>}>
-          <Layout
-            input={input}
-            setInput={setInput}
-            result={result}
-            validationWarnings={validationWarnings}
-            sidebarTab={sidebarTab}
-            setSidebarTab={setSidebarTab}
-            analysisTab={analysisTab}
-            setAnalysisTab={setAnalysisTab}
-            onPrint={handlePrint}
-          />
-        </Suspense>
-      )}
-
-      <Onboarding />
-
-      {showPrintView && result && (
-        <Suspense fallback={null}>
-          <ReportPrintView input={input} result={result} />
-        </Suspense>
-      )}
-    </div>
-  );
+    );
 }
 

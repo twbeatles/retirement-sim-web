@@ -106,7 +106,7 @@ export function RiskDashboard({ input, result, onInputChange }: Props) {
         <div className="card">
             <h3 className="card-header">Risk Dashboard</h3>
 
-            <div className="flex-row mb-4" style={{ borderBottom: "1px solid var(--border)", gap: 0 }}>
+            <div className="risk-tabs mb-4">
                 {[
                     { id: "depletion", label: "Depletion" },
                     { id: "sensitivity", label: "Sensitivity" },
@@ -116,16 +116,7 @@ export function RiskDashboard({ input, result, onInputChange }: Props) {
                     <button
                         key={tab.id}
                         onClick={() => setActiveTab(tab.id as typeof activeTab)}
-                        style={{
-                            padding: "8px 16px",
-                            background: activeTab === tab.id ? "var(--primary)" : "transparent",
-                            color: activeTab === tab.id ? "white" : "var(--text-sub)",
-                            border: "none",
-                            borderBottom: activeTab === tab.id ? "2px solid var(--primary)" : "2px solid transparent",
-                            cursor: "pointer",
-                            fontSize: "0.9rem",
-                            fontWeight: activeTab === tab.id ? "bold" : "normal"
-                        }}
+                        className={`risk-tab ${activeTab === tab.id ? "active" : ""}`}
                     >
                         {tab.label}
                     </button>
@@ -137,23 +128,23 @@ export function RiskDashboard({ input, result, onInputChange }: Props) {
                     <p className="text-sub text-sm mb-4">Distribution of asset depletion timing across simulation paths.</p>
                     {depletionAnalysis ? (
                         <>
-                            <div className="summary-grid mb-4" style={{ gridTemplateColumns: "repeat(2, 1fr)" }}>
-                                <div className="summary-card" style={{ borderLeftColor: "var(--success)" }}>
+                            <div className="summary-grid risk-summary-grid mb-4">
+                                <div className="summary-card risk-summary-success">
                                     <div className="summary-title">Never depleted</div>
-                                    <div className="summary-value" style={{ color: "var(--success)" }}>
+                                    <div className="summary-value text-success">
                                         {(depletionAnalysis.neverDepletedRate * 100).toFixed(1)}%
                                     </div>
                                 </div>
                                 {depletionAnalysis.medianDepletionAge && (
-                                    <div className="summary-card" style={{ borderLeftColor: "var(--warning)" }}>
+                                    <div className="summary-card risk-summary-warning">
                                         <div className="summary-title">Median depletion age</div>
-                                        <div className="summary-value" style={{ color: "var(--warning)" }}>
+                                        <div className="summary-value text-warning">
                                             {Math.round(depletionAnalysis.medianDepletionAge)}y
                                         </div>
                                     </div>
                                 )}
                             </div>
-                            <div style={{ width: "100%", height: 250 }}>
+                            <div className="chart-box chart-box-sm">
                                 <ResponsiveContainer>
                                     <BarChart data={depletionAnalysis.histogram.filter((bucket) => bucket.count > 0)}>
                                         <CartesianGrid strokeDasharray="3 3" />
@@ -184,7 +175,7 @@ export function RiskDashboard({ input, result, onInputChange }: Props) {
                     </button>
 
                     {sensitivityResults.length > 0 && (
-                        <div style={{ width: "100%", height: 300 }}>
+                        <div className="chart-box chart-box-md">
                             <ResponsiveContainer>
                                 <LineChart>
                                     <CartesianGrid strokeDasharray="3 3" />
@@ -230,16 +221,7 @@ export function RiskDashboard({ input, result, onInputChange }: Props) {
                         <strong>Sequence-of-returns risk</strong>
                         <Tooltip content="Early-retirement drawdowns can be more damaging than late drawdowns." />
                     </p>
-                    <div
-                        className="info-box"
-                        style={{
-                            background: "var(--warning-bg)",
-                            border: "1px solid var(--warning-border)",
-                            padding: "12px 16px",
-                            borderRadius: "var(--radius)",
-                            marginBottom: "16px"
-                        }}
-                    >
+                    <div className="info-box risk-info-box">
                         <strong>Tip:</strong> Increasing defensive allocation in the first few retirement years can reduce this risk.
                     </div>
                     <div className="mt-2">
@@ -287,37 +269,33 @@ export function RiskDashboard({ input, result, onInputChange }: Props) {
                     {input.medical_shocks?.enabled && (
                         <>
                             {input.medical_shocks.occurrences.map((shock, index) => (
-                                <div key={index} className="flex-row mb-2" style={{ gap: 8 }}>
+                                <div key={index} className="flex-row gap-2 mb-2">
                                     <input
                                         type="number"
-                                        className="input"
+                                        className="input risk-w-70"
                                         value={shock.age}
                                         onChange={(event) => updateMedicalShock(index, "age", Number(event.target.value))}
                                         placeholder="Age"
-                                        style={{ width: 70 }}
                                     />
                                     <span className="text-sub">at</span>
                                     <input
                                         type="number"
-                                        className="input"
+                                        className="input risk-w-140"
                                         value={shock.amount}
                                         onChange={(event) => updateMedicalShock(index, "amount", Number(event.target.value))}
                                         placeholder="Amount"
-                                        style={{ width: 140 }}
                                     />
                                     <span className="text-sub">KRW</span>
                                     <input
                                         type="text"
-                                        className="input"
+                                        className="input flex-1"
                                         value={shock.description || ""}
                                         onChange={(event) => updateMedicalShock(index, "description", event.target.value)}
                                         placeholder="Description"
-                                        style={{ flex: 1 }}
                                     />
                                     <button
                                         onClick={() => removeMedicalShock(index)}
-                                        className="btn btn-sm"
-                                        style={{ background: "var(--danger-bg)", color: "var(--danger)" }}
+                                        className="btn btn-sm scenario-delete-btn"
                                     >
                                         X
                                     </button>
@@ -333,4 +311,3 @@ export function RiskDashboard({ input, result, onInputChange }: Props) {
         </div>
     );
 }
-

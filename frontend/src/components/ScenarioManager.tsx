@@ -111,26 +111,25 @@ export function ScenarioManager({ currentInput, onLoad }: Props) {
                 </div>
             </div>
 
-            <div style={{ borderTop: "1px solid var(--border)", margin: "16px 0" }} />
+            <div className="scenario-divider" />
 
             <div className="flex-row mb-4">
                 <input
-                    className="input"
+                    className="input scenario-flex-1"
                     placeholder="현재 설정 저장 (예: 주식위주 40세)"
                     value={name}
                     onChange={(e) => setName(e.target.value)}
-                    style={{ flex: 1 }}
                 />
-                <button onClick={save} className="btn btn-primary" style={{ whiteSpace: "nowrap" }}>
+                <button onClick={save} className="btn btn-primary scenario-nowrap">
                     프리셋 저장
                 </button>
             </div>
 
             {/* Import/Export Data */}
             <div className="flex-row mb-4">
-                <label style={{ flex: 1, padding: "8px", background: "var(--bg-main)", border: "1px solid var(--border)", borderRadius: "var(--radius)", cursor: "pointer", fontSize: "0.85rem", textAlign: "center", display: "flex", alignItems: "center", justifyContent: "center", gap: 6 }}>
+                <label className="scenario-import-label">
                     📂 설정 불러오기
-                    <input type="file" accept=".json" style={{ display: "none" }} onChange={(e) => {
+                    <input type="file" accept=".json" className="scenario-file-input" onChange={(e) => {
                         const file = e.target.files?.[0];
                         if (!file) return;
                         const reader = new FileReader();
@@ -173,8 +172,7 @@ export function ScenarioManager({ currentInput, onLoad }: Props) {
                         a.click();
                         URL.revokeObjectURL(url);
                     }}
-                    className="btn btn-secondary"
-                    style={{ flex: 1 }}
+                    className="btn btn-secondary scenario-flex-1"
                 >
                     💾 설정 내보내기
                 </button>
@@ -194,8 +192,7 @@ export function ScenarioManager({ currentInput, onLoad }: Props) {
                         </div>
                         <button
                             onClick={(e) => remove(s.id, e)}
-                            className="btn btn-sm"
-                            style={{ background: "var(--danger-bg)", color: "var(--danger)", border: "1px solid var(--danger-border)" }}
+                            className="btn btn-sm scenario-delete-btn"
                         >
                             삭제
                         </button>

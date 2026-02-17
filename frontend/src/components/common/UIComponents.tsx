@@ -1,6 +1,5 @@
-﻿import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState } from "react";
 
-// Helper Components
 export function Section({ title, children }: { title: string; children: React.ReactNode }) {
     return (
         <div className="card">
@@ -11,12 +10,12 @@ export function Section({ title, children }: { title: string; children: React.Re
 }
 
 export function Field(props: { label: string; value: any; step?: string; onChange: (v: string) => void; suffix?: string }) {
-    const [draftValue, setDraftValue] = useState(String(props.value ?? ''));
+    const [draftValue, setDraftValue] = useState(String(props.value ?? ""));
     const [isFocused, setIsFocused] = useState(false);
 
     useEffect(() => {
         if (!isFocused) {
-            setDraftValue(String(props.value ?? ''));
+            setDraftValue(String(props.value ?? ""));
         }
     }, [props.value, isFocused]);
 
@@ -27,48 +26,44 @@ export function Field(props: { label: string; value: any; step?: string; onChang
     return (
         <div className="input-group">
             <label className="label">{props.label}</label>
-            <div style={{ position: 'relative', display: 'flex', alignItems: 'center' }}>
+            <div className="field-control">
                 <input
-                    className="input"
+                    className={`input field-input ${props.suffix ? "with-suffix" : ""}`}
                     type="number"
                     value={draftValue}
                     step={props.step}
                     onFocus={() => setIsFocused(true)}
-                    onChange={(e) => setDraftValue(e.target.value)}
+                    onChange={(event) => setDraftValue(event.target.value)}
                     onBlur={() => {
                         setIsFocused(false);
                         commit();
                     }}
-                    onKeyDown={(e) => {
-                        if (e.key === 'Enter') {
-                            (e.currentTarget as HTMLInputElement).blur();
+                    onKeyDown={(event) => {
+                        if (event.key === "Enter") {
+                            (event.currentTarget as HTMLInputElement).blur();
                         }
                     }}
-                    style={{ paddingRight: props.suffix ? '45px' : undefined }}
                 />
-                {props.suffix && (
-                    <span
-                        style={{
-                            position: 'absolute',
-                            right: '12px',
-                            color: 'var(--text-sub)',
-                            fontWeight: 600,
-                            fontSize: '0.85rem'
-                        }}
-                    >
-                        {props.suffix}
-                    </span>
-                )}
+                {props.suffix && <span className="field-suffix">{props.suffix}</span>}
             </div>
         </div>
     );
 }
 
 export function SummaryCard({ title, value, desc, color }: { title: string; value: string; desc: string; color?: string }) {
+    const toneClass =
+        color === "var(--success)"
+            ? "text-success"
+            : color === "var(--warning)"
+              ? "text-warning"
+              : color === "var(--danger)"
+                ? "text-danger"
+                : "";
+
     return (
-        <div className="summary-card" style={{ borderLeftColor: color }}>
+        <div className="summary-card">
             <div className="summary-title">{title}</div>
-            <div className="summary-value" style={{ color: color }}>{value}</div>
+            <div className={`summary-value ${toneClass}`}>{value}</div>
             <div className="summary-desc">{desc}</div>
         </div>
     );

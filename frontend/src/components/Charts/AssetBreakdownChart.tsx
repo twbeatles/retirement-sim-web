@@ -46,7 +46,7 @@ export const AssetBreakdownChart = React.memo(function AssetBreakdownChart({ dat
     }, [data, samplingRate]);
 
     return (
-        <div style={{ width: "100%", height: 320 }}>
+        <div className="chart-box chart-box-md">
             <ResponsiveContainer>
                 <AreaChart data={chartData}>
                     <CartesianGrid strokeDasharray="3 3" />

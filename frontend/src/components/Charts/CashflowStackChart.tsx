@@ -44,7 +44,7 @@ export const CashflowStackChart = React.memo(function CashflowStackChart({ data 
     }, [data]);
 
     return (
-        <div style={{ width: "100%", height: 320 }}>
+        <div className="chart-box chart-box-md">
             <ResponsiveContainer>
                 <ComposedChart data={chartData}>
                     <CartesianGrid strokeDasharray="3 3" />

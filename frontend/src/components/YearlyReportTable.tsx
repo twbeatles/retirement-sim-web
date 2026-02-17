@@ -70,7 +70,7 @@ export function YearlyReportTable({ data }: { data: TimelineRow[] }) {
     if (!data || data.length === 0) return null;
 
     return (
-        <div className="table-container" style={{ marginTop: 20 }}>
+        <div className="table-container yearly-report-table">
             <table className="data-table">
                 <thead>
                     <tr>
@@ -90,12 +90,12 @@ export function YearlyReportTable({ data }: { data: TimelineRow[] }) {
                         <tr key={row.year}>
                             <td>{row.age}세</td>
                             <td>{row.isRetired ? "은퇴" : "근로"}</td>
-                            <td style={{ fontWeight: "bold", color: "var(--text-main)" }}>{fmt(row.totalAssetsReal)}</td>
+                            <td className="yearly-asset-cell">{fmt(row.totalAssetsReal)}</td>
                             <td>{fmt(row.natPension)}</td>
                             <td>{fmt(row.privPension)}</td>
                             <td>{fmt(row.withdrawalNet)}</td>
-                            <td style={{ color: "var(--danger)" }}>{fmt(row.taxPaid)}</td>
-                            <td style={{ fontWeight: "bold", color: "var(--primary)" }}>{fmt(row.totalNetIncome)}</td>
+                            <td className="yearly-tax-cell">{fmt(row.taxPaid)}</td>
+                            <td className="yearly-income-cell">{fmt(row.totalNetIncome)}</td>
                             <td>{fmt(row.totalNetIncome / 12)}</td>
                         </tr>
                     ))}
