@@ -8,7 +8,7 @@ export interface HistoricalScenario {
 }
 
 export const HISTORICAL_YEAR_MIN = 1985;
-export const HISTORICAL_YEAR_MAX = 2020;
+export const HISTORICAL_YEAR_MAX = 2024;
 
 export const HISTORICAL_SCENARIOS: HistoricalScenario[] = [
     {
@@ -52,4 +52,3 @@ export const HISTORICAL_SCENARIOS: HistoricalScenario[] = [
         descriptionKo: "두 차례 대형 폭락, 10년 누적 수익 정체"
     }
 ];
-

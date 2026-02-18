@@ -8,7 +8,7 @@ import {
 } from "./workerTypes";
 
 // Worker context
-const ctx: Worker = self as any;
+const ctx = self as DedicatedWorkerGlobalScope;
 
 ctx.onmessage = (event: MessageEvent<AnyWorkerRequest>) => {
     const msg = event.data;

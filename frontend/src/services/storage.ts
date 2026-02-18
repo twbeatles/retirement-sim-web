@@ -1,3 +1,4 @@
+import { INITIAL_INPUT } from "../logic/constants";
 import { SimulationInput } from "../logic/types";
 
 export interface ScenarioData {
@@ -113,33 +114,53 @@ class ScenarioStorage {
     /**
      * Migrate old scenario input by filling in missing fields with defaults
      */
-    private migrateInput(input: any): any {
-        // Dynamic import would be ideal, but for simplicity we inline essential defaults
-        const defaults = {
-            guardrails: { baseRate: 0.04, upperThreshold: 0.05, lowerThreshold: 0.03, adjustmentRate: 0.10 },
-            bucket: { shortTermYears: 2, midTermYears: 5, shortTermReturn: 0.02, midTermReturn: 0.04, rebalanceFrequency: 'annual' },
-            health_insurance: { enabled: false, mode: 'simple', monthlyPremium: 200000, inflationLinked: true },
-            severance: { enabled: false, estimatedAmount: 50000000, payoutType: 'lump_sum', annuityYears: 10 },
-            realEstate: [],
-            additionalPensions: [],
-            businessIncome: [],
-            labor_income: { enabled: false, currentNetMonthlyIncome: 3000000, currentSavingsRate: 0.5, events: [] },
-            // NEW: Phase 3 Risk Features
-            longevity_risk: { useDistribution: false, averageLifeExpectancy: 85, stdDevYears: 5 },
-            medical_shocks: { enabled: false, occurrences: [] },
-            // NEW: Phase 1 Additional Features
-            reverse_annuity: { enabled: false, houseValue: 0, startAge: 70, monthlyPayment: 0 },
-            inflation_scenario: { type: 'normal', baseRate: 0.02 },
-            tax_credit: { enabled: false, pensionSavingsContribution: 0, irpContribution: 0, creditRate: 0.15 }
-        };
+    private migrateInput(input?: Partial<SimulationInput>): SimulationInput {
+        const source = input ?? {};
 
         return {
-            ...defaults,
-            ...input,
-            health_insurance: {
-                ...defaults.health_insurance,
-                ...(input.health_insurance ?? {})
-            }
+            ...INITIAL_INPUT,
+            ...source,
+            general: { ...INITIAL_INPUT.general, ...source.general },
+            private_pension: { ...INITIAL_INPUT.private_pension, ...source.private_pension },
+            national_pension: { ...INITIAL_INPUT.national_pension, ...source.national_pension },
+            debt: { ...INITIAL_INPUT.debt, ...source.debt },
+            portfolio: {
+                ...INITIAL_INPUT.portfolio,
+                ...source.portfolio,
+                assetClasses: source.portfolio?.assetClasses ?? INITIAL_INPUT.portfolio.assetClasses
+            },
+            withdrawal: { ...INITIAL_INPUT.withdrawal, ...source.withdrawal },
+            simulation_settings: { ...INITIAL_INPUT.simulation_settings, ...source.simulation_settings },
+            rebalancing: { ...INITIAL_INPUT.rebalancing, ...source.rebalancing },
+            stress_test: { ...INITIAL_INPUT.stress_test, ...source.stress_test },
+            labor_income: {
+                ...INITIAL_INPUT.labor_income,
+                ...source.labor_income,
+                events: source.labor_income?.events ?? INITIAL_INPUT.labor_income.events
+            },
+            guardrails: { ...INITIAL_INPUT.guardrails, ...source.guardrails },
+            bucket: { ...INITIAL_INPUT.bucket, ...source.bucket },
+            health_insurance: { ...INITIAL_INPUT.health_insurance, ...source.health_insurance },
+            severance: { ...INITIAL_INPUT.severance, ...source.severance },
+            longevity_risk: { ...INITIAL_INPUT.longevity_risk, ...source.longevity_risk },
+            medical_shocks: {
+                ...INITIAL_INPUT.medical_shocks,
+                ...source.medical_shocks,
+                occurrences: source.medical_shocks?.occurrences ?? INITIAL_INPUT.medical_shocks.occurrences
+            },
+            reverse_annuity: { ...INITIAL_INPUT.reverse_annuity, ...source.reverse_annuity },
+            inflation_scenario: { ...INITIAL_INPUT.inflation_scenario, ...source.inflation_scenario },
+            tax_credit: {
+                enabled: false,
+                pensionSavingsContribution: 0,
+                irpContribution: 0,
+                creditRate: 0.15,
+                ...source.tax_credit
+            },
+            realEstate: source.realEstate ?? INITIAL_INPUT.realEstate,
+            additionalPensions: source.additionalPensions ?? INITIAL_INPUT.additionalPensions,
+            businessIncome: source.businessIncome ?? INITIAL_INPUT.businessIncome,
+            events: source.events ?? INITIAL_INPUT.events
         };
     }
 

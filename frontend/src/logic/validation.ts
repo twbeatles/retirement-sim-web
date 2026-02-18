@@ -186,8 +186,8 @@ export function validateSimulationInput(input: SimulationInput): ValidationWarni
     // Historical mode validation (Phase 7)
     if (input.simulation_settings.mode === 'historical') {
         const year = input.simulation_settings.historical_start_year || 1985;
-        if (year < 1985 || year > 2020) {
-            warnings.push({ field: 'simulation_settings', message: '역사적 데이터는 1985~2020년 시작만 지원됩니다.', severity: 'error' });
+        if (year < 1985 || year > 2024) {
+            warnings.push({ field: 'simulation_settings', message: '역사적 데이터는 1985~2024년 시작만 지원됩니다.', severity: 'error' });
         }
     }
 

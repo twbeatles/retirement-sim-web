@@ -88,7 +88,7 @@ export type SimulationInput = {
         mc_paths: number;
         seed?: number;
         // Historical backtesting settings
-        historical_start_year?: number; // 1985-2020
+        historical_start_year?: number; // 1985-2024
         historical_asset_mapping?: Record<string, HistoricalAssetType>;
     };
 

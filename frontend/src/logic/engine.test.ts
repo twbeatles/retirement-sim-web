@@ -140,4 +140,78 @@ describe('Simulation Engine', () => {
         // After m=0 loop: 10000 - 1000 = 9000.
         expect(row1.general).toBe(9000);
     });
+
+    it('includes reverse annuity income after start age', () => {
+        const input = createBaseInput();
+        input.current_age = 60;
+        input.retire_age = 60;
+        input.end_age = 62;
+        input.general.current_balance = 0;
+        input.portfolio.assetClasses[0].expectedAnnualReturn = 0.0;
+        input.withdrawal.fixedMonthlyAmount = 0;
+        input.reverse_annuity = {
+            enabled: true,
+            houseValue: 500000000,
+            startAge: 61,
+            monthlyPayment: 500
+        };
+
+        const result = runSimulation(input);
+        const timeline = 'timeline' in result ? result.timeline : [];
+
+        const beforeStart = timeline[11];
+        const atStart = timeline[12];
+
+        expect(beforeStart.cashflow.totalIncomeNet).toBe(0);
+        expect(atStart.cashflow.totalIncomeNet).toBe(500);
+    });
+
+    it('pays severance annuity only during payout window', () => {
+        const input = createBaseInput();
+        input.current_age = 60;
+        input.retire_age = 60;
+        input.end_age = 62;
+        input.general.current_balance = 0;
+        input.portfolio.assetClasses[0].expectedAnnualReturn = 0.0;
+        input.withdrawal.fixedMonthlyAmount = 0;
+        input.severance = {
+            enabled: true,
+            estimatedAmount: 1200,
+            payoutType: 'annuity',
+            annuityYears: 1
+        };
+
+        const result = runSimulation(input);
+        const timeline = 'timeline' in result ? result.timeline : [];
+
+        expect(timeline[0].cashflow.totalIncomeNet).toBe(100);
+        expect(timeline[11].cashflow.totalIncomeNet).toBe(100);
+        expect(timeline[12].cashflow.totalIncomeNet).toBe(0);
+    });
+
+    it('uses historical inflation path regardless of annual_inflation input in historical mode', () => {
+        const inputA = createBaseInput();
+        inputA.current_age = 60;
+        inputA.retire_age = 60;
+        inputA.end_age = 62;
+        inputA.general.current_balance = 100000;
+        inputA.withdrawal.fixedMonthlyAmount = 0;
+        inputA.portfolio.assetClasses = [
+            { id: 'cash', name: 'cash', allocation: 1.0, expectedAnnualReturn: 0.0, annualVolatility: 0.0 }
+        ];
+        inputA.simulation_settings = {
+            mode: 'historical',
+            mc_paths: 20,
+            historical_start_year: 2024
+        };
+        inputA.annual_inflation = 0.0;
+
+        const inputB = structuredClone(inputA);
+        inputB.annual_inflation = 0.2;
+
+        const resultA = runSimulation(inputA);
+        const resultB = runSimulation(inputB);
+
+        expect(resultA.summary.finalTotalAssetsReal).toBeCloseTo(resultB.summary.finalTotalAssetsReal, 8);
+    });
 });

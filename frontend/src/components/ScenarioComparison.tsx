@@ -1,61 +1,59 @@
-﻿/**
+/**
  * Scenario Comparison Component
  * Allows comparing multiple saved scenarios in a single chart
  */
-import React, { useEffect, useMemo, useState } from 'react';
-import { SimulationInput, SimulationResult } from '../logic/types';
-import { LineChart, Line, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid, Legend } from 'recharts';
-import { requestSimulationBatch } from '../logic/simulationClient';
+import React, { useCallback, useEffect, useMemo, useState } from "react";
+import { LineChart, Line, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid, Legend } from "recharts";
+import type { SimulationResult } from "../logic/types";
+import { requestSimulationBatch } from "../logic/simulationClient";
+import { scenarioStorage, type SavedScenario } from "../services/storage";
 
-const STORAGE_KEY = 'retirement_sim_scenarios_v1';
-const COLORS = ['#8884d8', '#82ca9d', '#ffc658', '#ff7300', '#00C49F', '#FFBB28'];
+const COLORS = ["#8884d8", "#82ca9d", "#ffc658", "#ff7300", "#00C49F", "#FFBB28"];
 const COLOR_CLASS_MAP: Record<string, string> = {
-    '#8884d8': 'comparison-color-0',
-    '#82ca9d': 'comparison-color-1',
-    '#ffc658': 'comparison-color-2',
-    '#ff7300': 'comparison-color-3',
-    '#00C49F': 'comparison-color-4',
-    '#FFBB28': 'comparison-color-5'
+    "#8884d8": "comparison-color-0",
+    "#82ca9d": "comparison-color-1",
+    "#ffc658": "comparison-color-2",
+    "#ff7300": "comparison-color-3",
+    "#00C49F": "comparison-color-4",
+    "#FFBB28": "comparison-color-5"
 };
 
-type SavedScenario = {
-    id: string;
-    name: string;
-    date: string;
-    data: SimulationInput;
-};
-
-interface ComparisonData {
+type ComparisonData = {
     id: string;
     name: string;
     color: string;
     result: SimulationResult;
     trajectory: { month: number; value: number }[];
-}
+};
+
+type ChartPoint = {
+    month: number;
+    [seriesId: string]: number | undefined;
+};
 
 interface Props {
-    currentInput: SimulationInput;
     currentResult: SimulationResult | null;
 }
 
-export function ScenarioComparison({ currentInput, currentResult }: Props) {
+export function ScenarioComparison({ currentResult }: Props) {
     const [savedScenarios, setSavedScenarios] = useState<SavedScenario[]>([]);
-    const [selectedIds, setSelectedIds] = useState<string[]>([]);
+    const [selectedIds, setSelectedIds] = useState<number[]>([]);
     const [comparisonData, setComparisonData] = useState<ComparisonData[]>([]);
     const [isComparing, setIsComparing] = useState(false);
 
-    useEffect(() => {
-        const saved = localStorage.getItem(STORAGE_KEY);
-        if (!saved) return;
-
-        try {
-            setSavedScenarios(JSON.parse(saved));
-        } catch (error) {
-            console.error('Failed to load scenarios', error);
-        }
+    const loadScenarios = useCallback(async (): Promise<SavedScenario[]> => {
+        const scenarios = await scenarioStorage.getAllScenarios();
+        setSavedScenarios(scenarios);
+        return scenarios;
     }, []);
 
-    const toggleScenario = (id: string) => {
+    useEffect(() => {
+        void loadScenarios().catch((error) => {
+            console.error("Failed to load scenarios", error);
+        });
+    }, [loadScenarios]);
+
+    const toggleScenario = (id: number) => {
         setSelectedIds((prev) =>
             prev.includes(id)
                 ? prev.filter((item) => item !== id)
@@ -64,14 +62,21 @@ export function ScenarioComparison({ currentInput, currentResult }: Props) {
     };
 
     const getTrajectoryP50 = (result: SimulationResult): { month: number; value: number }[] => {
-        if (result.mode === 'montecarlo' && result.trajectoryStats) {
+        if (result.mode === "montecarlo" && result.trajectoryStats) {
             return result.trajectoryStats.month.map((month, index) => ({
                 month,
                 value: result.trajectoryStats!.p50[index]
             }));
         }
 
-        if (result.mode === 'deterministic') {
+        if (result.mode === "montecarlo" && result.sampleTimelines.length > 0) {
+            return result.sampleTimelines[0].map((row) => ({
+                month: row.month,
+                value: row.totalAssetsReal
+            }));
+        }
+
+        if (result.mode === "deterministic") {
             return result.timeline.map((row) => ({
                 month: row.month,
                 value: row.totalAssetsReal
@@ -85,12 +90,14 @@ export function ScenarioComparison({ currentInput, currentResult }: Props) {
         setIsComparing(true);
 
         try {
+            // Refresh just-in-time to avoid stale scenario list during comparison.
+            const latestScenarios = await loadScenarios();
             const results: ComparisonData[] = [];
 
             if (currentResult) {
                 results.push({
-                    id: 'current',
-                    name: '현재 설정',
+                    id: "current",
+                    name: "현재 설정",
                     color: COLORS[0],
                     result: currentResult,
                     trajectory: getTrajectoryP50(currentResult)
@@ -98,28 +105,27 @@ export function ScenarioComparison({ currentInput, currentResult }: Props) {
             }
 
             const selectedScenarios = selectedIds
-                .map((id) => savedScenarios.find((scenario) => scenario.id === id))
+                .map((id) => latestScenarios.find((scenario) => scenario.id === id))
                 .filter((scenario): scenario is SavedScenario => !!scenario);
 
             if (selectedScenarios.length > 0) {
                 const batchInputs = selectedScenarios.map((scenario) => ({
-                    ...scenario.data,
+                    ...scenario.input,
                     simulation_settings: {
-                        ...scenario.data.simulation_settings,
-                        mc_paths: Math.min(scenario.data.simulation_settings.mc_paths, 100)
+                        ...scenario.input.simulation_settings,
+                        mc_paths: Math.min(scenario.input.simulation_settings.mc_paths, 100)
                     }
                 }));
 
                 const batchResults = await requestSimulationBatch(batchInputs, {
-                    detailLevel: 'preview',
-                    previewPathCap: 100,
+                    detailLevel: "full",
                     includeSampleTimelines: false
                 });
 
                 batchResults.forEach((result, index) => {
                     const scenario = selectedScenarios[index];
                     results.push({
-                        id: scenario.id,
+                        id: `scenario-${scenario.id}`,
                         name: scenario.name,
                         color: COLORS[(index + 1) % COLORS.length],
                         result,
@@ -130,20 +136,20 @@ export function ScenarioComparison({ currentInput, currentResult }: Props) {
 
             setComparisonData(results);
         } catch (error) {
-            console.error('Scenario comparison failed:', error);
+            console.error("Scenario comparison failed:", error);
         } finally {
             setIsComparing(false);
         }
     };
 
-    const chartData = useMemo(() => {
+    const chartData = useMemo<ChartPoint[]>(() => {
         if (comparisonData.length === 0) return [];
 
         const maxLength = Math.max(...comparisonData.map((item) => item.trajectory.length));
-        const data: any[] = [];
+        const data: ChartPoint[] = [];
 
         for (let month = 0; month < maxLength; month += 12) {
-            const point: any = { month };
+            const point: ChartPoint = { month };
             comparisonData.forEach((item) => {
                 const value = item.trajectory.find((t) => t.month === month);
                 point[item.id] = value?.value;
@@ -176,7 +182,8 @@ export function ScenarioComparison({ currentInput, currentResult }: Props) {
                                     checked={selectedIds.includes(scenario.id)}
                                     onChange={() => toggleScenario(scenario.id)}
                                 />
-                                {scenario.name} <span className="text-sub">({scenario.date})</span>
+                                {scenario.name}{" "}
+                                <span className="text-sub">({new Date(scenario.updatedAt).toLocaleDateString()})</span>
                             </label>
                         ))}
                     </div>
@@ -186,7 +193,7 @@ export function ScenarioComparison({ currentInput, currentResult }: Props) {
                         disabled={isComparing}
                         className="btn btn-primary mb-4"
                     >
-                        {isComparing ? 'Comparing...' : 'Run comparison'}
+                        {isComparing ? "Comparing..." : "Run comparison"}
                     </button>
 
                     {comparisonData.length > 0 && (
@@ -204,7 +211,7 @@ export function ScenarioComparison({ currentInput, currentResult }: Props) {
                                         {comparisonData.map((item) => (
                                             <tr key={item.id}>
                                                 <td>
-                                                    <span className={`comparison-color-dot ${COLOR_CLASS_MAP[item.color] || ''}`} />
+                                                    <span className={`comparison-color-dot ${COLOR_CLASS_MAP[item.color] || ""}`} />
                                                     {item.name}
                                                 </td>
                                                 <td className={`comparison-rate-cell ${item.result.summary.successRate > 0.8 ? "text-success" : item.result.summary.successRate > 0.5 ? "text-warning" : "text-danger"}`}>
@@ -232,7 +239,7 @@ export function ScenarioComparison({ currentInput, currentResult }: Props) {
                                             width={70}
                                         />
                                         <Tooltip
-                                            formatter={(v: any) => `${Math.round(v / 10000).toLocaleString()}만원`}
+                                            formatter={(v: number) => `${Math.round(v / 10000).toLocaleString()}만원`}
                                             labelFormatter={(m) => `${Math.floor(Number(m) / 12)}y`}
                                         />
                                         <Legend />
@@ -257,4 +264,3 @@ export function ScenarioComparison({ currentInput, currentResult }: Props) {
         </div>
     );
 }
-

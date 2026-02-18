@@ -40,6 +40,21 @@ export function ResultsSection({
     }, [result]);
 
     const summary = result?.summary;
+    const simulationCount = result
+        ? result.mode === "deterministic"
+            ? 1
+            : result.pathCount
+        : input.simulation_settings.mc_paths;
+    const medianRealAssets = summary
+        ? result?.mode === "deterministic"
+            ? summary.finalTotalAssetsReal
+            : (summary.mc?.totalAssetsReal.p50 ?? summary.finalTotalAssetsReal)
+        : 0;
+    const meanRealAssets = summary
+        ? result?.mode === "deterministic"
+            ? summary.finalTotalAssetsReal
+            : (summary.mc?.totalAssetsReal.mean ?? summary.finalTotalAssetsReal)
+        : 0;
 
     return (
         <>
@@ -53,17 +68,21 @@ export function ResultsSection({
                             {(summary.successRate * 100).toFixed(1)}%
                         </div>
                         <div className="summary-desc">
-                            {input.end_age}세까지 자산 유지 ({input.simulation_settings.mc_paths}회 시뮬레이션)
+                            {input.end_age}세까지 자산 유지 ({simulationCount}회 시뮬레이션)
                         </div>
                     </div>
                     <div className="summary-card">
-                        <div className="summary-title">은퇴 시 자산 (중위값)</div>
-                        <div className="summary-value">{formatMoney(summary.mc?.totalAssetsReal.p50 || 0)}</div>
+                        <div className="summary-title">
+                            {result?.mode === "deterministic" ? "은퇴 시 자산" : "은퇴 시 자산 (중위값)"}
+                        </div>
+                        <div className="summary-value">{formatMoney(medianRealAssets)}</div>
                         <div className="summary-desc">현재 가치 기준 (물가 반영)</div>
                     </div>
                     <div className="summary-card">
-                        <div className="summary-title">최종 자산 잔존 (중위값)</div>
-                        <div className="summary-value">{formatMoney(summary.mc?.totalAssetsReal.mean || 0)}</div>
+                        <div className="summary-title">
+                            {result?.mode === "deterministic" ? "최종 자산 잔존" : "최종 자산 잔존 (평균값)"}
+                        </div>
+                        <div className="summary-value">{formatMoney(meanRealAssets)}</div>
                         <div className="summary-desc">{input.end_age}세 시점 예상 잔고</div>
                     </div>
                 </div>
@@ -147,7 +166,7 @@ export function ResultsSection({
                 )}
                 {analysisTab === "compare" && (
                     <Suspense fallback={<div className="text-center text-muted py-4">Loading...</div>}>
-                        <ScenarioComparison currentInput={input} currentResult={result} />
+                        <ScenarioComparison currentResult={result} />
                     </Suspense>
                 )}
                 {analysisTab === "whatif" && (
@@ -167,4 +186,3 @@ export function ResultsSection({
         </>
     );
 }
-

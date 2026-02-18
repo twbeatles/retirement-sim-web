@@ -115,7 +115,6 @@ interface SimulationContext {
     // But for Simple Mode efficiency, we can keep using it or just use input.
     // Let's refine: Detailed Mode needs dynamic income, so it must be calculated inside loop.
     severanceMonth?: number;             // Month when severance is received
-    severanceAmount?: number;            // Severance amount (lump_sum or annualized)
     severanceMonthlyPayout?: number;     // If annuity type
     reverseAnnuityStartMonth?: number;   // Month when reverse annuity starts
     reverseAnnuityPayment?: number;      // Monthly payment
@@ -169,13 +168,13 @@ function simulateOnePath(
 
     let r_general: number[] | Float64Array;
 
+    const historicalOffset = historicalPathIndex !== undefined ? historicalPathIndex * 12 : 0;
+
     // Phase 7: Historical Mode - use actual historical returns
-    if (ctx.historicalReturns && historicalPathIndex !== undefined) {
-        // Use pre-computed historical returns with rolling window offset
-        const offset = historicalPathIndex * 12; // Each path starts 1 year later
+    if (ctx.historicalReturns && ctx.historicalReturns.length > 0 && historicalPathIndex !== undefined) {
         r_general = new Float64Array(totalMonths);
         for (let m = 0; m < totalMonths; m++) {
-            const idx = (offset + m) % ctx.historicalReturns.length;
+            const idx = (historicalOffset + m) % ctx.historicalReturns.length;
             r_general[m] = ctx.historicalReturns[idx];
         }
     } else if (stochastic) {
@@ -230,8 +229,14 @@ function simulateOnePath(
         const age = current_age + m / 12.0;
         const isRetired = m >= monthsToRetire;
 
-        // Update CPI - use dynamic inflation if available (for spike scenarios)
-        const effectiveInflM = ctx.inflationByMonth ? ctx.inflationByMonth[m] : infl_m;
+        // CPI priority: historical path inflation -> configured spike path -> base inflation.
+        let effectiveInflM = infl_m;
+        if (ctx.historicalInflation && ctx.historicalInflation.length > 0 && historicalPathIndex !== undefined) {
+            const inflIdx = (historicalOffset + m) % ctx.historicalInflation.length;
+            effectiveInflM = ctx.historicalInflation[inflIdx];
+        } else if (ctx.inflationByMonth) {
+            effectiveInflM = ctx.inflationByMonth[m];
+        }
         cpi *= (1.0 + effectiveInflM);
 
         // 1. One-off events (Inflation Adjusted)
@@ -403,6 +408,8 @@ function simulateOnePath(
         let natPension = 0;
         let privPension = 0;
         let withdrawalGross = 0;
+        let reverseAnnuityIncome = 0;
+        let severancePayout = 0;
 
         if (isRetired) {
             // National Pension
@@ -442,7 +449,6 @@ function simulateOnePath(
             }
 
             // NEW: Reverse Annuity (주택연금)
-            let reverseAnnuityIncome = 0;
             if (ctx.reverseAnnuityStartMonth !== undefined &&
                 ctx.reverseAnnuityPayment !== undefined &&
                 m >= ctx.reverseAnnuityStartMonth) {
@@ -450,7 +456,6 @@ function simulateOnePath(
             }
 
             // NEW: Severance Monthly Payout (퇴직연금화)
-            let severancePayout = 0;
             if (ctx.severanceMonthlyPayout !== undefined &&
                 ctx.severanceMonth !== undefined &&
                 m >= ctx.severanceMonth) {
@@ -632,7 +637,7 @@ function simulateOnePath(
             const taxRate = input.withdrawal.taxRate || 0.0;
             taxPaid = withdrawalGross * taxRate;
         } else {
-            const totalMonthly = natPension + privPension + additionalPensionPayout + withdrawalGross;
+            const totalMonthly = natPension + privPension + additionalPensionPayout + reverseAnnuityIncome + severancePayout + withdrawalGross;
             const annualIncome = totalMonthly * 12; // Simplified annualized
 
             // KR 2023 brackets
@@ -656,11 +661,11 @@ function simulateOnePath(
         }
 
         // Fix: Prevent NaN when totalIncome is 0
-        const totalIncomeForTax = natPension + privPension + additionalPensionPayout + withdrawalGross;
+        const totalIncomeForTax = natPension + privPension + additionalPensionPayout + reverseAnnuityIncome + severancePayout + withdrawalGross;
         const withdrawalNet = withdrawalGross > 0 && totalIncomeForTax > 0
             ? withdrawalGross - (taxPaid * (withdrawalGross / totalIncomeForTax))
             : withdrawalGross;
-        const totalIncomeNet = natPension + privPension + additionalPensionPayout + withdrawalGross - taxPaid;
+        const totalIncomeNet = totalIncomeForTax - taxPaid;
         const totalAssets = balGeneral + balPrivate - debt + realEstateTotal + additionalPensionTotal;
         const totalAssetsReal = totalAssets / cpi;
 
@@ -749,11 +754,10 @@ export function runSimulation(
 
     // NEW: Severance calculation
     let severanceMonth: number | undefined;
-    let severanceAmount: number | undefined;
     let severanceMonthlyPayout: number | undefined;
     if (input.severance?.enabled) {
         severanceMonth = monthsToRetire;
-        severanceAmount = input.severance.estimatedAmount;
+        const severanceAmount = input.severance.estimatedAmount;
         if (input.severance.payoutType === 'lump_sum') {
             // Add to events map as lump sum at retirement
             const existing = eventsMap.get(monthsToRetire) || 0;
@@ -850,6 +854,9 @@ export function runSimulation(
         debtMonthlyRate: monthlyRateFromAnnual(input.debt.annual_interest),
         // New feature contexts
         inflationByMonth,
+        severanceMonth,
+        severanceMonthlyPayout,
+        reverseAnnuityStartMonth,
         reverseAnnuityPayment,
         medicalShockMonths,
         contributionByMonth,
