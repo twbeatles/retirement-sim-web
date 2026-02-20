@@ -1,5 +1,4 @@
 import React, { useState } from "react";
-import { PieChart, Pie, Cell, ResponsiveContainer } from "recharts";
 import type { SimulationInput, SimulationResult } from "../logic/types";
 import { InputSlider } from "./ui/InputSlider";
 
@@ -51,13 +50,12 @@ export const SimpleDashboard = React.memo(function SimpleDashboard({ input, resu
     const currentAsset = input.general.current_balance + input.private_pension.current_balance;
     const yearsToRetire = Math.max(0, input.retire_age - input.current_age);
     const scoreClass = getScoreClass(successRate);
-    const gaugeColor = getGaugeColor(successRate);
+    const clampedSuccessRate = Math.max(0, Math.min(1, successRate));
+    const gaugeColor = getGaugeColor(clampedSuccessRate);
+    const gaugeRadius = 70;
+    const gaugeLength = Math.PI * gaugeRadius;
+    const gaugeOffset = gaugeLength * (1 - clampedSuccessRate);
     const feedback = getFeedback(successRate);
-
-    const pieData = [
-        { name: "Success", value: successRate },
-        { name: "Fail", value: 1 - successRate }
-    ];
 
     const handlePreset = (preset: (typeof PRESETS)[0]) => {
         onInputChange({
@@ -216,24 +214,24 @@ export const SimpleDashboard = React.memo(function SimpleDashboard({ input, resu
                         <div className="result-grid">
                             <div className="result-score-card">
                                 <div className="gauge-container">
-                                    <ResponsiveContainer width="100%" height={180}>
-                                        <PieChart>
-                                            <Pie
-                                                data={pieData}
-                                                cx="50%"
-                                                cy="100%"
-                                                startAngle={180}
-                                                endAngle={0}
-                                                innerRadius={70}
-                                                outerRadius={90}
-                                                paddingAngle={2}
-                                                dataKey="value"
-                                            >
-                                                <Cell fill={gaugeColor} />
-                                                <Cell fill="var(--border)" />
-                                            </Pie>
-                                        </PieChart>
-                                    </ResponsiveContainer>
+                                    <svg width="100%" height="180" viewBox="0 0 180 110" role="img" aria-label="은퇴 성공 확률 게이지">
+                                        <path
+                                            d="M20 90 A70 70 0 0 1 160 90"
+                                            fill="none"
+                                            stroke="var(--border)"
+                                            strokeWidth="18"
+                                            strokeLinecap="round"
+                                        />
+                                        <path
+                                            d="M20 90 A70 70 0 0 1 160 90"
+                                            fill="none"
+                                            stroke={gaugeColor}
+                                            strokeWidth="18"
+                                            strokeLinecap="round"
+                                            strokeDasharray={`${gaugeLength} ${gaugeLength}`}
+                                            strokeDashoffset={gaugeOffset}
+                                        />
+                                    </svg>
                                     <div className={`gauge-score ${scoreClass}`}>{Math.round(successRate * 100)}점</div>
                                 </div>
                                 <div className="score-feedback">
@@ -298,4 +296,3 @@ export const SimpleDashboard = React.memo(function SimpleDashboard({ input, resu
         </div>
     );
 });
-

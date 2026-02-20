@@ -1,10 +1,11 @@
-import React from "react";
+import React, { Suspense, lazy } from "react";
 import { ExpenseManager } from "../../ExpenseManager";
-import { IncomeManager } from "../../IncomeManager";
-import { PortfolioEditor } from "../../PortfolioEditor";
 import { Section, Field } from "../../common/UIComponents";
 import { num } from "../../../utils/format";
 import type { SimulationInput } from "../../../logic/types";
+
+const IncomeManager = lazy(() => import("../../IncomeManager").then((m) => ({ default: m.IncomeManager })));
+const PortfolioEditor = lazy(() => import("../../PortfolioEditor").then((m) => ({ default: m.PortfolioEditor })));
 
 interface AssetsSectionProps {
     input: SimulationInput;
@@ -39,9 +40,12 @@ export function AssetsSection({ input, setInput }: AssetsSectionProps) {
             </Section>
 
             <ExpenseManager input={input} onChange={setInput} />
-            <IncomeManager input={input} onChange={setInput} />
-            <PortfolioEditor portfolio={input.portfolio} onChange={(portfolio) => setInput({ ...input, portfolio })} />
+            <Suspense fallback={<div className="text-center text-muted py-4">소득 모듈 로딩 중...</div>}>
+                <IncomeManager input={input} onChange={setInput} />
+            </Suspense>
+            <Suspense fallback={<div className="text-center text-muted py-4">포트폴리오 모듈 로딩 중...</div>}>
+                <PortfolioEditor portfolio={input.portfolio} onChange={(portfolio) => setInput({ ...input, portfolio })} />
+            </Suspense>
         </>
     );
 }
-

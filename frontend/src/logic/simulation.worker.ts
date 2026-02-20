@@ -1,3 +1,5 @@
+/// <reference lib="webworker" />
+
 import { runSimulation } from "./engine";
 import { optimizePensionStartAge, solveForMonthlyContribution, solveForRetirementAge } from "./solver";
 import { runSensitivityAnalysis } from "./riskAnalysis";

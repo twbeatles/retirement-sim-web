@@ -39,6 +39,13 @@
 - [x] `BacktestingPanel.tsx` UI component
 - [x] Validation for new settings
 
+### Phase 8: Performance Refactor (2026)
+- [x] Duplicate source-file guard (`check:duplicates`) and cleanup
+- [x] Interaction scheduler (preview while editing, full on idle)
+- [x] Section-level lazy loading for heavy asset modules
+- [x] Chart module split for results section
+- [x] Service worker static asset SWR cache policy
+
 ---
 
 ## 🔜 Future Enhancements
@@ -55,8 +62,8 @@
 
 ### Performance & Offline
 - [ ] PWA support (offline mode)
-- [ ] Service worker caching
-- [ ] Lazy loading for charts
+- [ ] Runtime web-vitals dashboard
+- [ ] Automatic long-task profiling in CI
 
 ### Advanced Features
 - [ ] Social Security optimization (US)
@@ -64,4 +71,3 @@
 - [ ] Roth conversion ladder modeling
 - [ ] PDF report export
 - [ ] Couples/household simulation
-

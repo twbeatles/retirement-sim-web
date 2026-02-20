@@ -35,6 +35,9 @@ jobs:
       - name: Type check
         run: npm run typecheck
 
+      - name: Duplicate file check
+        run: npm run check:duplicates
+
       - name: Import boundary check
         run: npm run check:imports
 

@@ -7,6 +7,7 @@ This project includes lightweight performance/refactor checks that can run witho
 Run from `frontend/`:
 
 ```bash
+npm run check:duplicates
 npm run typecheck
 npm run check:imports
 npm run perf:report
@@ -17,6 +18,25 @@ Combined:
 ```bash
 npm run verify:refactor
 ```
+
+Baseline refresh procedure:
+
+```bash
+npm ci
+npm run check:duplicates
+npm run typecheck
+npm run check:imports
+npm run build
+npm run perf:gate:hard
+```
+
+If `git` reports dubious ownership on Windows:
+
+```bash
+git config --global --add safe.directory "D:/google antigravity/retirement-sim-web"
+```
+
+If `npm ci` fails with `EPERM` on Windows, close file indexers/editors or restart shell, then rerun.
 
 PR-level gate (warn-only, expects a fresh build output):
 
@@ -32,12 +52,16 @@ npm run verify:ci
 
 ## What each check validates
 
+- `check:duplicates`
+  - Blocks duplicate-style filenames (for example `Component (1).tsx`, `types(1).ts`).
+  - Checks `frontend/src`, `frontend/public`, frontend root config files, and repository root files.
 - `typecheck`
   - Runs TypeScript no-emit validation.
 - `check:imports`
   - Blocks direct `logic/engine` usage inside `src/components`.
   - Blocks direct `new Worker(...)` usage inside `src/components`.
   - Blocks legacy `SOLVER_RESULT` event token usage.
+  - Blocks duplicate-style filenames inside `src`.
 - `perf:report`
   - Reads `dist/index.html` and reports initial JS payload sizes.
   - Reports current entry chunk size against the baseline target.
@@ -59,8 +83,9 @@ GitHub Actions workflow: `.github/workflows/frontend-performance-guard.yml`
 Runs on frontend changes:
 
 1. `npm ci`
-2. `npm run typecheck`
-3. `npm run check:imports`
-4. `npm run build`
-5. Pull request: `npm run perf:gate:warn`
-6. Push to `main`: `npm run perf:gate:hard`
+2. `npm run check:duplicates`
+3. `npm run typecheck`
+4. `npm run check:imports`
+5. `npm run build`
+6. Pull request: `npm run perf:gate:warn`
+7. Push to `main`: `npm run perf:gate:hard`

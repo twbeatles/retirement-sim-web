@@ -16,9 +16,6 @@ export default defineConfig({
             ) {
               return "charts-vendor";
             }
-            if (id.includes("react") || id.includes("scheduler")) {
-              return "react-vendor";
-            }
             return "vendor";
           }
           if (id.includes("historicalData.ts") || id.includes("engine.ts")) {

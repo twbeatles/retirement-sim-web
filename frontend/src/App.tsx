@@ -1,5 +1,6 @@
 import React, { Suspense, lazy, useMemo, useState, useEffect, useCallback } from "react";
 import { useSimulation } from "./hooks/useSimulation";
+import { useAutoSimulation } from "./hooks/useAutoSimulation";
 import type { SimulationInput, ValidationWarning } from "./logic/types";
 import { INITIAL_INPUT } from "./logic/constants";
 import { validateSimulationInput } from "./logic/validation";
@@ -30,15 +31,7 @@ export default function App() {
 
     const validationWarnings = useMemo<ValidationWarning[]>(() => validateSimulationInput(input), [input]);
     const { runSimulation, isCalculating, result, error } = useSimulation();
-
-    useEffect(() => {
-        const timer = setTimeout(() => {
-            void runSimulation(input, { detailLevel: "full", includeSampleTimelines: true }).catch((runError) =>
-                console.error("Simulation failed:", runError)
-            );
-        }, 400);
-        return () => clearTimeout(timer);
-    }, [input, runSimulation]);
+    useAutoSimulation({ input, viewMode, runSimulation });
 
     const handlePrint = useCallback(() => {
         setShowPrintView(true);
@@ -46,6 +39,7 @@ export default function App() {
             window.print();
         }, 0);
     }, []);
+    const resultStatusLabel = result?.detailLevel === "preview" ? "빠른 추정값" : result ? "최종 결과" : null;
 
     return (
         <div className="app-container">
@@ -55,6 +49,7 @@ export default function App() {
                         <span>🏦</span> 은퇴 자산 시뮬레이터 Pro
                     </div>
                     {isCalculating && <span className="status-running animate-pulse">계산 중...</span>}
+                    {resultStatusLabel && <span className="status-running status-ready">{resultStatusLabel}</span>}
                 </div>
 
                 <div className="header-right">

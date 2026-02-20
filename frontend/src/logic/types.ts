@@ -227,6 +227,12 @@ export type SimulationRunOptions = {
     previewPathCap?: number;
     // Skip timeline payload for lightweight preview responses
     includeSampleTimelines?: boolean;
+    // Skip percentile trajectory payload when not needed by the current UI.
+    includeTrajectoryStats?: boolean;
+    // Skip survival series payload when not needed by the current UI.
+    includeSurvivalSeries?: boolean;
+    // Control number of retained sample timelines for chart/table rendering.
+    maxSampleTimelines?: number;
 };
 
 export type SurvivalSeries = {

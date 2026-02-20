@@ -62,6 +62,11 @@
   color: var(--text-muted);
 }
 
+.status-ready {
+  color: var(--primary);
+  font-weight: 600;
+}
+
 .view-toggle {
   display: flex;
   background: var(--bg-main);
@@ -287,4 +292,3 @@
     font-size: 0.78rem;
   }
 }
-

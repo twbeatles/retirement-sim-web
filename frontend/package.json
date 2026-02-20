@@ -9,14 +9,15 @@
     "preview": "vite preview",
     "test": "vitest",
     "typecheck": "node node_modules/typescript/bin/tsc --noEmit -p tsconfig.json",
+    "check:duplicates": "node scripts/check-duplicates.mjs",
     "check:imports": "node scripts/check-import-boundaries.mjs",
     "perf:report": "node scripts/check-bundle-size.mjs",
     "perf:gate:warn": "node scripts/check-bundle-size.mjs --warn",
     "perf:gate:hard": "node scripts/check-bundle-size.mjs --enforce",
     "perf:gate": "node scripts/check-bundle-size.mjs --enforce",
-    "verify:refactor": "npm run typecheck && npm run check:imports && npm run perf:report",
-    "verify:pr": "npm run typecheck && npm run check:imports && npm run build && npm run perf:gate:warn",
-    "verify:ci": "npm run typecheck && npm run check:imports && npm run build && npm run perf:gate:hard"
+    "verify:refactor": "npm run check:duplicates && npm run typecheck && npm run check:imports && npm run perf:report",
+    "verify:pr": "npm run check:duplicates && npm run typecheck && npm run check:imports && npm run build && npm run perf:gate:warn",
+    "verify:ci": "npm run check:duplicates && npm run typecheck && npm run check:imports && npm run build && npm run perf:gate:hard"
   },
   "dependencies": {
     "react": "^18.3.1",

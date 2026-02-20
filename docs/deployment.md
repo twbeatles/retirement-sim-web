@@ -116,7 +116,10 @@ GitHub Pages 하위 경로 배포를 위해 다음을 반영했습니다.
 - `import.meta.env.BASE_URL` 기반으로 `sw.js` 등록
 - `frontend/public/sw.js`:
 - `self.registration.scope` 기준으로 캐시 경로 계산
-- 캐시 버전: `retirement-sim-v2`
+- 캐시 버전: `retirement-sim-app-v3`, `retirement-sim-static-v3`
+- 내비게이션 요청: `network-first` (짧은 timeout) + cache fallback
+- 정적 해시 자산(`/assets/*.js`, `/assets/*.css`, 폰트/이미지): `stale-while-revalidate`
+- 이전 버전 캐시 자동 정리
 
 ## 5) 빠른 검증 체크리스트
 
@@ -124,6 +127,7 @@ GitHub Pages 하위 경로 배포를 위해 다음을 반영했습니다.
 - [ ] `netlify.toml`, `vercel.json`, `deploy-pages.yml` 파일이 루트/워크플로우 경로에 있는지 확인
 - [ ] GitHub Pages 배포 URL이 `https://<user>.github.io/<repo>/` 형태인지 확인
 - [ ] 앱 로드 후 브라우저 콘솔에 SW 등록 에러가 없는지 확인
+- [ ] 정적 자산 재방문 시 캐시 hit 후 백그라운드 갱신되는지 확인
 - [ ] 새로고침 시 라우트 404가 재현되지 않는지 확인
 
 ## 6) 참고 파일

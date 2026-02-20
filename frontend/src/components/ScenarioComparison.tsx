@@ -119,7 +119,10 @@ export function ScenarioComparison({ currentResult }: Props) {
 
                 const batchResults = await requestSimulationBatch(batchInputs, {
                     detailLevel: "full",
-                    includeSampleTimelines: false
+                    includeSampleTimelines: false,
+                    includeTrajectoryStats: true,
+                    includeSurvivalSeries: false,
+                    maxSampleTimelines: 0
                 });
 
                 batchResults.forEach((result, index) => {

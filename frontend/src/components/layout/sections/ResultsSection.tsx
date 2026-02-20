@@ -8,10 +8,10 @@ import type { SimulationInput, SimulationResult } from "../../../logic/types";
 const RiskDashboard = lazy(() => import("../../RiskDashboard").then((m) => ({ default: m.RiskDashboard })));
 const ScenarioComparison = lazy(() => import("../../ScenarioComparison").then((m) => ({ default: m.ScenarioComparison })));
 const WhatIfSlider = lazy(() => import("../../WhatIfSlider").then((m) => ({ default: m.WhatIfSlider })));
-const FanChart = lazy(() => import("../../Charts").then((m) => ({ default: m.FanChart })));
-const AssetBreakdownChart = lazy(() => import("../../Charts").then((m) => ({ default: m.AssetBreakdownChart })));
-const CashflowStackChart = lazy(() => import("../../Charts").then((m) => ({ default: m.CashflowStackChart })));
-const SurvivalChart = lazy(() => import("../../Charts").then((m) => ({ default: m.SurvivalChart })));
+const FanChart = lazy(() => import("../../Charts/FanChart").then((m) => ({ default: m.FanChart })));
+const AssetBreakdownChart = lazy(() => import("../../Charts/AssetBreakdownChart").then((m) => ({ default: m.AssetBreakdownChart })));
+const CashflowStackChart = lazy(() => import("../../Charts/CashflowStackChart").then((m) => ({ default: m.CashflowStackChart })));
+const SurvivalChart = lazy(() => import("../../Charts/SurvivalChart").then((m) => ({ default: m.SurvivalChart })));
 const YearlyReportTable = lazy(() => import("../../YearlyReportTable").then((m) => ({ default: m.YearlyReportTable })));
 
 interface ResultsSectionProps {
@@ -40,6 +40,7 @@ export function ResultsSection({
     }, [result]);
 
     const summary = result?.summary;
+    const isPreviewResult = result?.detailLevel === "preview";
     const simulationCount = result
         ? result.mode === "deterministic"
             ? 1
@@ -88,7 +89,7 @@ export function ResultsSection({
                 </div>
             )}
 
-            {result && (
+            {result && !isPreviewResult && (
                 <div className="results-actions">
                     <button className={`btn btn-secondary ${compact ? "btn-sm" : ""}`} onClick={onPrint}>
                         🖨️ {compact ? "PDF" : "리포트 인쇄 (PDF)"}
@@ -104,19 +105,21 @@ export function ResultsSection({
                 <p className="text-sub text-sm mb-4">
                     은퇴 후 나이가 들면서 자산이 남아있을 확률을 보여줍니다. (몬테카를로 분석)
                 </p>
-                {result ? (
+                {result && !isPreviewResult ? (
                     <Suspense fallback={<div className="text-center text-muted py-4">Loading chart...</div>}>
                         <SurvivalChart result={result} />
                     </Suspense>
                 ) : (
-                    <div className="text-center text-muted py-8">시뮬레이션 결과를 기다리는 중...</div>
+                    <div className="text-center text-muted py-8">최종 계산 결과를 기다리는 중...</div>
                 )}
             </div>
 
             <div className="card">
                 <h3 className="card-header">📈 자산 구성 추이</h3>
                 <p className="text-sub text-sm mb-4">부동산, 연금, 일반 자산이 어떻게 변화하는지 보여줍니다.</p>
-                {result?.mode === "deterministic" ? (
+                {isPreviewResult ? (
+                    <div className="text-center text-muted py-8">빠른 추정값 계산 완료. 최종 차트 계산 중...</div>
+                ) : result?.mode === "deterministic" ? (
                     <Suspense fallback={<div className="text-center text-muted py-4">Loading chart...</div>}>
                         <AssetBreakdownChart data={timeline} />
                     </Suspense>
@@ -132,17 +135,25 @@ export function ResultsSection({
             <div className="card">
                 <h3 className="card-header">💵 은퇴 후 현금 흐름 (Income vs Spending)</h3>
                 <p className="text-sub text-sm mb-4">연금 소득과 자산 인출이 생활비를 어떻게 충당하는지 보여줍니다.</p>
-                <Suspense fallback={<div className="text-center text-muted py-4">Loading chart...</div>}>
-                    <CashflowStackChart data={timeline} />
-                </Suspense>
+                {timeline.length > 0 && !isPreviewResult ? (
+                    <Suspense fallback={<div className="text-center text-muted py-4">Loading chart...</div>}>
+                        <CashflowStackChart data={timeline} />
+                    </Suspense>
+                ) : (
+                    <div className="text-center text-muted py-8">최종 계산 결과를 기다리는 중...</div>
+                )}
             </div>
 
             <div className="card">
                 <h3 className="card-header">📋 연도별 상세 리포트</h3>
                 <div className="report-scroll">
-                    <Suspense fallback={<div className="text-center text-muted py-4">Loading table...</div>}>
-                        <YearlyReportTable data={timeline} />
-                    </Suspense>
+                    {timeline.length > 0 && !isPreviewResult ? (
+                        <Suspense fallback={<div className="text-center text-muted py-4">Loading table...</div>}>
+                            <YearlyReportTable data={timeline} />
+                        </Suspense>
+                    ) : (
+                        <div className="text-center text-muted py-8">최종 계산 결과를 기다리는 중...</div>
+                    )}
                 </div>
             </div>
 
@@ -159,20 +170,26 @@ export function ResultsSection({
                     ))}
                 </div>
 
-                {analysisTab === "risk" && (
-                    <Suspense fallback={<div className="text-center text-muted py-4">Loading...</div>}>
-                        <RiskDashboard input={input} result={result} onInputChange={setInput} />
-                    </Suspense>
-                )}
-                {analysisTab === "compare" && (
-                    <Suspense fallback={<div className="text-center text-muted py-4">Loading...</div>}>
-                        <ScenarioComparison currentResult={result} />
-                    </Suspense>
-                )}
-                {analysisTab === "whatif" && (
-                    <Suspense fallback={<div className="text-center text-muted py-4">Loading...</div>}>
-                        <WhatIfSlider input={input} onInputChange={setInput} />
-                    </Suspense>
+                {isPreviewResult ? (
+                    <div className="text-center text-muted py-8">고급 분석은 최종 계산 완료 후 표시됩니다.</div>
+                ) : (
+                    <>
+                        {analysisTab === "risk" && (
+                            <Suspense fallback={<div className="text-center text-muted py-4">Loading...</div>}>
+                                <RiskDashboard input={input} result={result} onInputChange={setInput} />
+                            </Suspense>
+                        )}
+                        {analysisTab === "compare" && (
+                            <Suspense fallback={<div className="text-center text-muted py-4">Loading...</div>}>
+                                <ScenarioComparison currentResult={result} />
+                            </Suspense>
+                        )}
+                        {analysisTab === "whatif" && (
+                            <Suspense fallback={<div className="text-center text-muted py-4">Loading...</div>}>
+                                <WhatIfSlider input={input} onInputChange={setInput} />
+                            </Suspense>
+                        )}
+                    </>
                 )}
             </div>
 

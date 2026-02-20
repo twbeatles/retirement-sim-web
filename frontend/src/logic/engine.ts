@@ -703,6 +703,9 @@ export function runSimulation(
     const detailLevel = options?.detailLevel ?? "full";
     const isPreview = detailLevel === "preview";
     const includeSampleTimelines = options?.includeSampleTimelines ?? !isPreview;
+    const includeTrajectoryStats = options?.includeTrajectoryStats ?? !isPreview;
+    const includeSurvivalSeries = options?.includeSurvivalSeries ?? !isPreview;
+    const maxSampleTimelines = Math.max(0, options?.maxSampleTimelines ?? (isPreview ? 1 : 3));
     const previewPathCap = options?.previewPathCap ?? 80;
 
     // Initialize seed for reproducible simulations
@@ -932,7 +935,7 @@ export function runSimulation(
     if (isHistorical) {
         // Run multiple rolling window scenarios
         const numScenarios = 20; // 20 rolling windows (1985-2005 start years)
-        const MAX_SAMPLE_PATHS = includeSampleTimelines ? (isPreview ? 1 : 5) : 0;
+        const MAX_SAMPLE_PATHS = includeSampleTimelines ? Math.min(maxSampleTimelines, numScenarios) : 0;
         const sampleTimelines: TimelineRow[][] = [];
         const finalAssets = new Float64Array(numScenarios);
         const finalAssetsReal = new Float64Array(numScenarios);
@@ -1012,8 +1015,7 @@ export function runSimulation(
         const paths = isPreview ? Math.min(configuredPaths, previewPathCap) : configuredPaths;
 
         // Memory Optimization: Store only sample timelines
-        // We'll store up to 5 complete timelines for visualization
-        const MAX_SAMPLE_PATHS = includeSampleTimelines ? (isPreview ? 1 : 5) : 0;
+        const MAX_SAMPLE_PATHS = includeSampleTimelines ? Math.min(maxSampleTimelines, paths) : 0;
         const sampleTimelines: TimelineRow[][] = [];
 
         // Store only final values for stats
@@ -1024,7 +1026,9 @@ export function runSimulation(
         // Index = path * totalMonths + month
         // To be safer for memory with high path counts, we could only store percentiles on the fly.
         // But 1000 paths * 720 months = 720k doubles = ~5.7MB. Totally fine.
-        const allTraj = isPreview ? null : new Float64Array(paths * totalMonths);
+        const allTraj = !isPreview && (includeTrajectoryStats || includeSurvivalSeries)
+            ? new Float64Array(paths * totalMonths)
+            : null;
 
         let successCount = 0;
 
@@ -1072,49 +1076,57 @@ export function runSimulation(
         const far = Array.from(finalAssetsReal);
 
         // Calculate Trajectory Stats (for Fan Chart)
-        const trajStats = {
+        const trajStats = includeTrajectoryStats ? {
             month: [] as number[],
             p10: [] as number[],
             p25: [] as number[],
             p50: [] as number[],
             p75: [] as number[],
             p90: [] as number[]
-        };
-        const survivalSeries = {
+        } : undefined;
+        const survivalSeries = includeSurvivalSeries ? {
             month: [] as number[],
             age: [] as number[],
             survivalRate: [] as number[]
-        };
+        } : undefined;
         if (allTraj) {
-            // Reuse buffer for sorting column
-            const column = new Float64Array(paths);
+            const needsTrajectoryStats = Boolean(trajStats);
+            const needsSurvivalSeries = Boolean(survivalSeries);
+            const column = needsTrajectoryStats ? new Float64Array(paths) : null;
 
-            // Sample every 12 months (Annual) OR every month? 
-            // Showing every month is heavy for chart. Let's do every 6 or 12 months?
-            // Charts.tsx can sample. Let's provide raw monthly data (computation is cheap here).
-            // Actually, sorting 1000 items 720 times is 720k * log(1000) ~ 7M ops. Fast.
             for (let m = 0; m < totalMonths; m++) {
-                // Extract column
                 let aliveCount = 0;
-                for (let p = 0; p < paths; p++) {
-                    const value = allTraj[p * totalMonths + m];
-                    column[p] = value;
-                    if (value > 0) {
-                        aliveCount++;
+
+                if (needsTrajectoryStats) {
+                    for (let p = 0; p < paths; p++) {
+                        const value = allTraj[p * totalMonths + m];
+                        column![p] = value;
+                        if (needsSurvivalSeries && value > 0) {
+                            aliveCount++;
+                        }
+                    }
+                    column!.sort((a, b) => a - b);
+
+                    trajStats!.month.push(m);
+                    trajStats!.p10.push(column![Math.floor(paths * 0.10)]);
+                    trajStats!.p25.push(column![Math.floor(paths * 0.25)]);
+                    trajStats!.p50.push(column![Math.floor(paths * 0.50)]);
+                    trajStats!.p75.push(column![Math.floor(paths * 0.75)]);
+                    trajStats!.p90.push(column![Math.floor(paths * 0.90)]);
+                } else if (needsSurvivalSeries) {
+                    for (let p = 0; p < paths; p++) {
+                        const value = allTraj[p * totalMonths + m];
+                        if (value > 0) {
+                            aliveCount++;
+                        }
                     }
                 }
-                column.sort((a, b) => a - b);
 
-                trajStats.month.push(m);
-                trajStats.p10.push(column[Math.floor(paths * 0.10)]);
-                trajStats.p25.push(column[Math.floor(paths * 0.25)]);
-                trajStats.p50.push(column[Math.floor(paths * 0.50)]);
-                trajStats.p75.push(column[Math.floor(paths * 0.75)]);
-                trajStats.p90.push(column[Math.floor(paths * 0.90)]);
-
-                survivalSeries.month.push(m);
-                survivalSeries.age.push(Math.floor(input.current_age + m / 12));
-                survivalSeries.survivalRate.push((aliveCount / paths) * 100);
+                if (needsSurvivalSeries) {
+                    survivalSeries!.month.push(m);
+                    survivalSeries!.age.push(Math.floor(input.current_age + m / 12));
+                    survivalSeries!.survivalRate.push((aliveCount / paths) * 100);
+                }
             }
         }
 
@@ -1146,8 +1158,8 @@ export function runSimulation(
             pathCount: paths,
             sampleTimelines,
             summary,
-            trajectoryStats: allTraj ? trajStats : undefined,
-            survivalSeries: allTraj ? survivalSeries : undefined
+            trajectoryStats: allTraj && trajStats ? trajStats : undefined,
+            survivalSeries: allTraj && survivalSeries ? survivalSeries : undefined
         };
     }
 }

@@ -116,40 +116,41 @@ class ScenarioStorage {
      */
     private migrateInput(input?: Partial<SimulationInput>): SimulationInput {
         const source = input ?? {};
+        const base = INITIAL_INPUT;
 
         return {
-            ...INITIAL_INPUT,
+            ...base,
             ...source,
-            general: { ...INITIAL_INPUT.general, ...source.general },
-            private_pension: { ...INITIAL_INPUT.private_pension, ...source.private_pension },
-            national_pension: { ...INITIAL_INPUT.national_pension, ...source.national_pension },
-            debt: { ...INITIAL_INPUT.debt, ...source.debt },
+            general: { ...base.general, ...source.general },
+            private_pension: { ...base.private_pension, ...source.private_pension },
+            national_pension: { ...base.national_pension, ...source.national_pension },
+            debt: { ...base.debt, ...source.debt },
             portfolio: {
-                ...INITIAL_INPUT.portfolio,
+                ...base.portfolio,
                 ...source.portfolio,
-                assetClasses: source.portfolio?.assetClasses ?? INITIAL_INPUT.portfolio.assetClasses
+                assetClasses: source.portfolio?.assetClasses ?? base.portfolio.assetClasses
             },
-            withdrawal: { ...INITIAL_INPUT.withdrawal, ...source.withdrawal },
-            simulation_settings: { ...INITIAL_INPUT.simulation_settings, ...source.simulation_settings },
-            rebalancing: { ...INITIAL_INPUT.rebalancing, ...source.rebalancing },
-            stress_test: { ...INITIAL_INPUT.stress_test, ...source.stress_test },
+            withdrawal: { ...base.withdrawal, ...source.withdrawal },
+            simulation_settings: { ...base.simulation_settings, ...source.simulation_settings },
+            rebalancing: { ...base.rebalancing!, ...source.rebalancing },
+            stress_test: { ...base.stress_test!, ...source.stress_test },
             labor_income: {
-                ...INITIAL_INPUT.labor_income,
+                ...base.labor_income!,
                 ...source.labor_income,
-                events: source.labor_income?.events ?? INITIAL_INPUT.labor_income.events
+                events: source.labor_income?.events ?? base.labor_income!.events
             },
-            guardrails: { ...INITIAL_INPUT.guardrails, ...source.guardrails },
-            bucket: { ...INITIAL_INPUT.bucket, ...source.bucket },
-            health_insurance: { ...INITIAL_INPUT.health_insurance, ...source.health_insurance },
-            severance: { ...INITIAL_INPUT.severance, ...source.severance },
-            longevity_risk: { ...INITIAL_INPUT.longevity_risk, ...source.longevity_risk },
+            guardrails: { ...base.guardrails!, ...source.guardrails },
+            bucket: { ...base.bucket!, ...source.bucket },
+            health_insurance: { ...base.health_insurance!, ...source.health_insurance },
+            severance: { ...base.severance!, ...source.severance },
+            longevity_risk: { ...base.longevity_risk!, ...source.longevity_risk },
             medical_shocks: {
-                ...INITIAL_INPUT.medical_shocks,
+                ...base.medical_shocks!,
                 ...source.medical_shocks,
-                occurrences: source.medical_shocks?.occurrences ?? INITIAL_INPUT.medical_shocks.occurrences
+                occurrences: source.medical_shocks?.occurrences ?? base.medical_shocks!.occurrences
             },
-            reverse_annuity: { ...INITIAL_INPUT.reverse_annuity, ...source.reverse_annuity },
-            inflation_scenario: { ...INITIAL_INPUT.inflation_scenario, ...source.inflation_scenario },
+            reverse_annuity: { ...base.reverse_annuity!, ...source.reverse_annuity },
+            inflation_scenario: { ...base.inflation_scenario!, ...source.inflation_scenario },
             tax_credit: {
                 enabled: false,
                 pensionSavingsContribution: 0,
@@ -157,11 +158,11 @@ class ScenarioStorage {
                 creditRate: 0.15,
                 ...source.tax_credit
             },
-            realEstate: source.realEstate ?? INITIAL_INPUT.realEstate,
-            additionalPensions: source.additionalPensions ?? INITIAL_INPUT.additionalPensions,
-            businessIncome: source.businessIncome ?? INITIAL_INPUT.businessIncome,
-            events: source.events ?? INITIAL_INPUT.events
-        };
+            realEstate: source.realEstate ?? base.realEstate,
+            additionalPensions: source.additionalPensions ?? base.additionalPensions,
+            businessIncome: source.businessIncome ?? base.businessIncome,
+            events: source.events ?? base.events
+        } as SimulationInput;
     }
 
     async deleteScenario(id: number): Promise<void> {

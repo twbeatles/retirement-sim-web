@@ -5,6 +5,7 @@ const ROOT = process.cwd();
 const SRC_DIR = path.join(ROOT, "src");
 const COMPONENTS_DIR = path.join(SRC_DIR, "components");
 const TARGET_EXTENSIONS = new Set([".ts", ".tsx"]);
+const DISALLOWED_DUPLICATE_PATTERN = /\s?\((?:1|2)\)(?=\.[^./\\]+$)/;
 
 async function walkFiles(dir) {
   const entries = await fs.readdir(dir, { withFileTypes: true });
@@ -30,6 +31,14 @@ function toPosixPath(filePath) {
 
 async function main() {
   const violations = [];
+
+  const allSourceFilesWithAnyExt = await walkFiles(SRC_DIR);
+  for (const filePath of allSourceFilesWithAnyExt) {
+    const relPath = toPosixPath(path.relative(ROOT, filePath));
+    if (DISALLOWED_DUPLICATE_PATTERN.test(path.basename(filePath))) {
+      violations.push(`${relPath}: duplicate-style filename is not allowed`);
+    }
+  }
 
   const componentFiles = await walkFiles(COMPONENTS_DIR);
   for (const filePath of componentFiles) {
@@ -106,6 +115,7 @@ async function main() {
   console.log("- components do not construct workers directly");
   console.log("- no legacy SOLVER_RESULT event usage found");
   console.log("- desktop/mobile layouts avoid static imports for heavy analysis/chart modules");
+  console.log("- duplicate-style filenames are not present in src");
 }
 
 main().catch((error) => {

@@ -63,7 +63,10 @@ export function useSimulation(): SimulationHookReturn {
         return requestSimulation(input, {
             detailLevel: "preview",
             previewPathCap,
-            includeSampleTimelines: false
+            includeSampleTimelines: false,
+            includeTrajectoryStats: false,
+            includeSurvivalSeries: false,
+            maxSampleTimelines: 0
         });
     }, []);
 
@@ -106,4 +109,3 @@ export function useSimulation(): SimulationHookReturn {
         error
     };
 }
-

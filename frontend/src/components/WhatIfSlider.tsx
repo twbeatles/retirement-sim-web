@@ -118,7 +118,10 @@ export function WhatIfSlider({ input, onInputChange }: Props) {
                 const result = await requestSimulation(testInput, {
                     detailLevel: 'preview',
                     previewPathCap: 80,
-                    includeSampleTimelines: false
+                    includeSampleTimelines: false,
+                    includeTrajectoryStats: false,
+                    includeSurvivalSeries: false,
+                    maxSampleTimelines: 0
                 });
 
                 if (seq === latestPreviewSeq.current) {
