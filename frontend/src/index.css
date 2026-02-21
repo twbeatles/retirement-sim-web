@@ -104,4 +104,24 @@
     -webkit-font-smoothing: antialiased;
     -moz-osx-font-smoothing: grayscale;
   }
+
+  /* Recharts Tooltip Contrast Fix */
+  .recharts-default-tooltip {
+    background-color: var(--color-bg-elevated) !important;
+    border-color: var(--color-border) !important;
+    color: var(--color-text-main) !important;
+    border-radius: var(--radius-base);
+    box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+  }
+
+  .recharts-tooltip-item {
+    color: var(--color-text-sub) !important;
+    font-weight: 600;
+  }
+
+  .recharts-tooltip-label {
+    color: var(--color-text-main) !important;
+    font-weight: 700;
+    margin-bottom: 4px;
+  }
 }
