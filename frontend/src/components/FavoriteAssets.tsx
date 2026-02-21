@@ -44,7 +44,7 @@ interface Props {
     onChange: (portfolio: PortfolioModel) => void;
 }
 
-export function FavoriteAssets({ portfolio, onChange }: Props) {
+export const FavoriteAssets = React.memo(function FavoriteAssets({ portfolio, onChange }: Props) {
     const [favorites, setFavorites] = useState<FavoriteAsset[]>(DEFAULT_FAVORITES);
     const [showAddForm, setShowAddForm] = useState(false);
     const [newAsset, setNewAsset] = useState<Partial<FavoriteAsset>>({
@@ -234,4 +234,4 @@ export function FavoriteAssets({ portfolio, onChange }: Props) {
             )}
         </div>
     );
-}
+});

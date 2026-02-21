@@ -54,6 +54,8 @@
 
 ## 3. 세금 및 연금 모델 (Tax & Pension - Korea)
 
+**파일**: `frontend/src/logic/koreaTax.ts`
+
 ### 3-1. 국민연금 (National Pension)
 - **수령 개시 연령 조정**:
     - 조기 수령 (최대 5년): 연 -6% 감액 (최대 -30%)

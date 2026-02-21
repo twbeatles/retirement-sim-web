@@ -22,7 +22,7 @@ const INFLATION_PRESETS: { type: InflationScenario['type']; label: string; rate:
     { type: 'spike', label: '스파이크 시나리오', rate: 0.02 }
 ];
 
-export function AdvancedSettings({ input, onChange }: Props) {
+export const AdvancedSettings = React.memo(function AdvancedSettings({ input, onChange }: Props) {
     const [expandedSections, setExpandedSections] = useState<string[]>(['inflation']);
 
     const toggleSection = (section: string) => {
@@ -574,7 +574,7 @@ export function AdvancedSettings({ input, onChange }: Props) {
             </CollapsibleSection>
         </div>
     );
-}
+});
 
 // Collapsible Section Helper
 function CollapsibleSection({

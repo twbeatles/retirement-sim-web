@@ -4,7 +4,7 @@ import { useAutoSimulation } from "./hooks/useAutoSimulation";
 import type { SimulationInput, ValidationWarning } from "./logic/types";
 import { INITIAL_INPUT } from "./logic/constants";
 import { validateSimulationInput } from "./logic/validation";
-import { Onboarding } from "./components/Onboarding";
+const Onboarding = lazy(() => import("./components/Onboarding").then((m) => ({ default: m.Onboarding })));
 import type { AnalysisTabType, SidebarSectionId } from "./components/layout/types";
 
 const ReportPrintView = lazy(() => import("./components/ReportPrintView").then((m) => ({ default: m.ReportPrintView })));
@@ -111,7 +111,9 @@ export default function App() {
                 </Suspense>
             )}
 
-            <Onboarding />
+            <Suspense fallback={null}>
+                <Onboarding />
+            </Suspense>
 
             {showPrintView && result && (
                 <Suspense fallback={null}>

@@ -62,16 +62,28 @@ retirement-sim-web/
 │   │   │   ├── Charts/           # Visualization Charts
 │   │   │   │   ├── AssetBreakdownChart.tsx
 │   │   │   │   ├── CashflowStackChart.tsx
+│   │   │   │   ├── FanChart.tsx
 │   │   │   │   └── SurvivalChart.tsx
+│   │   │   ├── common/           # Common UI Elements
+│   │   │   │   └── UIComponents.tsx
+│   │   │   ├── layout/           # Responsive Layout
+│   │   │   │   ├── DesktopLayout.tsx
+│   │   │   │   ├── MobileLayout.tsx
+│   │   │   │   ├── Layout.tsx
+│   │   │   │   ├── sections/
+│   │   │   │   └── types.ts
 │   │   │   ├── ui/               # Reusable UI Components
 │   │   │   │   ├── InputSlider.tsx
 │   │   │   │   └── MoneyInput.tsx
 │   │   │   ├── AdvancedSettings.tsx
+│   │   │   ├── BacktestingPanel.tsx  # Historical Backtesting UI
 │   │   │   ├── Charts.tsx        # Chart Container
+│   │   │   ├── ExpenseManager.tsx # Expense Management
 │   │   │   ├── FavoriteAssets.tsx # Favorite Assets
 │   │   │   ├── GoalPlanner.tsx   # Reverse Calculator
-│   │   │   ├── IncomeManager.tsx
+│   │   │   ├── IncomeManager.tsx # Income Management
 │   │   │   ├── Onboarding.tsx    # Onboarding Wizard
+│   │   │   ├── PensionOptimizer.tsx # Pension Optimization
 │   │   │   ├── PortfolioEditor.tsx
 │   │   │   ├── RiskDashboard.tsx
 │   │   │   ├── ScenarioComparison.tsx # Scenario Comparison
@@ -83,6 +95,8 @@ retirement-sim-web/
 │   │   │   └── YearlyReportTable.tsx
 │   │   │
 │   │   ├── hooks/                # Custom React Hooks
+│   │   │   ├── useAutoSimulation.ts
+│   │   │   ├── useMediaQuery.ts
 │   │   │   └── useSimulation.ts  # Simulation State Management
 │   │   │
 │   │   ├── logic/                # Core Business Logic
@@ -95,10 +109,17 @@ retirement-sim-web/
 │   │   │   ├── constants.ts      # Initial Values/Constants
 │   │   │   ├── math.ts           # Math Utilities
 │   │   │   ├── validation.ts     # Input Validation
+│   │   │   ├── historicalData.ts # Historical Data
+│   │   │   ├── historicalScenarioMeta.ts # Historical Scenario Metadata
+│   │   │   ├── koreaTax.ts       # Korea Tax & Pension Math
+│   │   │   ├── uiConstants.ts
 │   │   │   └── export.ts         # CSV Export
 │   │   │
 │   │   ├── services/             # Service Layer
 │   │   │   └── storage.ts        # IndexedDB Scenario Storage
+│   │   │
+│   │   ├── utils/                # Utilities
+│   │   │   └── format.ts
 │   │   │
 │   │   ├── App.tsx               # Main App Component
 │   │   ├── index.css             # Global Styles (incl. Dark Mode)

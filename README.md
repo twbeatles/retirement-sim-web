@@ -63,16 +63,28 @@ retirement-sim-web/
 │   │   │   ├── Charts/           # 시각화 차트
 │   │   │   │   ├── AssetBreakdownChart.tsx
 │   │   │   │   ├── CashflowStackChart.tsx
+│   │   │   │   ├── FanChart.tsx
 │   │   │   │   └── SurvivalChart.tsx
-│   │   │   ├── ui/               # 재사용 가능한 UI 컴포넌트
+│   │   │   ├── common/           # 공통 UI 컴포넌트
+│   │   │   │   └── UIComponents.tsx
+│   │   │   ├── layout/           # 반응형 레이아웃
+│   │   │   │   ├── DesktopLayout.tsx
+│   │   │   │   ├── MobileLayout.tsx
+│   │   │   │   ├── Layout.tsx
+│   │   │   │   ├── sections/
+│   │   │   │   └── types.ts
+│   │   │   ├── ui/               # 재사용 가능한 UI 요소
 │   │   │   │   ├── InputSlider.tsx
 │   │   │   │   └── MoneyInput.tsx
 │   │   │   ├── AdvancedSettings.tsx
+│   │   │   ├── BacktestingPanel.tsx  # 역사적 백테스팅 UI
 │   │   │   ├── Charts.tsx        # 차트 컨테이너
+│   │   │   ├── ExpenseManager.tsx # 지출 관리
 │   │   │   ├── FavoriteAssets.tsx # 즐겨찾기 자산
 │   │   │   ├── GoalPlanner.tsx   # 역산 계산기
-│   │   │   ├── IncomeManager.tsx
+│   │   │   ├── IncomeManager.tsx # 소득 관리
 │   │   │   ├── Onboarding.tsx    # 온보딩 위자드
+│   │   │   ├── PensionOptimizer.tsx # 연금 최적화
 │   │   │   ├── PortfolioEditor.tsx
 │   │   │   ├── RiskDashboard.tsx
 │   │   │   ├── ScenarioComparison.tsx # 시나리오 비교
@@ -81,10 +93,11 @@ retirement-sim-web/
 │   │   │   ├── Tooltip.tsx
 │   │   │   ├── WhatIfSlider.tsx
 │   │   │   ├── WithdrawalSettings.tsx
-│   │   │   ├── BacktestingPanel.tsx  # 역사적 백테스팅 UI
 │   │   │   └── YearlyReportTable.tsx
 │   │   │
 │   │   ├── hooks/                # 커스텀 React 훅
+│   │   │   ├── useAutoSimulation.ts
+│   │   │   ├── useMediaQuery.ts
 │   │   │   └── useSimulation.ts  # 시뮬레이션 상태 관리
 │   │   │
 │   │   ├── logic/                # 핵심 비즈니스 로직
@@ -97,11 +110,17 @@ retirement-sim-web/
 │   │   │   ├── constants.ts      # 초기값/상수
 │   │   │   ├── math.ts           # 수학 함수
 │   │   │   ├── validation.ts     # 입력값 검증
-│   │   │   ├── historicalData.ts # 역사적 시장 데이터 (1985~2024)
+│   │   │   ├── historicalData.ts # 역사적 시장 데이터
+│   │   │   ├── historicalScenarioMeta.ts # 역사적 시나리오 메타데이터
+│   │   │   ├── koreaTax.ts       # 세금 및 연금 수식
+│   │   │   ├── uiConstants.ts
 │   │   │   └── export.ts         # CSV 내보내기
 │   │   │
 │   │   ├── services/             # 서비스 레이어
 │   │   │   └── storage.ts        # IndexedDB 시나리오 저장
+│   │   │
+│   │   ├── utils/                # 유틸리티 함수
+│   │   │   └── format.ts
 │   │   │
 │   │   ├── App.tsx               # 메인 앱 컴포넌트
 │   │   ├── index.css             # 글로벌 스타일 (다크모드 포함)

@@ -10,7 +10,7 @@ interface MoneyInputProps {
     hint?: string;
 }
 
-export function MoneyInput({
+export const MoneyInput = React.memo(function MoneyInput({
     label,
     value,
     onChange,
@@ -84,7 +84,7 @@ export function MoneyInput({
             {hint && <p className="text-xs text-slate-500 dark:text-slate-400 mt-1">{hint}</p>}
         </div>
     );
-}
+});
 
 export default MoneyInput;
 

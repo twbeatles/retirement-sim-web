@@ -17,7 +17,7 @@ interface ExpenseItem {
     endAge?: number;
 }
 
-export const ExpenseManager: React.FC<ExpenseManagerProps> = ({ input, onChange }) => {
+export const ExpenseManager: React.FC<ExpenseManagerProps> = React.memo(({ input, onChange }) => {
     // We don't store ExpenseItem[] in the main input to keep types.ts clean.
     // Instead, we parse existing input.events to reconstruct (if possible) or just manage new ones.
     // For simplicity in this version, we will maintain a local state that synchronizes ONE-WAY to input.events.
@@ -212,4 +212,4 @@ export const ExpenseManager: React.FC<ExpenseManagerProps> = ({ input, onChange 
             )}
         </div>
     );
-};
+});

@@ -74,7 +74,7 @@ const SLIDERS: SliderConfig[] = [
     }
 ];
 
-export function WhatIfSlider({ input, onInputChange }: Props) {
+export const WhatIfSlider = React.memo(function WhatIfSlider({ input, onInputChange }: Props) {
     const [tempValues, setTempValues] = useState<Record<WhatIfParameter, number>>({
         retire_age: input.retire_age,
         annual_return: 0,
@@ -229,5 +229,5 @@ export function WhatIfSlider({ input, onInputChange }: Props) {
             </button>
         </div>
     );
-}
+});
 

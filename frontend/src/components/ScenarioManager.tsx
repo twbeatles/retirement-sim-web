@@ -44,7 +44,7 @@ const QUICK_PRESETS = [
     }
 ];
 
-export function ScenarioManager({ currentInput, onLoad }: Props) {
+export const ScenarioManager = React.memo(function ScenarioManager({ currentInput, onLoad }: Props) {
     const [scenarios, setScenarios] = useState<SavedScenario[]>([]);
     const [name, setName] = useState("");
 
@@ -201,4 +201,4 @@ export function ScenarioManager({ currentInput, onLoad }: Props) {
             </div>
         </div>
     );
-}
+});

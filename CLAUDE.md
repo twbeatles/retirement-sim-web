@@ -24,16 +24,28 @@ frontend/src/
 │   ├── Charts/           # 시각화 차트 (하위 분리)
 │   │   ├── AssetBreakdownChart.tsx    # 자산 구성 추이
 │   │   ├── CashflowStackChart.tsx     # 현금흐름 스택
+│   │   ├── FanChart.tsx               # 자산 범위(팬 차트) 분포
 │   │   └── SurvivalChart.tsx          # 생존 확률 곡선
+│   ├── common/           # 공통 처리 UI 요소
+│   │   └── UIComponents.tsx
+│   ├── layout/           # 반응형 레이아웃 계층
+│   │   ├── DesktopLayout.tsx
+│   │   ├── MobileLayout.tsx
+│   │   ├── Layout.tsx
+│   │   ├── sections/
+│   │   └── types.ts
 │   ├── ui/                   # 재사용 UI 컴포넌트
 │   │   ├── InputSlider.tsx       # 슬라이더 입력
 │   │   └── MoneyInput.tsx        # 금액 입력
 │   ├── AdvancedSettings.tsx   # 고급 설정 (세금, 부채 등)
+│   ├── BacktestingPanel.tsx   # 역사적 백테스팅 UI (Phase 7)
 │   ├── Charts.tsx             # 차트 컨테이너
+│   ├── ExpenseManager.tsx     # 지출(목돈) 관리
 │   ├── FavoriteAssets.tsx     # 즐겨찾기 자산
 │   ├── GoalPlanner.tsx        # 역산 계산기 UI
 │   ├── IncomeManager.tsx      # 소득 관리
 │   ├── Onboarding.tsx         # 온보딩 위자드
+│   ├── PensionOptimizer.tsx   # 연금 최적화
 │   ├── PortfolioEditor.tsx    # 포트폴리오 편집기
 │   ├── RiskDashboard.tsx      # 리스크 분석 대시보드
 │   ├── ScenarioComparison.tsx # 시나리오 비교
@@ -42,10 +54,11 @@ frontend/src/
 │   ├── Tooltip.tsx            # 설명 툴팁 컴포넌트
 │   ├── WhatIfSlider.tsx       # What-If 분석 슬라이더
 │   ├── WithdrawalSettings.tsx # 인출 전략 설정
-│   ├── BacktestingPanel.tsx   # 역사적 백테스팅 UI (Phase 7)
 │   └── YearlyReportTable.tsx  # 연도별 리포트 테이블
 │
 ├── hooks/                # 커스텀 React 훅
+│   ├── useAutoSimulation.ts  # 자동 실행 디바운스 처리
+│   ├── useMediaQuery.ts      # 화면크기 확인을 통한 레이아웃 분기
 │   └── useSimulation.ts      # 시뮬레이션 상태 관리 훅
 │
 ├── logic/                # 핵심 비즈니스 로직
@@ -59,10 +72,16 @@ frontend/src/
 │   ├── math.ts               # 수학 유틸리티 (Box-Muller 등)
 │   ├── validation.ts         # 입력값 검증
 │   ├── historicalData.ts     # 역사적 시장 데이터 1985~2024 (Phase 7)
+│   ├── historicalScenarioMeta.ts # 역사적 시나리오 메타데이터
+│   ├── koreaTax.ts           # 한국 세무 및 국민연금 계산식
+│   ├── uiConstants.ts        # UI 기본 표시 상수
 │   └── export.ts             # CSV 내보내기
 │
 ├── services/             # 서비스 레이어
 │   └── storage.ts            # IndexedDB 시나리오 저장
+│
+├── utils/                # 유틸리티 함수
+│   └── format.ts             # 통화/숫자 포맷팅
 │
 ├── App.tsx               # 메인 앱 컴포넌트
 ├── index.css             # 글로벌 스타일 (CSS Variables, 다크모드)

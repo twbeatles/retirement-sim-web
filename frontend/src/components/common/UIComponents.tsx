@@ -1,15 +1,15 @@
 import React, { useEffect, useState } from "react";
 
-export function Section({ title, children }: { title: string; children: React.ReactNode }) {
+export const Section = React.memo(function Section({ title, children }: { title: string; children: React.ReactNode }) {
     return (
         <div className="bg-white dark:bg-zinc-900 rounded-2xl p-4 lg:p-6 shadow-sm border border-slate-100 dark:border-zinc-800 transition-all mb-4 w-full text-slate-900 dark:text-slate-100">
             <h3 className="text-base font-bold text-slate-900 dark:text-white mb-4 pb-3 border-b border-slate-100 dark:border-zinc-800 mt-0">{title}</h3>
             {children}
         </div>
     );
-}
+});
 
-export function Field(props: { label: string; value: any; step?: string; onChange: (v: string) => void; suffix?: string }) {
+export const Field = React.memo(function Field(props: { label: string; value: any; step?: string; onChange: (v: string) => void; suffix?: string }) {
     const [draftValue, setDraftValue] = useState(String(props.value ?? ""));
     const [isFocused, setIsFocused] = useState(false);
 
@@ -48,9 +48,9 @@ export function Field(props: { label: string; value: any; step?: string; onChang
             </div>
         </div>
     );
-}
+});
 
-export function SummaryCard({ title, value, desc, color }: { title: string; value: string; desc: string; color?: string }) {
+export const SummaryCard = React.memo(function SummaryCard({ title, value, desc, color }: { title: string; value: string; desc: string; color?: string }) {
     const toneClass =
         color === "var(--success)"
             ? "text-success"
@@ -67,5 +67,5 @@ export function SummaryCard({ title, value, desc, color }: { title: string; valu
             <div className="text-xs lg:text-sm text-slate-500 dark:text-slate-400 font-medium">{desc}</div>
         </div>
     );
-}
+});
 

@@ -31,7 +31,7 @@ interface Props {
     onInputChange: (input: SimulationInput) => void;
 }
 
-export function RiskDashboard({ input, result, onInputChange }: Props) {
+export const RiskDashboard = React.memo(function RiskDashboard({ input, result, onInputChange }: Props) {
     const [activeTab, setActiveTab] = useState<"depletion" | "sensitivity" | "sorr" | "medical">("depletion");
     const [runningAnalysis, setRunningAnalysis] = useState(false);
     const [sensitivityResults, setSensitivityResults] = useState<SensitivityResult[]>([]);
@@ -313,4 +313,4 @@ export function RiskDashboard({ input, result, onInputChange }: Props) {
             )}
         </div>
     );
-}
+});
