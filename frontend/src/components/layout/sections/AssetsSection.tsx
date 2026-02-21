@@ -16,7 +16,7 @@ export function AssetsSection({ input, setInput }: AssetsSectionProps) {
     return (
         <>
             <Section title="💵 현재 자산">
-                <div className="grid-2-cols">
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-4 gap-y-2">
                     <Field
                         label="현재 자산(저축/투자)"
                         value={Math.round(input.general.current_balance / 10000)}
@@ -40,10 +40,10 @@ export function AssetsSection({ input, setInput }: AssetsSectionProps) {
             </Section>
 
             <ExpenseManager input={input} onChange={setInput} />
-            <Suspense fallback={<div className="text-center text-muted py-4">소득 모듈 로딩 중...</div>}>
+            <Suspense fallback={<div className="text-center text-slate-500 dark:text-slate-400 py-8 animate-pulse font-medium">소득 모듈 로딩 중...</div>}>
                 <IncomeManager input={input} onChange={setInput} />
             </Suspense>
-            <Suspense fallback={<div className="text-center text-muted py-4">포트폴리오 모듈 로딩 중...</div>}>
+            <Suspense fallback={<div className="text-center text-slate-500 dark:text-slate-400 py-8 animate-pulse font-medium">포트폴리오 모듈 로딩 중...</div>}>
                 <PortfolioEditor portfolio={input.portfolio} onChange={(portfolio) => setInput({ ...input, portfolio })} />
             </Suspense>
         </>

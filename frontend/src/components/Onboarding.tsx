@@ -81,39 +81,56 @@ export function Onboarding({ onComplete }: Props) {
 
     return (
         <>
-            <div className="onboarding-overlay" />
-            <div className="onboarding-modal" role="dialog" aria-modal="true" aria-label="온보딩 안내">
-                <div className="onboarding-dots">
+            <div className="fixed inset-0 bg-slate-900/40 dark:bg-black/60 backdrop-blur-sm z-50 animate-in fade-in duration-300" />
+            <div
+                className="fixed top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 bg-white dark:bg-zinc-900 w-[90%] max-w-md rounded-3xl p-6 sm:p-8 shadow-2xl z-50 animate-in zoom-in-95 duration-300 border border-slate-100 dark:border-zinc-800"
+                role="dialog"
+                aria-modal="true"
+                aria-label="온보딩 안내"
+            >
+                <div className="flex justify-center gap-2 mb-8">
                     {STEPS.map((_, index) => (
                         <div
                             key={index}
-                            className={`onboarding-dot ${index === currentStep ? "active" : ""} ${
-                                index < currentStep ? "done" : ""
-                            }`}
+                            className={`h-2 rounded-full transition-all duration-300 ${index === currentStep ? "w-6 bg-blue-600 dark:bg-blue-500" :
+                                    index < currentStep ? "w-2 bg-blue-200 dark:bg-blue-900/50" : "w-2 bg-slate-200 dark:bg-zinc-700"
+                                }`}
                         />
                     ))}
                 </div>
 
-                <h2 className="onboarding-title">{step.title}</h2>
-                <p className="onboarding-description">{step.description}</p>
+                <h2 className="text-xl sm:text-2xl font-bold text-slate-900 dark:text-white mb-4 leading-tight">{step.title}</h2>
+                <p className="text-sm sm:text-base text-slate-600 dark:text-slate-400 mb-8 leading-relaxed min-h-[4rem]">{step.description}</p>
 
-                <div className="onboarding-actions">
-                    <button type="button" onClick={completeOnboarding} className="btn btn-ghost">
+                <div className="flex flex-col-reverse sm:flex-row justify-between items-center gap-4">
+                    <button
+                        type="button"
+                        onClick={completeOnboarding}
+                        className="text-sm font-semibold text-slate-500 dark:text-slate-400 hover:text-slate-700 dark:hover:text-slate-200 transition-colors py-2 px-3 rounded-lg hover:bg-slate-100 dark:hover:bg-zinc-800 cursor-pointer w-full sm:w-auto text-center"
+                    >
                         건너뛰기
                     </button>
-                    <div className="onboarding-nav">
+                    <div className="flex gap-2 w-full sm:w-auto">
                         {currentStep > 0 && (
-                            <button type="button" onClick={prevStep} className="btn btn-secondary">
+                            <button
+                                type="button"
+                                onClick={prevStep}
+                                className="flex-1 sm:flex-none px-4 py-2.5 bg-slate-100 hover:bg-slate-200 dark:bg-zinc-800 dark:hover:bg-zinc-700 text-slate-700 dark:text-slate-300 font-semibold rounded-xl text-sm transition-all focus:outline-none focus:ring-2 focus:ring-slate-500/50 cursor-pointer whitespace-nowrap"
+                            >
                                 ← 이전
                             </button>
                         )}
-                        <button type="button" onClick={nextStep} className="btn btn-primary">
+                        <button
+                            type="button"
+                            onClick={nextStep}
+                            className="flex-1 sm:flex-none px-5 py-2.5 bg-blue-600 hover:bg-blue-700 text-white font-semibold rounded-xl text-sm transition-all shadow-md hover:shadow-lg focus:outline-none focus:ring-2 focus:ring-blue-500/50 cursor-pointer whitespace-nowrap"
+                        >
                             {currentStep < STEPS.length - 1 ? "다음 →" : "시작하기! 🚀"}
                         </button>
                     </div>
                 </div>
 
-                <div className="onboarding-counter">
+                <div className="absolute top-4 right-5 text-xs font-bold text-slate-400 dark:text-slate-500 bg-slate-100 dark:bg-zinc-800 px-2 py-1 rounded-md">
                     {currentStep + 1} / {STEPS.length}
                 </div>
             </div>

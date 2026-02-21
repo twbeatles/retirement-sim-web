@@ -160,44 +160,49 @@ export function WhatIfSlider({ input, onInputChange }: Props) {
     };
 
     const getProgressClass = (rate: number | null) => {
-        if (rate === null) return "whatif-progress-neutral";
-        if (rate >= 0.9) return "whatif-progress-success";
-        if (rate >= 0.7) return "whatif-progress-good";
-        if (rate >= 0.5) return "whatif-progress-warning";
-        return "whatif-progress-danger";
+        if (rate === null) return "bg-slate-200 dark:bg-zinc-700";
+        if (rate >= 0.9) return "bg-emerald-500 shadow-[0_0_10px_rgba(16,185,129,0.5)]";
+        if (rate >= 0.7) return "bg-blue-500 shadow-[0_0_10px_rgba(59,130,246,0.5)]";
+        if (rate >= 0.5) return "bg-amber-500 shadow-[0_0_10px_rgba(245,158,11,0.5)]";
+        return "bg-red-500 shadow-[0_0_10px_rgba(239,68,68,0.5)]";
     };
 
     return (
-        <div className="card">
-            <h3 className="card-header">What-If 분석</h3>
-            <p className="text-sub text-sm mb-4">
+        <div className="bg-white dark:bg-zinc-900 rounded-2xl p-4 lg:p-6 shadow-sm border border-slate-100 dark:border-zinc-800 transition-all">
+            <h3 className="text-base font-bold text-slate-900 dark:text-white mt-0 mb-1 border-b border-transparent">What-If 분석</h3>
+            <p className="text-sm font-medium text-slate-500 dark:text-slate-400 mb-6 mt-0">
                 파라미터를 조정하면 실시간으로 성공 확률 변화를 확인할 수 있습니다.
             </p>
 
-            <div className="text-center mb-4 whatif-summary">
-                <div className="text-sm text-sub mb-2">예상 성공 확률</div>
-                <div className={`whatif-rate-value ${getSuccessRateToneClass(successRate)}`}>
+            <div className="text-center mb-6 p-4 bg-slate-50 dark:bg-zinc-800/50 rounded-xl border border-slate-100 dark:border-zinc-700/50">
+                <div className="text-sm font-semibold text-slate-500 dark:text-slate-400 mb-2">예상 성공 확률</div>
+                <div className={`text-4xl font-black tabular-nums tracking-tight mb-3 transition-colors ${getSuccessRateToneClass(successRate)}`}>
                     {isCalculating ? '...' : successRate !== null ? `${(successRate * 100).toFixed(1)}%` : '-'}
                 </div>
-                <progress className={`whatif-progress ${getProgressClass(successRate)}`} max={100} value={(successRate || 0) * 100} />
+                <div className="w-full h-2.5 bg-slate-200 dark:bg-zinc-700 rounded-full overflow-hidden shadow-inner">
+                    <div
+                        className={`h-full transition-all duration-500 ease-out rounded-full ${getProgressClass(successRate)}`}
+                        style={{ width: `${(successRate || 0) * 100}%` }}
+                    />
+                </div>
             </div>
 
-            <div className="flex-col gap-4">
+            <div className="flex flex-col gap-5">
                 {SLIDERS.map((slider) => {
                     const value = tempValues[slider.id];
                     const originalValue = slider.getValue(input);
                     const hasChanged = value !== originalValue;
 
                     return (
-                        <div key={slider.id}>
-                            <div className="flex-between mb-1">
-                                <label className="text-sm font-bold">{slider.label}</label>
+                        <div key={slider.id} className="group">
+                            <div className="flex justify-between items-center mb-2">
+                                <label className="text-sm font-bold text-slate-700 dark:text-slate-300">{slider.label}</label>
                                 <span
-                                    className={`text-sm ${hasChanged ? 'text-primary' : 'text-main'}`}
+                                    className={`text-sm font-semibold transition-colors ${hasChanged ? 'text-blue-600 dark:text-blue-400 bg-blue-50 dark:bg-blue-900/20 px-2 py-0.5 rounded' : 'text-slate-900 dark:text-white'}`}
                                 >
                                     {slider.format(value)}
                                     {hasChanged && (
-                                        <span className="text-sub text-xs ml-2">(원래: {slider.format(originalValue)})</span>
+                                        <span className="text-slate-400 dark:text-slate-500 text-xs ml-2 font-medium">(원래: {slider.format(originalValue)})</span>
                                     )}
                                 </span>
                             </div>
@@ -208,9 +213,9 @@ export function WhatIfSlider({ input, onInputChange }: Props) {
                                 step={slider.step}
                                 value={value}
                                 onChange={(e) => handleChange(slider.id, Number(e.target.value))}
-                                className="whatif-range"
+                                className="w-full h-2 bg-slate-200 dark:bg-zinc-700 rounded-lg appearance-none cursor-pointer accent-blue-600 hover:accent-blue-500 transition-all my-2 outline-none focus:ring-2 focus:ring-blue-500/50"
                             />
-                            <div className="flex-between text-xs text-sub">
+                            <div className="flex justify-between items-center text-xs font-semibold text-slate-400 dark:text-slate-500">
                                 <span>{slider.format(slider.min)}</span>
                                 <span>{slider.format(slider.max)}</span>
                             </div>
@@ -219,7 +224,7 @@ export function WhatIfSlider({ input, onInputChange }: Props) {
                 })}
             </div>
 
-            <button onClick={applyChanges} className="btn btn-primary mt-4 w-full">
+            <button onClick={applyChanges} className="w-full px-4 py-3 bg-blue-600 hover:bg-blue-700 text-white font-bold rounded-xl transition-all shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500/50 mt-8 disabled:opacity-50 disabled:cursor-not-allowed">
                 변경사항 적용
             </button>
         </div>

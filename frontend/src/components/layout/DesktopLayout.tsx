@@ -9,7 +9,7 @@ import { AdvancedSection } from "./sections/AdvancedSection";
 import { ResultsSection } from "./sections/ResultsSection";
 import type { LayoutSharedProps } from "./types";
 
-interface DesktopLayoutProps extends LayoutSharedProps {}
+interface DesktopLayoutProps extends LayoutSharedProps { }
 
 export function DesktopLayout({
     input,
@@ -24,23 +24,25 @@ export function DesktopLayout({
 }: DesktopLayoutProps) {
     return (
         <>
-            <aside className="sidebar">
-                <div className="sidebar-tabs">
+            <aside className="h-[calc(100vh-var(--spacing-header)-var(--spacing-xl))] overflow-y-auto bg-white/75 dark:bg-zinc-900/75 backdrop-blur-xl rounded-2xl shadow-sm border border-slate-100 dark:border-zinc-800 p-4 lg:p-6 flex flex-col gap-6 sticky top-[calc(var(--spacing-header)+var(--spacing-xl))] hidden lg:flex">
+                <div className="flex flex-col gap-1">
                     {SIDEBAR_TABS.map((tab) => (
                         <button
                             key={tab.id}
-                            className={`sidebar-tab ${sidebarTab === tab.id ? "active" : ""}`}
+                            className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl border-none text-left text-sm font-semibold transition-all cursor-pointer group ${sidebarTab === tab.id ? "bg-blue-50 dark:bg-blue-900/20 text-blue-600 dark:text-blue-400" : "bg-transparent text-slate-500 hover:bg-slate-50 dark:hover:bg-zinc-800 dark:text-slate-400"}`}
                             onClick={() => setSidebarTab(tab.id)}
                         >
-                            <span className="tab-icon">{tab.icon}</span>
-                            <span className="tab-label">{tab.label}</span>
+                            <span className={`text-lg transition-transform group-hover:scale-110 ${sidebarTab === tab.id ? "opacity-100" : "opacity-70"}`}>{tab.icon}</span>
+                            <span>{tab.label}</span>
                         </button>
                     ))}
                 </div>
 
-                <ScenarioManager currentInput={input} onLoad={setInput} />
+                <div className="pt-4 border-t border-slate-100 dark:border-zinc-800">
+                    <ScenarioManager currentInput={input} onLoad={setInput} />
+                </div>
 
-                <div className="sidebar-content animate-fadeIn">
+                <div className="flex-1 overflow-y-auto pr-2 custom-scrollbar animate-in fade-in duration-300">
                     {sidebarTab === "basic" && <BasicSection input={input} setInput={setInput} />}
                     {sidebarTab === "assets" && <AssetsSection input={input} setInput={setInput} />}
                     {sidebarTab === "pension" && <PensionSection input={input} setInput={setInput} />}
@@ -49,18 +51,20 @@ export function DesktopLayout({
                 </div>
 
                 {validationWarnings.length > 0 && (
-                    <div className="validation-warnings">
-                        <h4 className="warning-header">⚠️ 입력값 확인</h4>
-                        {validationWarnings.map((warning, index) => (
-                            <div key={index} className={`warning-item ${warning.severity}`}>
-                                {warning.message}
-                            </div>
-                        ))}
+                    <div className="mt-4 p-4 rounded-xl bg-orange-50 dark:bg-orange-900/20 border border-orange-200 dark:border-orange-900/30">
+                        <h4 className="text-sm font-semibold text-orange-800 dark:text-orange-400 mb-2 flex items-center gap-2">⚠️ 입력값 확인</h4>
+                        <div className="flex flex-col gap-2">
+                            {validationWarnings.map((warning, index) => (
+                                <div key={index} className={`text-xs p-2 rounded-lg border ${warning.severity === 'error' ? 'bg-red-50 text-red-600 border-red-200 dark:bg-red-900/20 dark:border-red-900/30 dark:text-red-400' : 'bg-orange-50 text-orange-700 border-orange-200 dark:bg-orange-900/20 dark:border-orange-900/30 dark:text-orange-400'}`}>
+                                    {warning.message}
+                                </div>
+                            ))}
+                        </div>
                     </div>
                 )}
             </aside>
 
-            <main className="main-content">
+            <main className="min-h-[calc(100vh-var(--spacing-header)-var(--spacing-xl))]">
                 <ResultsSection
                     input={input}
                     setInput={setInput}

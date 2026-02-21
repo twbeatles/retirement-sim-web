@@ -93,17 +93,17 @@ export function ScenarioManager({ currentInput, onLoad }: Props) {
     };
 
     return (
-        <div className="card mb-4">
-            <h3 className="card-header mt-0">시나리오 관리</h3>
+        <div className="bg-white dark:bg-zinc-900 rounded-2xl p-4 lg:p-6 shadow-sm border border-slate-100 dark:border-zinc-800 transition-all mb-4 w-full text-slate-900 dark:text-slate-100">
+            <h3 className="text-base font-bold text-slate-900 dark:text-white mb-4 pb-3 border-b border-slate-100 dark:border-zinc-800 mt-0">시나리오 관리</h3>
 
             <div className="mb-4">
-                <div className="text-sm text-sub mb-2">빠른 설정 (템플릿):</div>
-                <div className="flex-row flex-wrap">
+                <div className="text-sm font-semibold text-slate-500 dark:text-slate-400 mb-2">빠른 설정 (템플릿):</div>
+                <div className="flex flex-wrap gap-2">
                     {QUICK_PRESETS.map((p, i) => (
                         <button
                             key={i}
                             onClick={() => load(p.apply(currentInput), `'${p.name}' 설정을 불러오시겠습니까?`)}
-                            className="btn btn-pill"
+                            className="px-3 py-1.5 bg-blue-50 dark:bg-blue-900/10 text-blue-600 dark:text-blue-400 border border-blue-100 dark:border-blue-900/30 rounded-full text-sm font-medium hover:bg-blue-100 dark:hover:bg-blue-900/30 transition-colors active:scale-95 cursor-pointer"
                         >
                             {p.name}
                         </button>
@@ -111,25 +111,25 @@ export function ScenarioManager({ currentInput, onLoad }: Props) {
                 </div>
             </div>
 
-            <div className="scenario-divider" />
+            <div className="h-px bg-slate-100 dark:bg-zinc-800 my-4" />
 
-            <div className="flex-row mb-4">
+            <div className="flex flex-col sm:flex-row gap-2 mb-4">
                 <input
-                    className="input scenario-flex-1"
+                    className="flex-1 px-4 py-2 bg-slate-50 dark:bg-zinc-800 border border-slate-200 dark:border-zinc-700 rounded-lg text-sm placeholder:text-slate-400 outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-all min-w-0"
                     placeholder="현재 설정 저장 (예: 주식위주 40세)"
                     value={name}
                     onChange={(e) => setName(e.target.value)}
                 />
-                <button onClick={save} className="btn btn-primary scenario-nowrap">
+                <button onClick={save} className="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white font-semibold rounded-lg text-sm transition-all shadow-sm active:scale-95 whitespace-nowrap cursor-pointer">
                     프리셋 저장
                 </button>
             </div>
 
             {/* Import/Export Data */}
-            <div className="flex-row mb-4">
-                <label className="scenario-import-label">
+            <div className="flex flex-col sm:flex-row gap-2 mb-4">
+                <label className="flex-1 flex items-center justify-center gap-2 px-4 py-2 bg-slate-50 dark:bg-zinc-800 border-2 border-dashed border-slate-200 dark:border-zinc-700 rounded-lg text-sm font-semibold text-slate-600 dark:text-slate-300 hover:border-slate-400 dark:hover:border-slate-500 hover:bg-slate-100 dark:hover:bg-zinc-700 transition-colors cursor-pointer text-center">
                     📂 설정 불러오기
-                    <input type="file" accept=".json" className="scenario-file-input" onChange={(e) => {
+                    <input type="file" accept=".json" className="hidden" onChange={(e) => {
                         const file = e.target.files?.[0];
                         if (!file) return;
                         const reader = new FileReader();
@@ -172,27 +172,27 @@ export function ScenarioManager({ currentInput, onLoad }: Props) {
                         a.click();
                         URL.revokeObjectURL(url);
                     }}
-                    className="btn btn-secondary scenario-flex-1"
+                    className="flex-1 flex items-center justify-center gap-2 px-4 py-2 bg-slate-100 dark:bg-zinc-800 border border-slate-200 dark:border-zinc-700 rounded-lg text-sm font-semibold text-slate-700 dark:text-slate-300 hover:bg-slate-200 dark:hover:bg-zinc-700 transition-all cursor-pointer active:scale-95"
                 >
                     💾 설정 내보내기
                 </button>
             </div>
 
-            <div className="flex-col">
-                {scenarios.length === 0 && <div className="text-sub text-sm text-center p-2">저장된 커스텀 시나리오가 없습니다.</div>}
+            <div className="flex flex-col gap-2">
+                {scenarios.length === 0 && <div className="text-slate-400 dark:text-slate-500 text-sm p-4 text-center border-2 border-dashed border-slate-100 dark:border-zinc-800 rounded-xl">저장된 커스텀 시나리오가 없습니다.</div>}
                 {scenarios.map(s => (
                     <div
                         key={s.id}
                         onClick={() => load(s.input, `'${s.name}' 시나리오를 불러오시겠습니까?`)}
-                        className="scenario-item"
+                        className="flex items-center justify-between p-3 bg-slate-50 dark:bg-zinc-800/50 border border-slate-100 dark:border-zinc-700/50 rounded-xl hover:bg-blue-50 dark:hover:bg-blue-900/10 hover:border-blue-200 dark:hover:border-blue-900/30 transition-all cursor-pointer group"
                     >
-                        <div>
-                            <div className="font-bold text-sm text-main">{s.name}</div>
-                            <div className="text-xs text-sub">{new Date(s.updatedAt).toLocaleDateString()} 저장됨</div>
+                        <div className="flex-1 min-w-0 pr-2">
+                            <div className="font-bold text-sm text-slate-800 dark:text-slate-200 truncate">{s.name}</div>
+                            <div className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">{new Date(s.updatedAt).toLocaleDateString()} 저장됨</div>
                         </div>
                         <button
                             onClick={(e) => remove(s.id, e)}
-                            className="btn btn-sm scenario-delete-btn"
+                            className="px-2.5 py-1.5 text-xs font-semibold rounded-lg bg-white dark:bg-zinc-800 border border-slate-200 dark:border-zinc-600 text-red-500 hover:bg-red-50 hover:border-red-200 dark:hover:bg-red-900/20 dark:hover:border-red-900/30 transition-all opacity-0 group-hover:opacity-100 cursor-pointer"
                         >
                             삭제
                         </button>

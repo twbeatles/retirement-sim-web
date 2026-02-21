@@ -119,79 +119,84 @@ export const ExpenseManager: React.FC<ExpenseManagerProps> = ({ input, onChange 
     const totalAmount = items.reduce((sum, item) => sum + item.amount, 0);
 
     return (
-        <div className="card">
-            <div className="flex justify-between items-center mb-4">
-                <h3 className="text-lg font-bold flex items-center gap-2">
-                    <span>🎉</span> 목돈 지출 이벤트
+        <div className="bg-white dark:bg-zinc-900 rounded-2xl p-4 lg:p-6 shadow-sm border border-slate-100 dark:border-zinc-800 transition-all">
+            <div className="flex justify-between items-center mb-4 pb-3 border-b border-slate-100 dark:border-zinc-800">
+                <h3 className="text-base font-bold text-slate-900 dark:text-white flex items-center gap-2 m-0">
+                    <span className="text-xl leading-none">🎉</span> 목돈 지출 이벤트
                 </h3>
-                <button className="btn btn-sm btn-secondary" onClick={additem}>
+                <button
+                    className="px-3 py-1.5 bg-slate-100 hover:bg-slate-200 dark:bg-zinc-800 dark:hover:bg-zinc-700 text-slate-700 dark:text-slate-300 font-semibold rounded-lg border border-slate-200 dark:border-zinc-700 transition-colors text-xs shadow-sm cursor-pointer whitespace-nowrap"
+                    onClick={additem}
+                >
                     + 추가
                 </button>
             </div>
 
-            <p className="text-sm text-gray-500 mb-4">
+            <p className="text-sm font-medium text-slate-500 dark:text-slate-400 mb-5">
                 결혼, 차량 교체, 여행 등 예상되는 큰 지출을 입력하세요.
             </p>
 
-            <div className="space-y-3">
+            <div className="flex flex-col gap-3">
                 {items.map(item => (
-                    <div key={item.id} className="p-3 bg-gray-50 border rounded-lg relative group">
+                    <div key={item.id} className="p-4 bg-slate-50 dark:bg-zinc-800/50 border border-slate-100 dark:border-zinc-700/50 rounded-xl relative group transition-all hover:border-slate-300 dark:hover:border-zinc-600">
                         <button
-                            className="absolute top-2 right-2 text-gray-400 hover:text-red-500"
+                            className="absolute top-3 right-3 w-6 h-6 flex items-center justify-center rounded-full text-slate-400 hover:text-red-500 hover:bg-red-50 dark:hover:bg-red-900/20 transition-colors cursor-pointer"
                             onClick={() => remove(item.id)}
+                            title="삭제"
                         >
                             ✕
                         </button>
 
-                        <div className="grid grid-cols-2 gap-3 mb-2">
+                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 mb-3 pr-8">
                             <input
-                                className="input font-bold"
+                                className="w-full px-3 py-2 bg-white dark:bg-zinc-900 border border-slate-200 dark:border-zinc-700 rounded-lg text-sm font-bold text-slate-900 dark:text-white placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-all"
                                 value={item.name}
                                 onChange={e => handleChange(item.id, 'name', e.target.value)}
                                 placeholder="이벤트명 (예: 가족 여행)"
                             />
-                            <div className="flex items-center gap-1">
+                            <div className="relative flex items-center">
                                 <input
                                     type="number"
-                                    className="input text-right text-red-600 font-bold"
+                                    className="w-full pl-3 pr-10 py-2 bg-white dark:bg-zinc-900 border border-slate-200 dark:border-zinc-700 rounded-lg text-sm font-bold text-red-600 dark:text-red-400 text-right focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-all"
                                     value={item.amount / 10000}
                                     onChange={e => handleChange(item.id, 'amount', Number(e.target.value) * 10000)}
                                     step={100}
                                 />
-                                <span className="text-sm font-bold text-gray-600">만원</span>
+                                <span className="absolute right-3 text-sm font-semibold text-slate-500 dark:text-slate-400 pointer-events-none select-none">만원</span>
                             </div>
                         </div>
 
-                        <div className="flex items-center gap-4 text-sm">
-                            <div className="flex items-center gap-2">
-                                <span className="text-gray-600">나이:</span>
+                        <div className="flex flex-wrap items-center gap-x-5 gap-y-3 text-sm">
+                            <div className="flex items-center gap-2 bg-white dark:bg-zinc-900 border border-slate-200 dark:border-zinc-700 rounded-lg overflow-hidden px-2 py-1">
+                                <span className="text-slate-500 dark:text-slate-400 font-medium text-xs select-none">나이:</span>
                                 <input
                                     type="number"
-                                    className="input w-16 text-center py-1"
+                                    className="w-12 text-center bg-transparent border-none font-bold text-slate-900 dark:text-white focus:outline-none p-0"
                                     value={item.startAge}
                                     onChange={e => handleChange(item.id, 'startAge', Number(e.target.value))}
                                 />
-                                <span className="text-gray-600">세</span>
+                                <span className="text-slate-500 dark:text-slate-400 font-medium text-xs select-none">세</span>
                             </div>
 
-                            <label className="flex items-center gap-2 cursor-pointer">
+                            <label className="flex items-center gap-2 cursor-pointer group/cb">
                                 <input
                                     type="checkbox"
+                                    className="w-4 h-4 text-blue-600 bg-slate-100 border-slate-300 rounded focus:ring-blue-500 dark:focus:ring-blue-600 dark:ring-offset-zinc-800 focus:ring-2 dark:bg-zinc-700 dark:border-zinc-600 cursor-pointer"
                                     checked={item.isRecurring}
                                     onChange={e => handleChange(item.id, 'isRecurring', e.target.checked)}
                                 />
-                                <span className="text-gray-600">반복</span>
+                                <span className="font-semibold text-slate-700 dark:text-slate-300 group-hover/cb:text-slate-900 dark:group-hover/cb:text-white transition-colors">반복</span>
                             </label>
 
                             {item.isRecurring && (
-                                <div className="flex items-center gap-2 animate-fadeIn">
+                                <div className="flex items-center gap-2 bg-white dark:bg-zinc-900 border border-slate-200 dark:border-zinc-700 rounded-lg overflow-hidden px-2 py-1 animate-in fade-in slide-in-from-left-2 duration-200">
                                     <input
                                         type="number"
-                                        className="input w-16 text-center py-1"
+                                        className="w-10 text-center bg-transparent border-none font-bold text-slate-900 dark:text-white focus:outline-none p-0"
                                         value={item.intervalYears || 5}
                                         onChange={e => handleChange(item.id, 'intervalYears', Number(e.target.value))}
                                     />
-                                    <span className="text-gray-600">년 마다</span>
+                                    <span className="text-slate-500 dark:text-slate-400 font-medium text-xs select-none">년 마다</span>
                                 </div>
                             )}
                         </div>
@@ -200,8 +205,9 @@ export const ExpenseManager: React.FC<ExpenseManagerProps> = ({ input, onChange 
             </div>
 
             {items.length === 0 && (
-                <div className="text-center py-6 bg-gray-50 rounded-lg border border-dashed">
-                    <p className="text-gray-400 text-sm">등록된 이벤트가 없습니다.</p>
+                <div className="flex flex-col items-center justify-center py-8 px-4 bg-slate-50 dark:bg-zinc-800/30 rounded-xl border border-dashed border-slate-200 dark:border-zinc-700">
+                    <span className="text-2xl mb-2 opacity-50">💸</span>
+                    <p className="font-medium text-slate-400 dark:text-slate-500 text-sm m-0">등록된 이벤트가 없습니다.</p>
                 </div>
             )}
         </div>

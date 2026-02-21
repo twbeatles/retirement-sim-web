@@ -16,16 +16,17 @@ interface AdvancedSectionProps {
 export function AdvancedSection({ input, setInput }: AdvancedSectionProps) {
     return (
         <>
-            <Suspense fallback={<div className="text-center text-muted py-4">Loading...</div>}>
+            <Suspense fallback={<div className="text-center text-slate-500 dark:text-slate-400 py-8 animate-pulse font-medium">Loading...</div>}>
                 <BacktestingPanel input={input} onInputChange={setInput} />
             </Suspense>
 
             <WithdrawalSettings withdrawal={input.withdrawal} onChange={(withdrawal) => setInput({ ...input, withdrawal })} />
 
             <Section title="⚠️ 리스크 관리 (Stress Test)">
-                <label className="checkbox-label font-semibold">
+                <label className="flex items-center gap-2 cursor-pointer text-sm font-semibold text-slate-700 dark:text-slate-300">
                     <input
                         type="checkbox"
+                        className="w-4 h-4 text-orange-600 bg-slate-100 border-slate-300 rounded focus:ring-orange-500 dark:focus:ring-orange-600 dark:ring-offset-zinc-800 focus:ring-2 dark:bg-zinc-700 dark:border-zinc-600"
                         checked={input.stress_test?.enabled ?? false}
                         onChange={(e) =>
                             setInput({
@@ -45,11 +46,12 @@ export function AdvancedSection({ input, setInput }: AdvancedSectionProps) {
                 </label>
 
                 {input.stress_test?.enabled && (
-                    <div className="stress-test-box mt-3">
-                        <div className="text-xs text-danger mb-2">
-                            * 주식 시장이 특정 기간 동안 매년 폭락한다고 가정합니다.
+                    <div className="mt-4 p-4 bg-orange-50 dark:bg-orange-900/10 border border-orange-200 dark:border-orange-900/30 rounded-xl">
+                        <div className="text-xs font-semibold text-orange-600 dark:text-orange-400 mb-3 flex items-start gap-1">
+                            <span className="mt-0.5">*</span>
+                            <span>주식 시장이 특정 기간 동안 매년 폭락한다고 가정합니다.</span>
                         </div>
-                        <div className="grid-2-cols">
+                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-4 gap-y-2">
                             <Field
                                 label="연간 하락률"
                                 step="5"
@@ -74,10 +76,11 @@ export function AdvancedSection({ input, setInput }: AdvancedSectionProps) {
                                 suffix="개월"
                             />
                         </div>
-                        <div className="mt-2">
-                            <label className="checkbox-label text-sm">
+                        <div className="mt-3 pt-3 border-t border-orange-200/50 dark:border-orange-900/30">
+                            <label className="flex items-center gap-2 cursor-pointer text-sm font-medium text-slate-700 dark:text-slate-300">
                                 <input
                                     type="checkbox"
+                                    className="w-4 h-4 text-orange-600 bg-slate-100 border-slate-300 rounded focus:ring-orange-500 dark:focus:ring-orange-600 dark:ring-offset-zinc-800 focus:ring-2 dark:bg-zinc-700 dark:border-zinc-600"
                                     checked={input.stress_test.startFromRetirement}
                                     onChange={(e) =>
                                         setInput({

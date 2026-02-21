@@ -70,33 +70,37 @@ export function YearlyReportTable({ data }: { data: TimelineRow[] }) {
     if (!data || data.length === 0) return null;
 
     return (
-        <div className="table-container yearly-report-table">
-            <table className="data-table">
+        <div className="overflow-x-auto rounded-xl border border-slate-200 dark:border-zinc-700 mt-6 shadow-sm">
+            <table className="w-full text-sm text-right border-collapse whitespace-nowrap">
                 <thead>
-                    <tr>
-                        <th>나이</th>
-                        <th>상태</th>
-                        <th>총자산(물가반영)</th>
-                        <th>국민연금(연)</th>
-                        <th>개인연금(연)</th>
-                        <th>자산인출(세후)</th>
-                        <th>세금</th>
-                        <th>총 가처분소득(연)</th>
-                        <th>월 평균소득</th>
+                    <tr className="bg-slate-50 dark:bg-zinc-800/80 text-slate-600 dark:text-slate-400 border-b border-slate-200 dark:border-zinc-700">
+                        <th className="p-3 text-center sm:text-right font-semibold text-xs uppercase tracking-wider">나이</th>
+                        <th className="p-3 text-center sm:text-right font-semibold text-xs uppercase tracking-wider">상태</th>
+                        <th className="p-3 text-center sm:text-right font-semibold text-xs uppercase tracking-wider">총자산(물가반영)</th>
+                        <th className="p-3 text-center sm:text-right font-semibold text-xs uppercase tracking-wider">국민연금(연)</th>
+                        <th className="p-3 text-center sm:text-right font-semibold text-xs uppercase tracking-wider">개인연금(연)</th>
+                        <th className="p-3 text-center sm:text-right font-semibold text-xs uppercase tracking-wider">자산인출(세후)</th>
+                        <th className="p-3 text-center sm:text-right font-semibold text-xs uppercase tracking-wider">세금</th>
+                        <th className="p-3 text-center sm:text-right font-semibold text-xs uppercase tracking-wider">총 가처분소득(연)</th>
+                        <th className="p-3 text-center sm:text-right font-semibold text-xs uppercase tracking-wider">월 평균소득</th>
                     </tr>
                 </thead>
-                <tbody>
+                <tbody className="bg-white dark:bg-zinc-900 divide-y divide-slate-100 dark:divide-zinc-800">
                     {years.map((row) => (
-                        <tr key={row.year}>
-                            <td>{row.age}세</td>
-                            <td>{row.isRetired ? "은퇴" : "근로"}</td>
-                            <td className="yearly-asset-cell">{fmt(row.totalAssetsReal)}</td>
-                            <td>{fmt(row.natPension)}</td>
-                            <td>{fmt(row.privPension)}</td>
-                            <td>{fmt(row.withdrawalNet)}</td>
-                            <td className="yearly-tax-cell">{fmt(row.taxPaid)}</td>
-                            <td className="yearly-income-cell">{fmt(row.totalNetIncome)}</td>
-                            <td>{fmt(row.totalNetIncome / 12)}</td>
+                        <tr key={row.year} className="hover:bg-slate-50 dark:hover:bg-zinc-800/50 transition-colors group">
+                            <td className="p-3 text-center sm:text-right font-bold text-slate-700 dark:text-slate-300 group-hover:text-blue-600 dark:group-hover:text-blue-400">{row.age}세</td>
+                            <td className="p-3 text-center sm:text-right">
+                                <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-xs font-bold ${row.isRetired ? 'bg-amber-100 text-amber-700 dark:bg-amber-500/20 dark:text-amber-300' : 'bg-blue-100 text-blue-700 dark:bg-blue-500/20 dark:text-blue-300'}`}>
+                                    {row.isRetired ? "은퇴" : "근로"}
+                                </span>
+                            </td>
+                            <td className="p-3 font-bold text-indigo-600 dark:text-indigo-400 bg-indigo-50/20 dark:bg-indigo-900/10 group-hover:bg-indigo-50/40 dark:group-hover:bg-indigo-900/20">{fmt(row.totalAssetsReal)}</td>
+                            <td className="p-3 font-medium text-slate-600 dark:text-slate-400">{fmt(row.natPension)}</td>
+                            <td className="p-3 font-medium text-slate-600 dark:text-slate-400">{fmt(row.privPension)}</td>
+                            <td className="p-3 font-medium text-slate-600 dark:text-slate-400">{fmt(row.withdrawalNet)}</td>
+                            <td className="p-3 font-semibold text-red-500 dark:text-red-400">{fmt(row.taxPaid)}</td>
+                            <td className="p-3 font-bold text-emerald-600 dark:text-emerald-400 bg-emerald-50/20 dark:bg-emerald-900/10 group-hover:bg-emerald-50/40 dark:group-hover:bg-emerald-900/20">{fmt(row.totalNetIncome)}</td>
+                            <td className="p-3 font-bold text-slate-800 dark:text-slate-200">{fmt(row.totalNetIncome / 12)}</td>
                         </tr>
                     ))}
                 </tbody>

@@ -62,22 +62,21 @@ export function calculateRegionalHealthInsurance(
     // Let's use a widely used approximation function or simplified table.
 
     if (taxableProperty > 0) {
-        // Very rough approximation of the 60 grades
-        if (taxableProperty < 13500000) propertyScore = 22;
-        else {
-            // Approx: val / 1,000,000 * 1.1 ? 
-            // Let's use a step function for key points
-            if (taxableProperty < 100000000) propertyScore = 150; // 100~200 points
-            else if (taxableProperty < 300000000) propertyScore = 300;
-            else if (taxableProperty < 500000000) propertyScore = 500;
-            else if (taxableProperty < 900000000) propertyScore = 700;
-            else propertyScore = 900 + Math.floor((taxableProperty - 900000000) / 10000000) * 2;
+        // Piecewise linear approximation based on the exact 60-grade table (2024 National Health Insurance)
+        const tp = taxableProperty;
+        if (tp <= 4500000) propertyScore = 22;
+        else if (tp <= 9000000) propertyScore = 32;
+        else if (tp <= 13500000) propertyScore = 43;
+        else if (tp <= 50000000) propertyScore = 43 + ((tp - 13500000) / 36500000) * (147 - 43);
+        else if (tp <= 100000000) propertyScore = 147 + ((tp - 50000000) / 50000000) * (262 - 147);
+        else if (tp <= 200000000) propertyScore = 262 + ((tp - 100000000) / 100000000) * (433 - 262);
+        else if (tp <= 500000000) propertyScore = 433 + ((tp - 200000000) / 300000000) * (741 - 433);
+        else if (tp <= 1000000000) propertyScore = 741 + ((tp - 500000000) / 500000000) * (1081 - 741);
+        else if (tp <= 3000000000) propertyScore = 1081 + ((tp - 1000000000) / 2000000000) * (1821 - 1081);
+        else if (tp <= 7781240000) propertyScore = 1821 + ((tp - 3000000000) / 4781240000) * (2341 - 1821);
+        else propertyScore = 2341;
 
-            // Refinement: (Property / 10,000) * factor
-            // For 500M Property: ~540 points.
-            // For 1B Property: ~900 points.
-            propertyScore = Math.min(2341, Math.round(taxableProperty / 1000000));
-        }
+        propertyScore = Math.floor(propertyScore);
     }
 
     // 3. Car Premium (자동차 점수)

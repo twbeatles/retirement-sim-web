@@ -42,21 +42,21 @@ export default function App() {
     const resultStatusLabel = result?.detailLevel === "preview" ? "빠른 추정값" : result ? "최종 결과" : null;
 
     return (
-        <div className="app-container">
-            <header className="header">
-                <div className="header-left">
-                    <div className="brand">
-                        <span>🏦</span> 은퇴 자산 시뮬레이터 Pro
+        <div className="flex flex-col min-h-screen p-4 lg:p-6 lg:grid lg:grid-cols-[var(--spacing-sidebar)_1fr] lg:grid-rows-[auto_1fr] gap-4 lg:gap-6 max-w-[var(--spacing-max-width)] mx-auto">
+            <header className="col-span-full bg-white/75 dark:bg-zinc-900/75 backdrop-blur-xl px-4 lg:px-6 h-[var(--spacing-header)] rounded-2xl flex items-center justify-between shadow-sm border border-slate-100 dark:border-zinc-800 sticky top-4 lg:top-6 z-50 transition-colors duration-300">
+                <div className="flex items-center gap-3">
+                    <div className="text-lg lg:text-xl font-extrabold bg-gradient-to-br from-blue-500 to-purple-500 bg-clip-text text-transparent flex items-center gap-2">
+                        <span className="text-current">🏦</span> 은퇴 자산 시뮬레이터 Pro
                     </div>
-                    {isCalculating && <span className="status-running animate-pulse">계산 중...</span>}
-                    {resultStatusLabel && <span className="status-running status-ready">{resultStatusLabel}</span>}
+                    {isCalculating && <span className="text-xs text-slate-400 dark:text-slate-500 animate-pulse">계산 중...</span>}
+                    {resultStatusLabel && <span className="text-xs text-blue-600 dark:text-blue-400 font-semibold">{resultStatusLabel}</span>}
                 </div>
 
-                <div className="header-right">
-                    <div className="view-toggle" role="tablist" aria-label="모드 전환">
+                <div className="flex items-center gap-2 lg:gap-3">
+                    <div className="flex bg-slate-50 dark:bg-zinc-900 p-1 rounded-full border border-slate-200 dark:border-zinc-800" role="tablist" aria-label="모드 전환">
                         <button
                             type="button"
-                            className={viewMode === "simple" ? "active" : ""}
+                            className={`px-3 lg:px-4 py-1.5 lg:py-2 rounded-full border-none bg-transparent text-sm font-semibold transition-all min-h-[36px] lg:min-h-[40px] cursor-pointer ${viewMode === "simple" ? "bg-white dark:bg-zinc-800 text-blue-600 dark:text-blue-400 shadow-sm" : "text-slate-500 hover:text-slate-900 dark:text-slate-400 dark:hover:text-slate-100"}`}
                             onClick={() => setViewMode("simple")}
                             aria-pressed={viewMode === "simple"}
                         >
@@ -64,7 +64,7 @@ export default function App() {
                         </button>
                         <button
                             type="button"
-                            className={viewMode === "pro" ? "active" : ""}
+                            className={`px-3 lg:px-4 py-1.5 lg:py-2 rounded-full border-none bg-transparent text-sm font-semibold transition-all min-h-[36px] lg:min-h-[40px] cursor-pointer ${viewMode === "pro" ? "bg-white dark:bg-zinc-800 text-blue-600 dark:text-blue-400 shadow-sm" : "text-slate-500 hover:text-slate-900 dark:text-slate-400 dark:hover:text-slate-100"}`}
                             onClick={() => setViewMode("pro")}
                             aria-pressed={viewMode === "pro"}
                         >
@@ -73,7 +73,7 @@ export default function App() {
                     </div>
                     <button
                         type="button"
-                        className="theme-toggle"
+                        className="w-10 h-10 rounded-full border border-slate-200 dark:border-zinc-800 bg-white dark:bg-zinc-800 flex items-center justify-center cursor-pointer text-lg hover:bg-slate-50 dark:hover:bg-zinc-700 transition-colors"
                         onClick={() => setTheme((prev) => (prev === "light" ? "dark" : "light"))}
                         aria-label={theme === "light" ? "다크 모드 켜기" : "라이트 모드 켜기"}
                         title={theme === "light" ? "다크 모드 켜기" : "라이트 모드 켜기"}
@@ -84,14 +84,14 @@ export default function App() {
             </header>
 
             {error && (
-                <div className="alert alert-danger app-alert" role="alert">
+                <div className="col-span-full p-4 rounded-xl text-sm flex items-start gap-2 bg-red-100 text-red-600 border border-red-200 dark:bg-red-900/20 dark:border-red-900/30" role="alert">
                     ⚠️ 시뮬레이션 실행 중 오류가 발생했습니다: {error}
                 </div>
             )}
 
             {viewMode === "simple" ? (
-                <Suspense fallback={<div className="text-center text-muted py-8">Loading dashboard...</div>}>
-                    <div className="simple-mode-container">
+                <Suspense fallback={<div className="text-center text-slate-400 py-8">Loading dashboard...</div>}>
+                    <div className="flex flex-col gap-6 max-w-5xl mx-auto w-full">
                         <SimpleDashboard input={input} result={result} onInputChange={setInput} />
                     </div>
                 </Suspense>

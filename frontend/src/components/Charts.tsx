@@ -37,10 +37,10 @@ export const AssetChart = React.memo(function AssetChart({ data }: { data: Timel
   const sampled = data.filter((_, i) => i % samplingRate === 0);
 
   return (
-    <div className="chart-box chart-box-md">
+    <div className="bg-white dark:bg-zinc-900 border border-slate-100 dark:border-zinc-800 rounded-2xl shadow-sm p-4 w-full h-80">
       <ResponsiveContainer>
         <LineChart data={sampled} margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>
-          <CartesianGrid strokeDasharray="3 3" />
+          <CartesianGrid strokeDasharray="3 3" stroke="#e2e8f0" vertical={false} />
           <XAxis dataKey="month" tickFormatter={(m) => `${Math.floor(m / 12)}y`} style={axisStyle} />
           <YAxis tickFormatter={fmt} width={60} style={axisStyle} />
           <Tooltip formatter={(v: any) => fmtFull(Number(v))} labelFormatter={(l) => Math.floor(Number(l) / 12) + "년차"} />
@@ -68,11 +68,11 @@ export const RetirementCashflowChart = React.memo(function RetirementCashflowCha
   }));
 
   return (
-    <div className="chart-box chart-box-md">
-      {stack.length === 0 ? <div className="chart-empty">은퇴 구간 데이터가 없습니다.</div> : (
+    <div className="bg-white dark:bg-zinc-900 border border-slate-100 dark:border-zinc-800 rounded-2xl shadow-sm p-4 w-full h-80">
+      {stack.length === 0 ? <div className="flex items-center justify-center h-full text-sm font-medium text-slate-400 dark:text-slate-500">은퇴 구간 데이터가 없습니다.</div> : (
         <ResponsiveContainer>
           <AreaChart data={stack} margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>
-            <CartesianGrid strokeDasharray="3 3" />
+            <CartesianGrid strokeDasharray="3 3" stroke="#e2e8f0" vertical={false} />
             <XAxis dataKey="year" tickFormatter={(y) => y + "세"} style={axisStyle} />
             <YAxis tickFormatter={fmt} width={60} style={axisStyle} />
             <Tooltip formatter={(v: any) => fmtFull(Number(v))} />
@@ -104,10 +104,10 @@ export const FanChart = React.memo(function FanChart({ stats }: { stats: Simulat
   }, [stats]);
 
   return (
-    <div className="chart-box chart-box-md">
+    <div className="bg-white dark:bg-zinc-900 border border-slate-100 dark:border-zinc-800 rounded-2xl shadow-sm p-4 w-full h-80">
       <ResponsiveContainer>
         <AreaChart data={data} margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>
-          <CartesianGrid strokeDasharray="3 3" />
+          <CartesianGrid strokeDasharray="3 3" stroke="#e2e8f0" vertical={false} />
           <XAxis dataKey="month" tickFormatter={(m) => `${Math.floor(m / 12)}y`} style={axisStyle} />
           <YAxis tickFormatter={fmt} width={60} domain={['auto', 'auto']} style={axisStyle} />
           <Tooltip formatter={(v: any) => Array.isArray(v) ? v.map(n => fmtFull(n)).join(" ~ ") : fmtFull(Number(v))} />

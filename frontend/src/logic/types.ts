@@ -43,6 +43,7 @@ export type WithdrawalPolicy = {
     // VPW Specific
     vpwMaxWithdrawalRate?: number; // Optional cap, e.g. 0.1 (10%)
     vpwMinWithdrawalRate?: number; // Optional floor
+    vpwMaxYoYChange?: number;      // Smoothing: Max Year-over-Year change (e.g. 0.1 for 10%)
 };
 
 export type SimulationInput = {

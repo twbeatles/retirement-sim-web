@@ -514,7 +514,21 @@ function simulateOnePath(
                     appliedRate = Math.max(appliedRate, input.withdrawal.vpwMinWithdrawalRate);
                 }
 
-                withdrawalGross = balGeneral * (appliedRate / 12.0);
+                let targetWithdrawal = balGeneral * (appliedRate / 12.0);
+
+                if (input.withdrawal.vpwMaxYoYChange) {
+                    const prevMonth = m - 1;
+                    if (prevMonth >= monthsToRetire) {
+                        const lastWithdrawal = timeline[prevMonth]?.cashflow.withdrawalGross || targetWithdrawal;
+                        // Limit monthly change to approximate the annual max YoY change
+                        const maxChangePerMonth = Math.pow(1 + input.withdrawal.vpwMaxYoYChange, 1 / 12) - 1;
+                        const upperBound = lastWithdrawal * (1 + maxChangePerMonth);
+                        const lowerBound = lastWithdrawal * (1 - Math.pow(1 - input.withdrawal.vpwMaxYoYChange, 1 / 12));
+                        targetWithdrawal = Math.min(upperBound, Math.max(lowerBound, targetWithdrawal));
+                    }
+                }
+
+                withdrawalGross = targetWithdrawal;
             } else if (strategy === "guardrails" && input.guardrails) {
                 // NEW: Guardrails Strategy
                 const gr = input.guardrails;

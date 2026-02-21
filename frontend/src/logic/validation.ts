@@ -15,9 +15,13 @@ export function validateSimulationInput(input: SimulationInput): ValidationWarni
     }
 
     // Portfolio validations
-    const totalAlloc = input.portfolio.assetClasses.reduce((sum, a) => sum + a.allocation, 0);
-    if (Math.abs(totalAlloc - 1.0) > 0.01) {
-        warnings.push({ field: 'portfolio', message: `포트폴리오 비중 합계가 ${(totalAlloc * 100).toFixed(0)}%입니다. 100%가 되어야 합니다.`, severity: 'error' });
+    if (!input.portfolio.assetClasses || input.portfolio.assetClasses.length === 0) {
+        warnings.push({ field: 'portfolio', message: '포트폴리오에 최소 하나의 자산군이 포함되어야 합니다.', severity: 'error' });
+    } else {
+        const totalAlloc = input.portfolio.assetClasses.reduce((sum, a) => sum + a.allocation, 0);
+        if (Math.abs(totalAlloc - 1.0) > 0.01) {
+            warnings.push({ field: 'portfolio', message: `포트폴리오 비중 합계가 ${(totalAlloc * 100).toFixed(0)}%입니다. 100%가 되어야 합니다.`, severity: 'error' });
+        }
     }
 
     // Withdrawal rate warning

@@ -103,10 +103,10 @@ export function RiskDashboard({ input, result, onInputChange }: Props) {
     };
 
     return (
-        <div className="card">
-            <h3 className="card-header">Risk Dashboard</h3>
+        <div className="bg-white dark:bg-zinc-900 rounded-2xl p-4 lg:p-6 shadow-sm border border-slate-100 dark:border-zinc-800 transition-all hover:-translate-y-0.5 hover:shadow-md">
+            <h3 className="text-base font-bold text-slate-900 dark:text-white mb-4 pb-3 border-b border-slate-100 dark:border-zinc-800">Risk Dashboard</h3>
 
-            <div className="risk-tabs mb-4">
+            <div className="flex gap-2 overflow-x-auto pb-2 mb-4 border-b-2 border-slate-100 dark:border-zinc-800">
                 {[
                     { id: "depletion", label: "Depletion" },
                     { id: "sensitivity", label: "Sensitivity" },
@@ -116,7 +116,7 @@ export function RiskDashboard({ input, result, onInputChange }: Props) {
                     <button
                         key={tab.id}
                         onClick={() => setActiveTab(tab.id as typeof activeTab)}
-                        className={`risk-tab ${activeTab === tab.id ? "active" : ""}`}
+                        className={`px-4 py-2 font-semibold text-sm rounded-t-lg transition-colors whitespace-nowrap ${activeTab === tab.id ? "text-blue-600 dark:text-blue-400 border-b-2 border-blue-600 dark:border-blue-400 bg-blue-50/50 dark:bg-blue-900/10" : "text-slate-500 hover:text-slate-900 dark:text-slate-400 dark:hover:text-slate-100 hover:bg-slate-50 dark:hover:bg-zinc-800"}`}
                     >
                         {tab.label}
                     </button>
@@ -124,27 +124,27 @@ export function RiskDashboard({ input, result, onInputChange }: Props) {
             </div>
 
             {activeTab === "depletion" && (
-                <div>
-                    <p className="text-sub text-sm mb-4">Distribution of asset depletion timing across simulation paths.</p>
+                <div className="animate-in fade-in duration-300">
+                    <p className="text-slate-500 dark:text-slate-400 text-sm mb-4">Distribution of asset depletion timing across simulation paths.</p>
                     {depletionAnalysis ? (
                         <>
-                            <div className="summary-grid risk-summary-grid mb-4">
-                                <div className="summary-card risk-summary-success">
-                                    <div className="summary-title">Never depleted</div>
-                                    <div className="summary-value text-success">
+                            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-4">
+                                <div className="bg-emerald-50 dark:bg-emerald-900/10 p-4 rounded-xl border border-emerald-100 dark:border-emerald-900/30">
+                                    <div className="text-xs uppercase tracking-wider font-semibold text-emerald-700 dark:text-emerald-400 mb-1">Never depleted</div>
+                                    <div className="text-2xl font-extrabold text-emerald-600 dark:text-emerald-500">
                                         {(depletionAnalysis.neverDepletedRate * 100).toFixed(1)}%
                                     </div>
                                 </div>
                                 {depletionAnalysis.medianDepletionAge && (
-                                    <div className="summary-card risk-summary-warning">
-                                        <div className="summary-title">Median depletion age</div>
-                                        <div className="summary-value text-warning">
+                                    <div className="bg-orange-50 dark:bg-orange-900/10 p-4 rounded-xl border border-orange-100 dark:border-orange-900/30">
+                                        <div className="text-xs uppercase tracking-wider font-semibold text-orange-700 dark:text-orange-400 mb-1">Median depletion age</div>
+                                        <div className="text-2xl font-extrabold text-orange-600 dark:text-orange-500">
                                             {Math.round(depletionAnalysis.medianDepletionAge)}y
                                         </div>
                                     </div>
                                 )}
                             </div>
-                            <div className="chart-box chart-box-sm">
+                            <div className="h-64 w-full">
                                 <ResponsiveContainer>
                                     <BarChart data={depletionAnalysis.histogram.filter((bucket) => bucket.count > 0)}>
                                         <CartesianGrid strokeDasharray="3 3" />
@@ -157,7 +157,7 @@ export function RiskDashboard({ input, result, onInputChange }: Props) {
                             </div>
                         </>
                     ) : (
-                        <div className="text-center text-sub p-4">
+                        <div className="text-center text-slate-500 dark:text-slate-400 p-6 bg-slate-50 dark:bg-zinc-800/50 rounded-xl border border-slate-100 dark:border-zinc-800">
                             Depletion analysis is available in Monte Carlo mode.
                         </div>
                     )}
@@ -165,17 +165,17 @@ export function RiskDashboard({ input, result, onInputChange }: Props) {
             )}
 
             {activeTab === "sensitivity" && (
-                <div>
-                    <p className="text-sub text-sm mb-4">
+                <div className="animate-in fade-in duration-300">
+                    <p className="text-slate-500 dark:text-slate-400 text-sm mb-4 flex items-center gap-2">
                         Parameter sensitivity for success rate.
                         <Tooltip content="Runs worker-based comparisons over ±2% parameter shifts." />
                     </p>
-                    <button onClick={handleRunSensitivity} disabled={runningAnalysis} className="btn btn-primary mb-4">
+                    <button onClick={handleRunSensitivity} disabled={runningAnalysis} className="inline-flex items-center justify-center gap-2 px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg font-semibold text-sm transition-all active:scale-[0.98] disabled:opacity-50 disabled:cursor-not-allowed mb-4">
                         {runningAnalysis ? "Analyzing..." : "Run sensitivity"}
                     </button>
 
                     {sensitivityResults.length > 0 && (
-                        <div className="chart-box chart-box-md">
+                        <div className="h-80 w-full mt-4">
                             <ResponsiveContainer>
                                 <LineChart>
                                     <CartesianGrid strokeDasharray="3 3" />
@@ -216,18 +216,19 @@ export function RiskDashboard({ input, result, onInputChange }: Props) {
             )}
 
             {activeTab === "sorr" && (
-                <div>
-                    <p className="text-sub text-sm mb-4">
-                        <strong>Sequence-of-returns risk</strong>
+                <div className="animate-in fade-in duration-300">
+                    <p className="text-slate-500 dark:text-slate-400 text-sm mb-4 flex items-center gap-2">
+                        <strong className="text-slate-900 dark:text-slate-100">Sequence-of-returns risk</strong>
                         <Tooltip content="Early-retirement drawdowns can be more damaging than late drawdowns." />
                     </p>
-                    <div className="info-box risk-info-box">
+                    <div className="bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-900/30 rounded-xl p-3 flex items-start gap-2 mt-2 text-sm text-blue-800 dark:text-blue-300">
                         <strong>Tip:</strong> Increasing defensive allocation in the first few retirement years can reduce this risk.
                     </div>
-                    <div className="mt-2">
-                        <label className="checkbox-label font-bold">
+                    <div className="mt-6 flex items-center">
+                        <label className="flex items-center gap-3 text-sm cursor-pointer font-semibold text-slate-700 dark:text-slate-300 hover:text-slate-900 dark:hover:text-slate-100 group">
                             <input
                                 type="checkbox"
+                                className="w-5 h-5 rounded border-slate-300 dark:border-zinc-700 text-blue-600 focus:ring-blue-500 dark:bg-zinc-800 transition-transform cursor-pointer group-hover:scale-110"
                                 checked={input.stress_test?.enabled ?? false}
                                 onChange={(event) =>
                                     onInputChange({
@@ -250,15 +251,16 @@ export function RiskDashboard({ input, result, onInputChange }: Props) {
             )}
 
             {activeTab === "medical" && (
-                <div>
-                    <p className="text-sub text-sm mb-4">
+                <div className="animate-in fade-in duration-300">
+                    <p className="text-slate-500 dark:text-slate-400 text-sm mb-4">
                         Add one-time medical expense shocks at specific ages.
                     </p>
 
-                    <div className="mb-4">
-                        <label className="checkbox-label font-bold">
+                    <div className="mb-6 flex items-center">
+                        <label className="flex items-center gap-3 text-sm cursor-pointer font-semibold text-slate-700 dark:text-slate-300 hover:text-slate-900 dark:hover:text-slate-100 group">
                             <input
                                 type="checkbox"
+                                className="w-5 h-5 rounded border-slate-300 dark:border-zinc-700 text-blue-600 focus:ring-blue-500 dark:bg-zinc-800 transition-transform cursor-pointer group-hover:scale-110"
                                 checked={input.medical_shocks?.enabled ?? false}
                                 onChange={(event) => toggleMedicalShock(event.target.checked)}
                             />
@@ -267,44 +269,45 @@ export function RiskDashboard({ input, result, onInputChange }: Props) {
                     </div>
 
                     {input.medical_shocks?.enabled && (
-                        <>
+                        <div className="flex flex-col gap-3">
                             {input.medical_shocks.occurrences.map((shock, index) => (
-                                <div key={index} className="flex-row gap-2 mb-2">
+                                <div key={index} className="flex flex-wrap items-center gap-2 bg-slate-50 dark:bg-zinc-800/50 p-2 lg:p-3 rounded-xl border border-slate-100 dark:border-zinc-800">
                                     <input
                                         type="number"
-                                        className="input risk-w-70"
+                                        className="w-20 lg:w-24 px-3 py-2 bg-white dark:bg-zinc-900 border border-slate-200 dark:border-zinc-700 rounded-lg text-sm text-slate-900 dark:text-white focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20 outline-none transition-all"
                                         value={shock.age}
                                         onChange={(event) => updateMedicalShock(index, "age", Number(event.target.value))}
                                         placeholder="Age"
                                     />
-                                    <span className="text-sub">at</span>
+                                    <span className="text-slate-500 dark:text-slate-400 text-sm font-medium">세에</span>
                                     <input
                                         type="number"
-                                        className="input risk-w-140"
+                                        className="w-32 lg:w-40 px-3 py-2 bg-white dark:bg-zinc-900 border border-slate-200 dark:border-zinc-700 rounded-lg text-sm text-slate-900 dark:text-white focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20 outline-none transition-all"
                                         value={shock.amount}
                                         onChange={(event) => updateMedicalShock(index, "amount", Number(event.target.value))}
                                         placeholder="Amount"
                                     />
-                                    <span className="text-sub">KRW</span>
+                                    <span className="text-slate-500 dark:text-slate-400 text-sm font-medium">KRW 발생:</span>
                                     <input
                                         type="text"
-                                        className="input flex-1"
+                                        className="flex-1 min-w-[120px] px-3 py-2 bg-white dark:bg-zinc-900 border border-slate-200 dark:border-zinc-700 rounded-lg text-sm text-slate-900 dark:text-white focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20 outline-none transition-all"
                                         value={shock.description || ""}
                                         onChange={(event) => updateMedicalShock(index, "description", event.target.value)}
-                                        placeholder="Description"
+                                        placeholder="설명 (예: 수술비)"
                                     />
                                     <button
                                         onClick={() => removeMedicalShock(index)}
-                                        className="btn btn-sm scenario-delete-btn"
+                                        className="p-2 text-slate-400 hover:text-red-500 hover:bg-red-50 dark:hover:bg-red-900/20 rounded-lg transition-colors cursor-pointer"
+                                        aria-label="항목 삭제"
                                     >
-                                        X
+                                        ✕
                                     </button>
                                 </div>
                             ))}
-                            <button onClick={addMedicalShock} className="btn btn-secondary btn-sm mt-2">
-                                + Add shock
+                            <button onClick={addMedicalShock} className="self-start mt-2 inline-flex items-center justify-center gap-2 px-3 py-1.5 bg-slate-50 dark:bg-zinc-800 text-slate-700 dark:text-slate-300 border border-slate-200 dark:border-zinc-700 hover:bg-slate-100 dark:hover:bg-zinc-700 hover:border-slate-300 dark:hover:border-zinc-600 rounded-lg text-sm font-semibold transition-all active:scale-[0.98] cursor-pointer">
+                                + 항목 추가
                             </button>
-                        </>
+                        </div>
                     )}
                 </div>
             )}

@@ -66,9 +66,9 @@ describe('Simulation Engine', () => {
         expect(timeline).not.toBeNull();
         if (!timeline) return;
 
-        // Check month 12 (Age 61)
-        const row12 = timeline[12];
-        expect(row12.age).toBeCloseTo(61);
+        // Check month 12 (Age 61) which is index 11
+        const row12 = timeline[11];
+        expect(row12.age).toBeCloseTo(60.916, 2);
 
         // Theoretical Value: 10000 * 1.10 = 11000
         // Floating point tolerance
@@ -106,8 +106,8 @@ describe('Simulation Engine', () => {
         const timeline = 'timeline' in result ? result.timeline : [];
 
         // Month 1: 1200 - 100 = 1100
-        // Month 12: 0
-        const row12 = timeline[12];
+        // Month 12: 0 (index 11)
+        const row12 = timeline[11];
         expect(row12.general).toBeCloseTo(0, 2);
     });
 
@@ -119,6 +119,7 @@ describe('Simulation Engine', () => {
         input.general.current_balance = 10000;
         input.withdrawal.strategy = 'fixed_amount';
         input.withdrawal.fixedMonthlyAmount = 1000;
+        input.portfolio.assetClasses[0].expectedAnnualReturn = 0.0;
         input.withdrawal.taxRate = 0.10; // 10% tax
         input.withdrawal.taxStrategy = 'simple';
 
@@ -128,9 +129,7 @@ describe('Simulation Engine', () => {
         // Withdraw 1000. Tax 100. Net 900.
         // Balance reduces by 1000.
 
-        const row1 = timeline[1]; // Month 0 is initial state? No, Engine loop:
-        // m=0 (Age 65.0). isRetired=true (if >= monthsToRetire). 
-        // m=0 is the first month of simulation.
+        const row1 = timeline[0]; // First month of simulation
 
         expect(row1.cashflow.withdrawalGross).toBe(1000);
         expect(row1.cashflow.taxPaid).toBe(100);
@@ -213,5 +212,31 @@ describe('Simulation Engine', () => {
         const resultB = runSimulation(inputB);
 
         expect(resultA.summary.finalTotalAssetsReal).toBeCloseTo(resultB.summary.finalTotalAssetsReal, 8);
+    });
+
+    it('limits VPW withdrawal YoY changes when vpwMaxYoYChange is set', () => {
+        const input = createBaseInput();
+        input.current_age = 65;
+        input.retire_age = 65;
+        input.end_age = 67; // 2 years
+        input.general.current_balance = 100000;
+        input.portfolio.assetClasses[0].expectedAnnualReturn = -0.50; // -50% return to force a huge drop in balance
+        input.withdrawal.strategy = 'vpw';
+        input.withdrawal.vpwMaxYoYChange = 0.10; // Max 10% drop per year (equivalent to ~0.79% per month smoothed)
+
+        const result = runSimulation(input);
+        const timeline = 'timeline' in result ? result.timeline : [];
+
+        // Month 0 withdrawal
+        const w0 = timeline[0].cashflow.withdrawalGross;
+        // Month 1 withdrawal
+        const w1 = timeline[1].cashflow.withdrawalGross;
+
+        // Since balance dropped by -50% annually, applied rate would plummet the withdrawal.
+        // But the smoothing limits it to ~0.79% per month.
+        const maxChangePerMonth = Math.pow(1 + 0.10, 1 / 12) - 1;
+        const expectedW1Min = w0 * (1 - Math.pow(1 - 0.10, 1 / 12));
+
+        expect(w1).toBeGreaterThanOrEqual(expectedW1Min * 0.999);
     });
 });

@@ -9,7 +9,7 @@ import { AdvancedSection } from "./sections/AdvancedSection";
 import { ResultsSection } from "./sections/ResultsSection";
 import type { LayoutSectionId, LayoutSharedProps } from "./types";
 
-interface MobileLayoutProps extends LayoutSharedProps {}
+interface MobileLayoutProps extends LayoutSharedProps { }
 
 export function MobileLayout({
     input,
@@ -39,15 +39,15 @@ export function MobileLayout({
     };
 
     return (
-        <div className="mobile-layout">
-            <div className="mobile-content pb-safe">
+        <div className="flex flex-col h-[calc(100vh-var(--spacing-header))] relative overflow-hidden">
+            <div className="flex-[1_1_auto] overflow-y-auto pb-[calc(70px+env(safe-area-inset-bottom))] scroll-smooth">
                 {isInputTab && (
-                    <div className="mobile-scenario-wrap">
+                    <div className="p-4 bg-white dark:bg-zinc-900 border-b border-slate-100 dark:border-zinc-800 sticky top-0 z-10 shadow-sm">
                         <ScenarioManager currentInput={input} onLoad={setInput} />
                     </div>
                 )}
 
-                <div className="mobile-section p-3 animate-fadeIn">
+                <div className="p-4 animate-in fade-in duration-300 relative">
                     {activeTab === "basic" && <BasicSection input={input} setInput={setInput} />}
                     {activeTab === "assets" && <AssetsSection input={input} setInput={setInput} />}
                     {activeTab === "pension" && <PensionSection input={input} setInput={setInput} />}
@@ -67,36 +67,38 @@ export function MobileLayout({
                 </div>
 
                 {isInputTab && validationWarnings.length > 0 && (
-                    <div className="validation-warnings m-3">
-                        <h4 className="warning-header">⚠️ 입력값 확인</h4>
-                        {validationWarnings.map((warning, index) => (
-                            <div key={index} className={`warning-item ${warning.severity}`}>
-                                {warning.message}
-                            </div>
-                        ))}
+                    <div className="m-4 p-4 rounded-xl bg-orange-50 dark:bg-orange-900/20 border border-orange-200 dark:border-orange-900/30">
+                        <h4 className="text-sm font-semibold text-orange-800 dark:text-orange-400 mb-2 flex items-center gap-2">⚠️ 입력값 확인</h4>
+                        <div className="flex flex-col gap-2">
+                            {validationWarnings.map((warning, index) => (
+                                <div key={index} className={`text-xs p-2 rounded-lg border ${warning.severity === 'error' ? 'bg-red-50 text-red-600 border-red-200 dark:bg-red-900/20 dark:border-red-900/30 dark:text-red-400' : 'bg-orange-50 text-orange-700 border-orange-200 dark:bg-orange-900/20 dark:border-orange-900/30 dark:text-orange-400'}`}>
+                                    {warning.message}
+                                </div>
+                            ))}
+                        </div>
                     </div>
                 )}
 
-                <div className="mobile-bottom-spacer" />
+                <div className="h-6" />
             </div>
 
-            <nav className="bottom-nav" aria-label="하단 탐색">
+            <nav className="fixed bottom-0 left-0 right-0 bg-white/90 dark:bg-zinc-900/90 backdrop-blur-xl border-t border-slate-200 dark:border-zinc-800 flex justify-around items-center h-[64px] pb-[env(safe-area-inset-bottom)] px-2 z-50 shadow-[0_-4px_20px_rgba(0,0,0,0.05)]" aria-label="하단 탐색">
                 {SIDEBAR_TABS.map((tab) => (
                     <button
                         key={tab.id}
-                        className={`nav-item ${activeTab === tab.id ? "active" : ""}`}
+                        className={`flex-1 flex flex-col items-center justify-center gap-1 h-full border-none bg-transparent transition-colors cursor-pointer ${activeTab === tab.id ? "text-blue-600 dark:text-blue-400" : "text-slate-500 hover:text-slate-800 dark:text-slate-400 dark:hover:text-slate-200"}`}
                         onClick={() => handleTabChange(tab.id)}
                     >
-                        <span className="nav-icon">{tab.icon}</span>
-                        <span className="nav-label">{tab.label}</span>
+                        <span className={`text-xl transition-transform ${activeTab === tab.id ? "scale-110" : ""}`}>{tab.icon}</span>
+                        <span className="text-[10px] font-semibold">{tab.label}</span>
                     </button>
                 ))}
                 <button
-                    className={`nav-item ${activeTab === "results" ? "active" : ""}`}
+                    className={`flex-1 flex flex-col items-center justify-center gap-1 h-full border-none bg-transparent transition-colors cursor-pointer ${activeTab === "results" ? "text-blue-600 dark:text-blue-400" : "text-slate-500 hover:text-slate-800 dark:text-slate-400 dark:hover:text-slate-200"}`}
                     onClick={() => handleTabChange("results")}
                 >
-                    <span className="nav-icon">📊</span>
-                    <span className="nav-label">리포트</span>
+                    <span className={`text-xl transition-transform ${activeTab === "results" ? "scale-110" : ""}`}>📊</span>
+                    <span className="text-[10px] font-semibold">리포트</span>
                 </button>
             </nav>
         </div>
