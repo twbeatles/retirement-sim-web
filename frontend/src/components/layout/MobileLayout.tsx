@@ -93,13 +93,6 @@ export function MobileLayout({
                         <span className={`text-[10px] font-bold ${activeTab === tab.id ? "opacity-100" : "opacity-70 font-semibold"}`}>{tab.label}</span>
                     </button>
                 ))}
-                <button
-                    className={`flex-1 flex flex-col items-center justify-center gap-1.5 h-full border-none bg-transparent transition-all duration-300 cursor-pointer ${activeTab === "results" ? "text-blue-600 dark:text-blue-400 -translate-y-1" : "text-slate-500 hover:text-slate-800 dark:text-slate-400 dark:hover:text-slate-200"}`}
-                    onClick={() => handleTabChange("results")}
-                >
-                    <span className={`text-2xl transition-all duration-300 ${activeTab === "results" ? "scale-110 drop-shadow-md" : "grayscale-[50%] opacity-80"}`}>📊</span>
-                    <span className={`text-[10px] font-bold ${activeTab === "results" ? "opacity-100" : "opacity-70 font-semibold"}`}>리포트</span>
-                </button>
             </nav>
         </div>
     );

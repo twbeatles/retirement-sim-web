@@ -3,7 +3,8 @@ import type { AnalysisTabType } from "../../logic/uiConstants";
 import type { SimulationInput, SimulationResult, ValidationWarning } from "../../logic/types";
 
 export type LayoutSectionId = "basic" | "assets" | "pension" | "goal" | "advanced" | "results";
-export type SidebarSectionId = Exclude<LayoutSectionId, "results">;
+// We now allow "results" as a valid Sidebar tab
+export type SidebarSectionId = LayoutSectionId;
 
 export interface LayoutSharedProps {
     input: SimulationInput;

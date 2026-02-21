@@ -43,11 +43,7 @@ export function DesktopLayout({
                 </div>
 
                 <div className="flex-1 overflow-y-auto pr-2 custom-scrollbar animate-in fade-in duration-300">
-                    {sidebarTab === "basic" && <BasicSection input={input} setInput={setInput} />}
-                    {sidebarTab === "assets" && <AssetsSection input={input} setInput={setInput} />}
-                    {sidebarTab === "pension" && <PensionSection input={input} setInput={setInput} />}
-                    {sidebarTab === "goal" && <GoalSection input={input} setInput={setInput} />}
-                    {sidebarTab === "advanced" && <AdvancedSection input={input} setInput={setInput} />}
+                    {/* Sections moved to main view */}
                 </div>
 
                 {validationWarnings.length > 0 && (
@@ -65,14 +61,21 @@ export function DesktopLayout({
             </aside>
 
             <main className="min-h-[calc(100vh-var(--spacing-header)-var(--spacing-xl))]">
-                <ResultsSection
-                    input={input}
-                    setInput={setInput}
-                    result={result}
-                    analysisTab={analysisTab}
-                    setAnalysisTab={setAnalysisTab}
-                    onPrint={onPrint}
-                />
+                {sidebarTab === "basic" && <BasicSection input={input} setInput={setInput} />}
+                {sidebarTab === "assets" && <AssetsSection input={input} setInput={setInput} />}
+                {sidebarTab === "pension" && <PensionSection input={input} setInput={setInput} />}
+                {sidebarTab === "goal" && <GoalSection input={input} setInput={setInput} />}
+                {sidebarTab === "advanced" && <AdvancedSection input={input} setInput={setInput} />}
+                {sidebarTab === "results" && (
+                    <ResultsSection
+                        input={input}
+                        setInput={setInput}
+                        result={result}
+                        analysisTab={analysisTab}
+                        setAnalysisTab={setAnalysisTab}
+                        onPrint={onPrint}
+                    />
+                )}
             </main>
         </>
     );
