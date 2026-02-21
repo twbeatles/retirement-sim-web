@@ -42,7 +42,7 @@ export default function App() {
     const resultStatusLabel = result?.detailLevel === "preview" ? "빠른 추정값" : result ? "최종 결과" : null;
 
     return (
-        <div className="flex flex-col min-h-screen p-4 lg:p-6 lg:grid lg:grid-cols-[var(--spacing-sidebar)_1fr] lg:grid-rows-[auto_1fr] gap-4 lg:gap-6 max-w-[var(--spacing-max-width)] mx-auto relative relative z-0">
+        <div className="flex flex-col min-h-screen w-full p-4 lg:p-6 lg:grid lg:grid-cols-[var(--spacing-sidebar)_1fr] lg:grid-rows-[auto_1fr] gap-4 lg:gap-6 max-w-[var(--spacing-max-width)] mx-auto relative z-0">
             {/* Background Decorations */}
             <div className="fixed inset-0 overflow-hidden pointer-events-none -z-10 bg-slate-50 dark:bg-[#0a0a0a] transition-colors duration-500">
                 <div className="absolute top-[-10%] left-[-10%] w-[40%] h-[40%] rounded-full bg-blue-400/10 dark:bg-blue-900/20 blur-[100px]" />

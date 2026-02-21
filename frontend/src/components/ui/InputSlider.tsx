@@ -38,7 +38,7 @@ export function InputSlider({
     const displayValue = formatValue ? formatValue(draftValue) : draftValue.toLocaleString();
 
     return (
-        <div className="flex flex-col gap-2 relative bg-white/40 dark:bg-zinc-800/40 backdrop-blur-sm p-4 rounded-2xl border border-slate-200/50 dark:border-zinc-700/50 shadow-sm">
+        <div className="flex flex-col gap-2 relative bg-white/40 dark:bg-zinc-800/40 backdrop-blur-sm p-4 rounded-2xl border border-slate-200/50 dark:border-zinc-700/50 shadow-sm w-full">
             <div className="flex justify-between items-baseline mb-2 gap-2 min-w-0">
                 <label className="text-sm font-bold text-slate-700 dark:text-slate-200 whitespace-nowrap shrink-0">{label}</label>
                 <span className="text-xl font-black text-blue-600 dark:text-blue-400 tabular-nums tracking-tight bg-white/80 dark:bg-zinc-900/80 shadow-inner px-3 py-1 rounded-xl border border-blue-100/50 dark:border-blue-900/30 whitespace-nowrap shrink-0">
