@@ -165,21 +165,21 @@ export function ScenarioComparison({ currentResult }: Props) {
 
     return (
         <div className="bg-white dark:bg-zinc-900 rounded-2xl p-4 lg:p-6 shadow-sm border border-slate-100 dark:border-zinc-800 transition-all">
-            <h3 className="text-base font-bold text-slate-900 dark:text-white mt-0 mb-1 border-b border-transparent">📊 Scenario Comparison</h3>
+            <h3 className="text-base font-bold text-slate-900 dark:text-white mt-0 mb-1 border-b border-transparent">📊 시나리오 비교</h3>
             <p className="text-sm font-medium text-slate-500 dark:text-slate-400 mb-6">
-                Compare up to 5 saved scenarios against the current setup.
+                현재 설정과 저장된 시나리오를 최대 5개까지 비교할 수 있습니다.
             </p>
 
             {savedScenarios.length === 0 ? (
                 <div className="flex flex-col items-center justify-center py-10 px-4 bg-slate-50 dark:bg-zinc-800/30 rounded-xl border border-dashed border-slate-200 dark:border-zinc-700">
                     <span className="text-3xl mb-3 opacity-40">📁</span>
-                    <p className="font-medium text-slate-500 dark:text-slate-400 text-sm m-0">No saved scenarios found.</p>
+                    <p className="font-medium text-slate-500 dark:text-slate-400 text-sm m-0">저장된 시나리오가 없습니다.</p>
                 </div>
             ) : (
                 <div className="animate-in fade-in duration-300">
                     <div className="flex flex-col gap-3 mb-6 p-4 border border-slate-200 dark:border-zinc-700 rounded-xl bg-slate-50/50 dark:bg-zinc-800/30">
                         <div className="text-sm font-bold text-slate-700 dark:text-slate-300 flex items-center gap-2">
-                            <span>📌</span> Select scenarios (max 5)
+                            <span>📌</span> 시나리오 선택 (최대 5개)
                         </div>
                         <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
                             {savedScenarios.map((scenario) => (
@@ -211,9 +211,9 @@ export function ScenarioComparison({ currentResult }: Props) {
                         {isComparing ? (
                             <div className="flex items-center justify-center gap-2">
                                 <svg className="animate-spin h-4 w-4 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24"><circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle><path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path></svg>
-                                Comparing...
+                                비교 중...
                             </div>
-                        ) : "Run comparison"}
+                        ) : "비교 실행"}
                     </button>
 
                     {comparisonData.length > 0 && (
@@ -222,9 +222,9 @@ export function ScenarioComparison({ currentResult }: Props) {
                                 <table className="w-full text-sm text-left border-collapse">
                                     <thead>
                                         <tr className="bg-slate-50 dark:bg-zinc-800/80 text-slate-600 dark:text-slate-400 border-b border-slate-200 dark:border-zinc-700">
-                                            <th className="p-3 font-semibold text-xs uppercase tracking-wider">Scenario</th>
-                                            <th className="p-3 font-semibold text-xs uppercase tracking-wider text-right">Success rate</th>
-                                            <th className="p-3 font-semibold text-xs uppercase tracking-wider text-right">Final real assets (median)</th>
+                                            <th className="p-3 font-semibold text-xs uppercase tracking-wider">시나리오</th>
+                                            <th className="p-3 font-semibold text-xs uppercase tracking-wider text-right">성공률</th>
+                                            <th className="p-3 font-semibold text-xs uppercase tracking-wider text-right">최종 실질 자산 (중간값)</th>
                                         </tr>
                                     </thead>
                                     <tbody className="bg-white dark:bg-zinc-900 divide-y divide-slate-100 dark:divide-zinc-800">
@@ -247,13 +247,13 @@ export function ScenarioComparison({ currentResult }: Props) {
                             </div>
 
                             <div className="h-80 w-full p-4 bg-slate-50 dark:bg-zinc-800/30 rounded-xl border border-slate-100 dark:border-zinc-800/50">
-                                <p className="text-sm font-bold text-slate-700 dark:text-slate-300 mb-2 mt-0">Total Assets Over Time (Median)</p>
+                                <p className="text-sm font-bold text-slate-700 dark:text-slate-300 mb-2 mt-0">시간에 따른 총 자산 추이 (중간값)</p>
                                 <ResponsiveContainer width="100%" height="90%">
                                     <LineChart data={chartData} margin={{ top: 10, right: 10, left: 0, bottom: 0 }}>
                                         <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#e2e8f0" opacity={0.5} />
                                         <XAxis
                                             dataKey="month"
-                                            tickFormatter={(m) => `${Math.floor(m / 12)}y`}
+                                            tickFormatter={(m) => `${Math.floor(m / 12)}년`}
                                             tick={{ fontSize: 11, fill: '#64748b' }}
                                             axisLine={{ stroke: '#cbd5e1' }}
                                             tickLine={false}
@@ -267,7 +267,7 @@ export function ScenarioComparison({ currentResult }: Props) {
                                         />
                                         <Tooltip
                                             formatter={(v: number) => `${Math.round(v / 10000).toLocaleString()}만원`}
-                                            labelFormatter={(m) => `${Math.floor(Number(m) / 12)}y`}
+                                            labelFormatter={(m) => `${Math.floor(Number(m) / 12)}년`}
                                             contentStyle={{
                                                 backgroundColor: 'rgba(255, 255, 255, 0.95)',
                                                 border: '1px solid #e2e8f0',

@@ -101,12 +101,12 @@ export function ResultsSection({
             )}
 
             <div className="bg-white/70 dark:bg-zinc-900/70 backdrop-blur-2xl rounded-[2rem] p-6 lg:p-8 shadow-xl shadow-slate-200/40 dark:shadow-zinc-900/40 border border-slate-200/60 dark:border-zinc-800/60 mb-8 transition-all relative overflow-hidden">
-                <h3 className="text-xl sm:text-2xl font-extrabold text-slate-900 dark:text-white mb-2 flex items-center gap-2">📊 자산 생존 확률 (Survival Analysis)</h3>
+                <h3 className="text-xl sm:text-2xl font-extrabold text-slate-900 dark:text-white mb-2 flex items-center gap-2">📊 자산 생존 확률</h3>
                 <p className="text-xs sm:text-sm font-semibold text-slate-500 dark:text-slate-400 mb-6">
                     은퇴 후 나이가 들면서 자산이 남아있을 확률을 보여줍니다. (몬테카를로 분석)
                 </p>
                 {result && !isPreviewResult ? (
-                    <Suspense fallback={<div className="text-center text-slate-400 py-4">Loading chart...</div>}>
+                    <Suspense fallback={<div className="text-center text-slate-400 py-4">차트 로딩 중...</div>}>
                         <div className="bg-white/50 dark:bg-black/20 rounded-2xl p-4 sm:p-6 border border-slate-100/50 dark:border-zinc-800/50 shadow-inner">
                             <SurvivalChart result={result} />
                         </div>
@@ -122,13 +122,13 @@ export function ResultsSection({
                 {isPreviewResult ? (
                     <div className="text-center text-slate-400 py-10 font-medium">빠른 추정값 계산 완료. 최종 차트 계산 중...</div>
                 ) : result?.mode === "deterministic" ? (
-                    <Suspense fallback={<div className="text-center text-slate-400 py-4">Loading chart...</div>}>
+                    <Suspense fallback={<div className="text-center text-slate-400 py-4">차트 로딩 중...</div>}>
                         <div className="bg-white/50 dark:bg-black/20 rounded-2xl p-4 sm:p-6 border border-slate-100/50 dark:border-zinc-800/50 shadow-inner overflow-hidden">
                             <AssetBreakdownChart data={timeline} />
                         </div>
                     </Suspense>
                 ) : result?.mode === "montecarlo" && result.trajectoryStats ? (
-                    <Suspense fallback={<div className="text-center text-slate-400 py-4">Loading chart...</div>}>
+                    <Suspense fallback={<div className="text-center text-slate-400 py-4">차트 로딩 중...</div>}>
                         <div className="bg-white/50 dark:bg-black/20 rounded-2xl p-4 sm:p-6 border border-slate-100/50 dark:border-zinc-800/50 shadow-inner overflow-hidden">
                             <FanChart stats={result.trajectoryStats} />
                         </div>
@@ -139,10 +139,10 @@ export function ResultsSection({
             </div>
 
             <div className="bg-white/70 dark:bg-zinc-900/70 backdrop-blur-2xl rounded-[2rem] p-6 lg:p-8 shadow-xl shadow-slate-200/40 dark:shadow-zinc-900/40 border border-slate-200/60 dark:border-zinc-800/60 mb-8 transition-all relative overflow-hidden">
-                <h3 className="text-xl sm:text-2xl font-extrabold text-slate-900 dark:text-white mb-2 flex items-center gap-2">💵 은퇴 후 현금 흐름 (Income vs Spending)</h3>
+                <h3 className="text-xl sm:text-2xl font-extrabold text-slate-900 dark:text-white mb-2 flex items-center gap-2">💵 은퇴 후 현금 흐름</h3>
                 <p className="text-xs sm:text-sm font-semibold text-slate-500 dark:text-slate-400 mb-6">연금 소득과 자산 인출이 생활비를 어떻게 충당하는지 보여줍니다.</p>
                 {timeline.length > 0 && !isPreviewResult ? (
-                    <Suspense fallback={<div className="text-center text-slate-400 py-4">Loading chart...</div>}>
+                    <Suspense fallback={<div className="text-center text-slate-400 py-4">차트 로딩 중...</div>}>
                         <div className="bg-white/50 dark:bg-black/20 rounded-2xl p-4 sm:p-6 border border-slate-100/50 dark:border-zinc-800/50 shadow-inner overflow-hidden">
                             <CashflowStackChart data={timeline} />
                         </div>
@@ -156,7 +156,7 @@ export function ResultsSection({
                 <h3 className="text-xl sm:text-2xl font-extrabold text-slate-900 dark:text-white mb-4 flex items-center gap-2">📋 연도별 상세 리포트</h3>
                 <div className="overflow-x-auto w-full max-h-[600px] overflow-y-auto no-scrollbar rounded-[1.5rem] border border-slate-200/60 dark:border-zinc-700/50 bg-white/40 dark:bg-black/30 p-2 sm:p-6 shadow-inner relative">
                     {timeline.length > 0 && !isPreviewResult ? (
-                        <Suspense fallback={<div className="text-center text-slate-400 py-4">Loading table...</div>}>
+                        <Suspense fallback={<div className="text-center text-slate-400 py-4">표 로딩 중...</div>}>
                             <YearlyReportTable data={timeline} />
                         </Suspense>
                     ) : (
@@ -183,17 +183,17 @@ export function ResultsSection({
                 ) : (
                     <div className="bg-slate-50/40 dark:bg-black/10 rounded-2xl sm:p-4 border border-slate-100/50 dark:border-zinc-800/30">
                         {analysisTab === "risk" && (
-                            <Suspense fallback={<div className="text-center text-slate-400 py-4">Loading...</div>}>
+                            <Suspense fallback={<div className="text-center text-slate-400 py-4">로딩 중...</div>}>
                                 <RiskDashboard input={input} result={result} onInputChange={setInput} />
                             </Suspense>
                         )}
                         {analysisTab === "compare" && (
-                            <Suspense fallback={<div className="text-center text-slate-400 py-4">Loading...</div>}>
+                            <Suspense fallback={<div className="text-center text-slate-400 py-4">로딩 중...</div>}>
                                 <ScenarioComparison currentResult={result} />
                             </Suspense>
                         )}
                         {analysisTab === "whatif" && (
-                            <Suspense fallback={<div className="text-center text-slate-400 py-4">Loading...</div>}>
+                            <Suspense fallback={<div className="text-center text-slate-400 py-4">로딩 중...</div>}>
                                 <WhatIfSlider input={input} onInputChange={setInput} />
                             </Suspense>
                         )}

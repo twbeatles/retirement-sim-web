@@ -97,7 +97,7 @@ export default function App() {
             )}
 
             {viewMode === "simple" ? (
-                <Suspense fallback={<div className="text-center text-slate-400 py-8 lg:col-span-full">Loading dashboard...</div>}>
+                <Suspense fallback={<div className="text-center text-slate-400 py-8 lg:col-span-full">대시보드 로딩 중...</div>}>
                     <div className="flex flex-col gap-6 max-w-5xl mx-auto w-full min-w-[320px] lg:col-span-full">
                         <SimpleDashboard input={input} result={result} onInputChange={setInput} />
                     </div>

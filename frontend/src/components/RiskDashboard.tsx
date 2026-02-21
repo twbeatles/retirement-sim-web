@@ -104,14 +104,14 @@ export const RiskDashboard = React.memo(function RiskDashboard({ input, result, 
 
     return (
         <div className="bg-white dark:bg-zinc-900 rounded-2xl p-4 lg:p-6 shadow-sm border border-slate-100 dark:border-zinc-800 transition-all hover:-translate-y-0.5 hover:shadow-md">
-            <h3 className="text-base font-bold text-slate-900 dark:text-white mb-4 pb-3 border-b border-slate-100 dark:border-zinc-800">Risk Dashboard</h3>
+            <h3 className="text-base font-bold text-slate-900 dark:text-white mb-4 pb-3 border-b border-slate-100 dark:border-zinc-800">리스크 분석 📈</h3>
 
             <div className="flex gap-2 overflow-x-auto pb-2 mb-4 border-b-2 border-slate-100 dark:border-zinc-800">
                 {[
-                    { id: "depletion", label: "Depletion" },
-                    { id: "sensitivity", label: "Sensitivity" },
-                    { id: "sorr", label: "Sequence Risk" },
-                    { id: "medical", label: "Medical Shock" }
+                    { id: "depletion", label: "자산 고갈 분석" },
+                    { id: "sensitivity", label: "민감도 분석" },
+                    { id: "sorr", label: "수익률 순서 리스크" },
+                    { id: "medical", label: "의료비 쇼크" }
                 ].map((tab) => (
                     <button
                         key={tab.id}
@@ -125,21 +125,21 @@ export const RiskDashboard = React.memo(function RiskDashboard({ input, result, 
 
             {activeTab === "depletion" && (
                 <div className="animate-in fade-in duration-300">
-                    <p className="text-slate-500 dark:text-slate-400 text-sm mb-4">Distribution of asset depletion timing across simulation paths.</p>
+                    <p className="text-slate-500 dark:text-slate-400 text-sm mb-4">시뮬레이션 경로상 자산이 고갈되는 시점의 분포입니다.</p>
                     {depletionAnalysis ? (
                         <>
                             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-4">
                                 <div className="bg-emerald-50 dark:bg-emerald-900/10 p-4 rounded-xl border border-emerald-100 dark:border-emerald-900/30">
-                                    <div className="text-xs uppercase tracking-wider font-semibold text-emerald-700 dark:text-emerald-400 mb-1">Never depleted</div>
+                                    <div className="text-xs uppercase tracking-wider font-semibold text-emerald-700 dark:text-emerald-400 mb-1">고갈되지 않음</div>
                                     <div className="text-2xl font-extrabold text-emerald-600 dark:text-emerald-500">
                                         {(depletionAnalysis.neverDepletedRate * 100).toFixed(1)}%
                                     </div>
                                 </div>
                                 {depletionAnalysis.medianDepletionAge && (
                                     <div className="bg-orange-50 dark:bg-orange-900/10 p-4 rounded-xl border border-orange-100 dark:border-orange-900/30">
-                                        <div className="text-xs uppercase tracking-wider font-semibold text-orange-700 dark:text-orange-400 mb-1">Median depletion age</div>
+                                        <div className="text-xs uppercase tracking-wider font-semibold text-orange-700 dark:text-orange-400 mb-1">고갈 예상 평균 연령</div>
                                         <div className="text-2xl font-extrabold text-orange-600 dark:text-orange-500">
-                                            {Math.round(depletionAnalysis.medianDepletionAge)}y
+                                            {Math.round(depletionAnalysis.medianDepletionAge)}세
                                         </div>
                                     </div>
                                 )}
@@ -151,14 +151,14 @@ export const RiskDashboard = React.memo(function RiskDashboard({ input, result, 
                                         <XAxis dataKey="ageRange" />
                                         <YAxis tickFormatter={(value) => `${(value * 100).toFixed(0)}%`} />
                                         <RechartsTooltip formatter={(value: any) => `${(value * 100).toFixed(1)}%`} />
-                                        <Bar dataKey="percentage" fill="var(--primary)" name="Rate" />
+                                        <Bar dataKey="percentage" fill="var(--primary)" name="비율" />
                                     </BarChart>
                                 </ResponsiveContainer>
                             </div>
                         </>
                     ) : (
                         <div className="text-center text-slate-500 dark:text-slate-400 p-6 bg-slate-50 dark:bg-zinc-800/50 rounded-xl border border-slate-100 dark:border-zinc-800">
-                            Depletion analysis is available in Monte Carlo mode.
+                            자산 고갈 분석은 몬테카를로 시뮬레이션 모드에서만 지원됩니다.
                         </div>
                     )}
                 </div>
@@ -167,11 +167,11 @@ export const RiskDashboard = React.memo(function RiskDashboard({ input, result, 
             {activeTab === "sensitivity" && (
                 <div className="animate-in fade-in duration-300">
                     <p className="text-slate-500 dark:text-slate-400 text-sm mb-4 flex items-center gap-2">
-                        Parameter sensitivity for success rate.
-                        <Tooltip content="Runs worker-based comparisons over ±2% parameter shifts." />
+                        주요 변수 변동에 따른 목표 달성 확률 민감도입니다.
+                        <Tooltip content="변수를 ±2% 조정하여 성공률 변화를 분석합니다." />
                     </p>
                     <button onClick={handleRunSensitivity} disabled={runningAnalysis} className="inline-flex items-center justify-center gap-2 px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg font-semibold text-sm transition-all active:scale-[0.98] disabled:opacity-50 disabled:cursor-not-allowed mb-4">
-                        {runningAnalysis ? "Analyzing..." : "Run sensitivity"}
+                        {runningAnalysis ? "분석 중..." : "민감도 분석 실행"}
                     </button>
 
                     {sensitivityResults.length > 0 && (
@@ -191,7 +191,7 @@ export const RiskDashboard = React.memo(function RiskDashboard({ input, result, 
                                     />
                                     <RechartsTooltip
                                         formatter={(value: any) => `${(value * 100).toFixed(1)}%`}
-                                        labelFormatter={(value) => `Input: ${(Number(value) * 100).toFixed(2)}%`}
+                                        labelFormatter={(value) => `입력값: ${(Number(value) * 100).toFixed(2)}%`}
                                     />
                                     <Legend />
                                     {sensitivityResults.map((series, index) => (
@@ -202,7 +202,7 @@ export const RiskDashboard = React.memo(function RiskDashboard({ input, result, 
                                                 rate: series.successRates[seriesIndex]
                                             }))}
                                             dataKey="rate"
-                                            name={series.parameter === "annual_return" ? "Return" : "Inflation"}
+                                            name={series.parameter === "annual_return" ? "수익률" : "물가상승률"}
                                             stroke={index === 0 ? "var(--primary)" : "var(--warning)"}
                                             strokeWidth={2}
                                             dot
@@ -218,11 +218,11 @@ export const RiskDashboard = React.memo(function RiskDashboard({ input, result, 
             {activeTab === "sorr" && (
                 <div className="animate-in fade-in duration-300">
                     <p className="text-slate-500 dark:text-slate-400 text-sm mb-4 flex items-center gap-2">
-                        <strong className="text-slate-900 dark:text-slate-100">Sequence-of-returns risk</strong>
-                        <Tooltip content="Early-retirement drawdowns can be more damaging than late drawdowns." />
+                        <strong className="text-slate-900 dark:text-slate-100">수익률 순서 리스크 (SoRR)</strong>
+                        <Tooltip content="은퇴 초기 하락장은 후기 하락장보다 자산에 훨씬 치명적인 영향을 미칩니다." />
                     </p>
                     <div className="bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-900/30 rounded-xl p-3 flex items-start gap-2 mt-2 text-sm text-blue-800 dark:text-blue-300">
-                        <strong>Tip:</strong> Increasing defensive allocation in the first few retirement years can reduce this risk.
+                        <strong>Tip:</strong> 은퇴 직후 몇 년간 방어적 자산 배분 비중을 높이면 이 리스크를 줄일 수 있습니다.
                     </div>
                     <div className="mt-6 flex items-center">
                         <label className="flex items-center gap-3 text-sm cursor-pointer font-semibold text-slate-700 dark:text-slate-300 hover:text-slate-900 dark:hover:text-slate-100 group">
@@ -244,7 +244,7 @@ export const RiskDashboard = React.memo(function RiskDashboard({ input, result, 
                                     })
                                 }
                             />
-                            Enable early-retirement stress scenario
+                            은퇴 초기 스트레스 시나리오 (하락장) 활성화
                         </label>
                     </div>
                 </div>
@@ -253,7 +253,7 @@ export const RiskDashboard = React.memo(function RiskDashboard({ input, result, 
             {activeTab === "medical" && (
                 <div className="animate-in fade-in duration-300">
                     <p className="text-slate-500 dark:text-slate-400 text-sm mb-4">
-                        Add one-time medical expense shocks at specific ages.
+                        특정 나이에 발생하는 일회성 대규모 의료비 한도를 설정합니다.
                     </p>
 
                     <div className="mb-6 flex items-center">
@@ -264,7 +264,7 @@ export const RiskDashboard = React.memo(function RiskDashboard({ input, result, 
                                 checked={input.medical_shocks?.enabled ?? false}
                                 onChange={(event) => toggleMedicalShock(event.target.checked)}
                             />
-                            Enable medical shocks
+                            의료비 쇼크 시나리오 활성화
                         </label>
                     </div>
 
@@ -277,7 +277,7 @@ export const RiskDashboard = React.memo(function RiskDashboard({ input, result, 
                                         className="w-20 lg:w-24 px-3 py-2 bg-white dark:bg-zinc-900 border border-slate-200 dark:border-zinc-700 rounded-lg text-sm text-slate-900 dark:text-white focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20 outline-none transition-all"
                                         value={shock.age}
                                         onChange={(event) => updateMedicalShock(index, "age", Number(event.target.value))}
-                                        placeholder="Age"
+                                        placeholder="연령"
                                     />
                                     <span className="text-slate-500 dark:text-slate-400 text-sm font-medium">세에</span>
                                     <input
@@ -285,7 +285,7 @@ export const RiskDashboard = React.memo(function RiskDashboard({ input, result, 
                                         className="w-32 lg:w-40 px-3 py-2 bg-white dark:bg-zinc-900 border border-slate-200 dark:border-zinc-700 rounded-lg text-sm text-slate-900 dark:text-white focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20 outline-none transition-all"
                                         value={shock.amount}
                                         onChange={(event) => updateMedicalShock(index, "amount", Number(event.target.value))}
-                                        placeholder="Amount"
+                                        placeholder="금액"
                                     />
                                     <span className="text-slate-500 dark:text-slate-400 text-sm font-medium">KRW 발생:</span>
                                     <input
