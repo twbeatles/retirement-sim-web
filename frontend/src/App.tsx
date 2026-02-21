@@ -42,8 +42,15 @@ export default function App() {
     const resultStatusLabel = result?.detailLevel === "preview" ? "빠른 추정값" : result ? "최종 결과" : null;
 
     return (
-        <div className="flex flex-col min-h-screen p-4 lg:p-6 lg:grid lg:grid-cols-[var(--spacing-sidebar)_1fr] lg:grid-rows-[auto_1fr] gap-4 lg:gap-6 max-w-[var(--spacing-max-width)] mx-auto">
-            <header className="col-span-full bg-white/75 dark:bg-zinc-900/75 backdrop-blur-xl px-4 lg:px-6 h-[var(--spacing-header)] rounded-2xl flex items-center justify-between shadow-sm border border-slate-100 dark:border-zinc-800 sticky top-4 lg:top-6 z-50 transition-colors duration-300">
+        <div className="flex flex-col min-h-screen p-4 lg:p-6 lg:grid lg:grid-cols-[var(--spacing-sidebar)_1fr] lg:grid-rows-[auto_1fr] gap-4 lg:gap-6 max-w-[var(--spacing-max-width)] mx-auto relative relative z-0">
+            {/* Background Decorations */}
+            <div className="fixed inset-0 overflow-hidden pointer-events-none -z-10 bg-slate-50 dark:bg-[#0a0a0a] transition-colors duration-500">
+                <div className="absolute top-[-10%] left-[-10%] w-[40%] h-[40%] rounded-full bg-blue-400/10 dark:bg-blue-900/20 blur-[100px]" />
+                <div className="absolute top-[20%] right-[-10%] w-[30%] h-[30%] rounded-full bg-purple-400/10 dark:bg-purple-900/20 blur-[100px]" />
+                <div className="absolute bottom-[-10%] left-[20%] w-[50%] h-[50%] rounded-full bg-emerald-400/10 dark:bg-emerald-900/10 blur-[120px]" />
+            </div>
+
+            <header className="col-span-full bg-white/60 dark:bg-zinc-900/60 backdrop-blur-2xl px-4 lg:px-6 h-[var(--spacing-header)] rounded-2xl flex items-center justify-between shadow-sm border border-slate-200/50 dark:border-zinc-800/50 sticky top-4 lg:top-6 z-50 transition-all duration-300">
                 <div className="flex items-center gap-3">
                     <div className="text-lg lg:text-xl font-extrabold bg-gradient-to-br from-blue-500 to-purple-500 bg-clip-text text-transparent flex items-center gap-2">
                         <span className="text-current">🏦</span> 은퇴 자산 시뮬레이터 Pro
@@ -53,10 +60,10 @@ export default function App() {
                 </div>
 
                 <div className="flex items-center gap-2 lg:gap-3">
-                    <div className="flex bg-slate-50 dark:bg-zinc-900 p-1 rounded-full border border-slate-200 dark:border-zinc-800" role="tablist" aria-label="모드 전환">
+                    <div className="flex bg-slate-500/5 dark:bg-zinc-500/10 p-1 rounded-full border border-slate-200/50 dark:border-zinc-700/50 backdrop-blur-md" role="tablist" aria-label="모드 전환">
                         <button
                             type="button"
-                            className={`px-3 lg:px-4 py-1.5 lg:py-2 rounded-full border-none bg-transparent text-sm font-semibold transition-all min-h-[36px] lg:min-h-[40px] cursor-pointer ${viewMode === "simple" ? "bg-white dark:bg-zinc-800 text-blue-600 dark:text-blue-400 shadow-sm" : "text-slate-500 hover:text-slate-900 dark:text-slate-400 dark:hover:text-slate-100"}`}
+                            className={`px-3 lg:px-4 py-1.5 lg:py-2 rounded-full border-none bg-transparent text-sm font-semibold transition-all min-h-[36px] lg:min-h-[40px] cursor-pointer ${viewMode === "simple" ? "bg-white/90 dark:bg-zinc-800/90 text-blue-600 dark:text-blue-400 shadow-sm" : "text-slate-500 hover:text-slate-900 dark:text-slate-400 dark:hover:text-slate-100"}`}
                             onClick={() => setViewMode("simple")}
                             aria-pressed={viewMode === "simple"}
                         >
@@ -64,7 +71,7 @@ export default function App() {
                         </button>
                         <button
                             type="button"
-                            className={`px-3 lg:px-4 py-1.5 lg:py-2 rounded-full border-none bg-transparent text-sm font-semibold transition-all min-h-[36px] lg:min-h-[40px] cursor-pointer ${viewMode === "pro" ? "bg-white dark:bg-zinc-800 text-blue-600 dark:text-blue-400 shadow-sm" : "text-slate-500 hover:text-slate-900 dark:text-slate-400 dark:hover:text-slate-100"}`}
+                            className={`px-3 lg:px-4 py-1.5 lg:py-2 rounded-full border-none bg-transparent text-sm font-semibold transition-all min-h-[36px] lg:min-h-[40px] cursor-pointer ${viewMode === "pro" ? "bg-white/90 dark:bg-zinc-800/90 text-blue-600 dark:text-blue-400 shadow-sm" : "text-slate-500 hover:text-slate-900 dark:text-slate-400 dark:hover:text-slate-100"}`}
                             onClick={() => setViewMode("pro")}
                             aria-pressed={viewMode === "pro"}
                         >
@@ -73,7 +80,7 @@ export default function App() {
                     </div>
                     <button
                         type="button"
-                        className="w-10 h-10 rounded-full border border-slate-200 dark:border-zinc-800 bg-white dark:bg-zinc-800 flex items-center justify-center cursor-pointer text-lg hover:bg-slate-50 dark:hover:bg-zinc-700 transition-colors"
+                        className="w-10 h-10 rounded-full border border-slate-200/50 dark:border-zinc-700/50 bg-white/60 dark:bg-zinc-800/60 backdrop-blur-md flex items-center justify-center cursor-pointer text-lg hover:bg-white dark:hover:bg-zinc-700 transition-all shadow-sm"
                         onClick={() => setTheme((prev) => (prev === "light" ? "dark" : "light"))}
                         aria-label={theme === "light" ? "다크 모드 켜기" : "라이트 모드 켜기"}
                         title={theme === "light" ? "다크 모드 켜기" : "라이트 모드 켜기"}

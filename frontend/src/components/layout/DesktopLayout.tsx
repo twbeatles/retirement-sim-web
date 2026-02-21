@@ -24,15 +24,15 @@ export function DesktopLayout({
 }: DesktopLayoutProps) {
     return (
         <>
-            <aside className="h-[calc(100vh-var(--spacing-header)-var(--spacing-xl))] overflow-y-auto bg-white/75 dark:bg-zinc-900/75 backdrop-blur-xl rounded-2xl shadow-sm border border-slate-100 dark:border-zinc-800 p-4 lg:p-6 flex flex-col gap-6 sticky top-[calc(var(--spacing-header)+var(--spacing-xl))] hidden lg:flex">
+            <aside className="h-[calc(100vh-var(--spacing-header)-var(--spacing-xl))] overflow-y-auto bg-white/60 dark:bg-zinc-900/60 backdrop-blur-2xl rounded-3xl shadow-lg border border-slate-200/50 dark:border-zinc-800/50 p-4 lg:p-6 flex flex-col gap-6 sticky top-[calc(var(--spacing-header)+var(--spacing-xl))] hidden lg:flex">
                 <div className="flex flex-col gap-1">
                     {SIDEBAR_TABS.map((tab) => (
                         <button
                             key={tab.id}
-                            className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl border-none text-left text-sm font-semibold transition-all cursor-pointer group ${sidebarTab === tab.id ? "bg-blue-50 dark:bg-blue-900/20 text-blue-600 dark:text-blue-400" : "bg-transparent text-slate-500 hover:bg-slate-50 dark:hover:bg-zinc-800 dark:text-slate-400"}`}
+                            className={`w-full flex items-center gap-3 px-4 py-3.5 rounded-2xl border-none text-left text-sm font-semibold transition-all duration-300 cursor-pointer group hover:shadow-sm ${sidebarTab === tab.id ? "bg-gradient-to-r from-blue-50 to-blue-100/50 dark:from-blue-900/20 dark:to-blue-800/10 text-blue-700 dark:text-blue-300 shadow-inner ring-1 ring-blue-500/20" : "bg-transparent text-slate-500 hover:bg-white/80 dark:hover:bg-zinc-800/80 dark:text-slate-400"}`}
                             onClick={() => setSidebarTab(tab.id)}
                         >
-                            <span className={`text-lg transition-transform group-hover:scale-110 ${sidebarTab === tab.id ? "opacity-100" : "opacity-70"}`}>{tab.icon}</span>
+                            <span className={`text-xl transition-all duration-300 group-hover:scale-110 ${sidebarTab === tab.id ? "opacity-100 text-blue-600 dark:text-blue-400 drop-shadow-sm" : "opacity-70 grayscale-[50%]"}`}>{tab.icon}</span>
                             <span>{tab.label}</span>
                         </button>
                     ))}

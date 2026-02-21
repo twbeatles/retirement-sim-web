@@ -69,7 +69,9 @@ export const SimpleDashboard = React.memo(function SimpleDashboard({ input, resu
     };
 
     return (
-        <div className="bg-white dark:bg-zinc-900 rounded-3xl p-6 lg:p-10 shadow-sm border border-slate-100 dark:border-zinc-800 transition-all max-w-4xl mx-auto w-full">
+        <div className="bg-white/80 dark:bg-zinc-900/80 backdrop-blur-2xl rounded-[2rem] p-6 lg:p-10 shadow-xl shadow-slate-200/50 dark:shadow-zinc-900/50 border border-slate-200/60 dark:border-zinc-700/50 transition-all max-w-4xl mx-auto w-full relative overflow-hidden">
+            {/* Inner ambient glow */}
+            <div className="absolute inset-x-0 top-0 h-40 bg-gradient-to-b from-blue-50/50 dark:from-blue-900/10 to-transparent pointer-events-none" />
             <div className="flex justify-between items-center mb-10 relative">
                 {STEPS.map((step, index) => (
                     <button
@@ -77,7 +79,7 @@ export const SimpleDashboard = React.memo(function SimpleDashboard({ input, resu
                         className={`flex flex-col items-center gap-3 z-10 transition-all cursor-pointer group flex-1 ${index === currentStep ? "text-blue-600 dark:text-blue-400" : index < currentStep ? "text-emerald-500 dark:text-emerald-400" : "text-slate-400 dark:text-slate-500 hover:text-slate-600 dark:hover:text-slate-300"}`}
                         onClick={() => setCurrentStep(index)}
                     >
-                        <span className={`w-12 h-12 rounded-full flex items-center justify-center text-xl sm:text-2xl transition-all shadow-sm group-hover:scale-110 ${index === currentStep ? "bg-blue-600 text-white shadow-blue-500/30" : index < currentStep ? "bg-emerald-500 text-white shadow-emerald-500/30" : "bg-white dark:bg-zinc-800 border-2 border-slate-200 dark:border-zinc-700"}`}>
+                        <span className={`w-12 h-12 rounded-full flex items-center justify-center text-xl sm:text-2xl transition-all duration-300 shadow-sm group-hover:scale-110 group-active:scale-95 ${index === currentStep ? "bg-gradient-to-tr from-blue-600 to-indigo-500 text-white shadow-blue-500/40 shadow-lg ring-4 ring-blue-500/20" : index < currentStep ? "bg-gradient-to-tr from-emerald-500 to-teal-400 text-white shadow-emerald-500/40 shadow-lg" : "bg-white/90 dark:bg-zinc-800/90 border-2 border-slate-200/80 dark:border-zinc-700/80 backdrop-blur-md"}`}>
                             {index < currentStep ? "✓" : step.icon}
                         </span>
                         <span className="text-xs sm:text-sm font-bold tracking-tight">{step.title}</span>
@@ -89,7 +91,7 @@ export const SimpleDashboard = React.memo(function SimpleDashboard({ input, resu
 
             <div className="h-2 bg-slate-100 dark:bg-zinc-800 rounded-full mb-10 overflow-hidden">
                 <div
-                    className="h-full bg-blue-500 dark:bg-blue-400 transition-all duration-500 ease-out rounded-full"
+                    className="h-full bg-gradient-to-r from-blue-500 to-indigo-500 dark:from-blue-400 dark:to-indigo-400 transition-all duration-700 ease-in-out rounded-full shadow-[0_0_10px_rgba(59,130,246,0.5)]"
                     style={{ width: `${((currentStep + 1) / STEPS.length) * 100}%` }}
                 />
             </div>
@@ -148,7 +150,7 @@ export const SimpleDashboard = React.memo(function SimpleDashboard({ input, resu
                             {PRESETS.map((preset) => (
                                 <button
                                     key={preset.id}
-                                    className="flex flex-col items-center justify-center gap-3 p-5 rounded-2xl border-2 border-slate-100 dark:border-zinc-800 bg-white dark:bg-zinc-900 hover:border-blue-400 dark:hover:border-blue-500 hover:bg-blue-50 dark:hover:bg-blue-900/10 transition-all cursor-pointer group active:scale-[0.98]"
+                                    className="flex flex-col items-center justify-center gap-3 p-6 rounded-3xl border border-slate-200/80 dark:border-zinc-700/80 bg-white/50 dark:bg-zinc-800/30 hover:bg-white dark:hover:bg-zinc-800 hover:border-blue-400/80 dark:hover:border-blue-500/80 hover:shadow-xl hover:shadow-blue-500/10 transition-all duration-300 cursor-pointer group active:scale-[0.97]"
                                     onClick={() => handlePreset(preset)}
                                 >
                                     <span className="text-4xl transition-transform group-hover:scale-110">{preset.icon}</span>
@@ -206,7 +208,9 @@ export const SimpleDashboard = React.memo(function SimpleDashboard({ input, resu
                                 hint={`연간 저축액: ${((input.general.monthly_contribution * 12) / 10000).toLocaleString()}만원`}
                             />
 
-                            <div className="bg-slate-50 dark:bg-zinc-800/50 rounded-2xl p-6 border border-slate-100 dark:border-zinc-800 flex flex-col sm:flex-row gap-6 justify-between items-center mt-4">
+                            <div className="bg-gradient-to-br from-slate-50/80 to-slate-100/50 dark:from-zinc-800/80 dark:to-zinc-900/50 backdrop-blur-md rounded-3xl p-6 md:p-8 border border-slate-200/50 dark:border-zinc-700/50 flex flex-col sm:flex-row gap-6 justify-between items-center mt-4 relative overflow-hidden">
+                                <div className="absolute top-0 right-0 w-32 h-32 bg-blue-500/5 rounded-full blur-2xl -translate-y-1/2 translate-x-1/2" />
+                                <div className="absolute bottom-0 left-0 w-32 h-32 bg-purple-500/5 rounded-full blur-2xl translate-y-1/2 -translate-x-1/2" />
                                 <div className="flex flex-col items-center sm:items-start w-full sm:w-auto">
                                     <span className="text-xs uppercase tracking-wider font-semibold text-slate-500 dark:text-slate-400 mb-2">은퇴까지 예상 저축 합계</span>
                                     <span className="text-2xl font-bold text-slate-800 dark:text-slate-200">
@@ -234,8 +238,8 @@ export const SimpleDashboard = React.memo(function SimpleDashboard({ input, resu
                         </div>
 
                         <div className="grid grid-cols-1 md:grid-cols-2 gap-6 lg:gap-8 max-w-4xl mx-auto w-full">
-                            <div className="bg-white dark:bg-zinc-900 border-2 border-slate-100 dark:border-zinc-800 rounded-3xl p-8 flex flex-col items-center justify-center shadow-sm relative overflow-hidden">
-                                <div className="absolute top-0 inset-x-0 h-2 bg-gradient-to-r from-blue-400 to-purple-500" />
+                            <div className="bg-white/80 dark:bg-zinc-800/80 backdrop-blur-xl border border-slate-200/60 dark:border-zinc-700/60 rounded-[2rem] p-8 flex flex-col items-center justify-center shadow-xl shadow-slate-200/40 dark:shadow-zinc-900/40 relative overflow-hidden group">
+                                <div className="absolute top-0 inset-x-0 h-1.5 bg-gradient-to-r from-blue-400 via-indigo-500 to-purple-500" />
                                 <div className="relative w-full max-w-[240px] aspect-[2/1] flex flex-col items-center mx-auto mb-6">
                                     <svg width="100%" height="100%" viewBox="0 0 180 110" role="img" aria-label="은퇴 성공 확률 게이지" className="drop-shadow-sm">
                                         <path
@@ -263,29 +267,29 @@ export const SimpleDashboard = React.memo(function SimpleDashboard({ input, resu
                                         </div>
                                     </div>
                                 </div>
-                                <div className="bg-slate-50 dark:bg-zinc-800/80 px-4 py-3 rounded-2xl flex items-center gap-3 w-full justify-center">
+                                <div className="bg-slate-50/80 dark:bg-zinc-900/80 backdrop-blur-md px-5 py-3.5 rounded-2xl flex items-center gap-3 w-full justify-center border border-slate-200/50 dark:border-zinc-700/50 shadow-inner">
                                     <span className="text-2xl">{feedback.emoji}</span>
                                     <span className="text-sm font-semibold text-slate-700 dark:text-slate-300 text-center leading-snug">{feedback.text}</span>
                                 </div>
                             </div>
 
                             <div className="flex flex-col gap-4">
-                                <div className="bg-white dark:bg-zinc-900 border border-slate-100 dark:border-zinc-800 rounded-2xl p-5 shadow-sm flex items-center justify-between">
+                                <div className="bg-white/60 dark:bg-zinc-800/60 backdrop-blur-md border border-slate-200/60 dark:border-zinc-700/60 rounded-3xl p-5 md:p-6 shadow-md shadow-slate-200/40 dark:shadow-none flex items-center justify-between hover:bg-white/90 dark:hover:bg-zinc-800/90 transition-colors">
                                     <span className="text-sm font-semibold text-slate-500 dark:text-slate-400">은퇴 성공 확률</span>
                                     <span className="text-xl font-bold" style={{ color: gaugeColor }}>{(successRate * 100).toFixed(1)}%</span>
                                 </div>
-                                <div className="bg-white dark:bg-zinc-900 border border-slate-100 dark:border-zinc-800 rounded-2xl p-5 shadow-sm flex items-center justify-between">
+                                <div className="bg-white/60 dark:bg-zinc-800/60 backdrop-blur-md border border-slate-200/60 dark:border-zinc-700/60 rounded-3xl p-5 md:p-6 shadow-md shadow-slate-200/40 dark:shadow-none flex items-center justify-between hover:bg-white/90 dark:hover:bg-zinc-800/90 transition-colors">
                                     <span className="text-sm font-semibold text-slate-500 dark:text-slate-400">예상 은퇴 자산 (중위값)</span>
                                     <span className="text-xl font-bold text-slate-900 dark:text-white">{Math.round(endAsset / 100000000).toLocaleString()}억원</span>
                                 </div>
-                                <div className="bg-white dark:bg-zinc-900 border border-slate-100 dark:border-zinc-800 rounded-2xl p-5 shadow-sm flex items-center justify-between">
+                                <div className="bg-white/60 dark:bg-zinc-800/60 backdrop-blur-md border border-slate-200/60 dark:border-zinc-700/60 rounded-3xl p-5 md:p-6 shadow-md shadow-slate-200/40 dark:shadow-none flex items-center justify-between hover:bg-white/90 dark:hover:bg-zinc-800/90 transition-colors">
                                     <span className="text-sm font-semibold text-slate-500 dark:text-slate-400">은퇴까지 남은 기간</span>
                                     <span className="text-xl font-bold text-slate-900 dark:text-white">{yearsToRetire}년</span>
                                 </div>
                             </div>
                         </div>
 
-                        <div className="bg-blue-50/50 dark:bg-blue-900/10 border border-blue-100 dark:border-blue-900/30 rounded-2xl p-6 lg:p-8 max-w-4xl mx-auto w-full mt-2">
+                        <div className="bg-gradient-to-br from-blue-50/80 to-indigo-50/50 dark:from-blue-900/20 dark:to-indigo-900/10 border border-blue-200/50 dark:border-blue-800/30 backdrop-blur-xl rounded-[2rem] p-6 lg:p-8 max-w-4xl mx-auto w-full mt-4 shadow-lg shadow-blue-500/5 dark:shadow-none">
                             <h4 className="text-lg font-bold text-blue-900 dark:text-blue-300 mb-4 flex items-center gap-2">💡 은퇴 준비 개선 팁</h4>
                             <ul className="space-y-3 m-0 pl-1 list-none">
                                 {successRate < 0.9 && (
@@ -307,22 +311,22 @@ export const SimpleDashboard = React.memo(function SimpleDashboard({ input, resu
 
             <div className="mt-12 pt-6 border-t border-slate-100 dark:border-zinc-800 flex flex-col-reverse sm:flex-row items-center justify-between gap-4">
                 <button
-                    className={`px-6 py-3 rounded-xl border-2 border-slate-200 dark:border-zinc-700 font-bold text-slate-600 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-zinc-800 transition-colors w-full sm:w-auto shadow-sm cursor-pointer ${currentStep === 0 ? "invisible" : ""}`}
+                    className={`px-6 py-3 rounded-2xl border border-slate-200 dark:border-zinc-700 font-bold text-slate-600 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-zinc-800 hover:border-slate-300 dark:hover:border-zinc-600 transition-all duration-300 w-full sm:w-auto shadow-sm cursor-pointer active:scale-95 ${currentStep === 0 ? "invisible" : ""}`}
                     onClick={() => setCurrentStep((prev) => Math.max(prev - 1, 0))}
                 >
                     ← 이전
                 </button>
                 <div className="flex gap-2">
                     {STEPS.map((_, i) => (
-                        <div key={i} className={`w-2.5 h-2.5 rounded-full transition-all duration-300 ${i === currentStep ? 'bg-blue-600 scale-125' : i < currentStep ? 'bg-blue-300 dark:bg-blue-800' : 'bg-slate-200 dark:bg-zinc-700'}`} />
+                        <div key={i} className={`w-2 h-2 rounded-full transition-all duration-500 ${i === currentStep ? 'bg-blue-600 w-6' : i < currentStep ? 'bg-blue-300 dark:bg-blue-800' : 'bg-slate-200 dark:bg-zinc-700'}`} />
                     ))}
                 </div>
                 {currentStep < STEPS.length - 1 ? (
-                    <button className="px-8 py-3 rounded-xl bg-blue-600 hover:bg-blue-700 text-white font-bold transition-all hover:-translate-y-0.5 shadow-md shadow-blue-500/20 active:scale-95 w-full sm:w-auto cursor-pointer" onClick={() => setCurrentStep((prev) => Math.min(prev + 1, STEPS.length - 1))}>
+                    <button className="px-8 py-3 rounded-2xl bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-500 hover:to-indigo-500 text-white font-bold transition-all duration-300 hover:-translate-y-1 hover:shadow-xl hover:shadow-blue-500/30 active:scale-95 w-full sm:w-auto cursor-pointer" onClick={() => setCurrentStep((prev) => Math.min(prev + 1, STEPS.length - 1))}>
                         다음 단계 →
                     </button>
                 ) : (
-                    <button className="px-8 py-3 rounded-xl bg-slate-900 dark:bg-white text-white dark:text-slate-900 hover:bg-slate-800 dark:hover:bg-slate-100 font-bold transition-all hover:-translate-y-0.5 shadow-md active:scale-95 w-full sm:w-auto cursor-pointer flex items-center justify-center gap-2" onClick={() => setCurrentStep(0)}>
+                    <button className="px-8 py-3 rounded-2xl bg-gradient-to-r from-slate-900 to-slate-700 dark:from-white dark:to-slate-200 text-white dark:text-slate-900 hover:shadow-xl dark:hover:shadow-white/20 font-bold transition-all duration-300 hover:-translate-y-1 active:scale-95 w-full sm:w-auto cursor-pointer flex items-center justify-center gap-2" onClick={() => setCurrentStep(0)}>
                         처음부터 다시 🔄
                     </button>
                 )}

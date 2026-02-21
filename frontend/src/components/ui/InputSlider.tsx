@@ -38,10 +38,10 @@ export function InputSlider({
     const displayValue = formatValue ? formatValue(draftValue) : draftValue.toLocaleString();
 
     return (
-        <div className="flex flex-col gap-2 relative">
+        <div className="flex flex-col gap-2 relative bg-white/40 dark:bg-zinc-800/40 backdrop-blur-sm p-4 rounded-2xl border border-slate-200/50 dark:border-zinc-700/50 shadow-sm">
             <div className="flex justify-between items-baseline mb-2">
-                <label className="text-sm font-bold text-slate-700 dark:text-slate-300">{label}</label>
-                <span className="text-xl font-black text-blue-600 dark:text-blue-400 tabular-nums tracking-tight bg-blue-50 dark:bg-blue-900/20 px-3 py-1 rounded-lg border border-blue-100 dark:border-blue-900/30">
+                <label className="text-sm font-bold text-slate-700 dark:text-slate-200">{label}</label>
+                <span className="text-xl font-black text-blue-600 dark:text-blue-400 tabular-nums tracking-tight bg-white/80 dark:bg-zinc-900/80 shadow-inner px-3 py-1 rounded-xl border border-blue-100/50 dark:border-blue-900/30">
                     {displayValue}
                     {unit && <span className="text-sm font-semibold text-slate-500 dark:text-blue-300/80 ml-1">{unit}</span>}
                 </span>
@@ -62,7 +62,7 @@ export function InputSlider({
                             commit();
                         }
                     }}
-                    className="w-full h-2 bg-slate-200 dark:bg-zinc-700 rounded-lg appearance-none cursor-pointer outline-none transition-all hover:bg-slate-300 dark:hover:bg-zinc-600 focus:ring-2 focus:ring-blue-500/50 accent-blue-600"
+                    className="w-full h-2.5 bg-slate-200/80 dark:bg-zinc-700/80 rounded-full appearance-none cursor-pointer outline-none transition-all hover:bg-slate-300 dark:hover:bg-zinc-600 focus:ring-4 focus:ring-blue-500/30 accent-blue-500 dark:accent-blue-400 shadow-inner"
                 />
             </div>
             {hint && <p className="text-xs font-medium text-slate-500 dark:text-slate-400 mt-1">{hint}</p>}

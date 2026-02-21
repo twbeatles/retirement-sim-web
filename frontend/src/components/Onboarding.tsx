@@ -81,9 +81,12 @@ export function Onboarding({ onComplete }: Props) {
 
     return (
         <>
-            <div className="fixed inset-0 bg-slate-900/40 dark:bg-black/60 backdrop-blur-sm z-50 animate-in fade-in duration-300" />
             <div
-                className="fixed top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 bg-white dark:bg-zinc-900 w-[90%] max-w-md rounded-3xl p-6 sm:p-8 shadow-2xl z-50 animate-in zoom-in-95 duration-300 border border-slate-100 dark:border-zinc-800"
+                className="fixed inset-0 bg-slate-900/20 dark:bg-black/40 backdrop-blur-sm z-50 animate-in fade-in duration-300"
+                onClick={completeOnboarding}
+            />
+            <div
+                className="fixed top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 bg-white/90 dark:bg-zinc-900/90 backdrop-blur-xl w-[90%] max-w-md rounded-3xl p-6 sm:p-8 shadow-2xl z-50 animate-in zoom-in-95 duration-300 border border-slate-200/50 dark:border-zinc-700/50"
                 role="dialog"
                 aria-modal="true"
                 aria-label="온보딩 안내"
@@ -93,7 +96,7 @@ export function Onboarding({ onComplete }: Props) {
                         <div
                             key={index}
                             className={`h-2 rounded-full transition-all duration-300 ${index === currentStep ? "w-6 bg-blue-600 dark:bg-blue-500" :
-                                    index < currentStep ? "w-2 bg-blue-200 dark:bg-blue-900/50" : "w-2 bg-slate-200 dark:bg-zinc-700"
+                                index < currentStep ? "w-2 bg-blue-200 dark:bg-blue-900/50" : "w-2 bg-slate-200 dark:bg-zinc-700"
                                 }`}
                         />
                     ))}
