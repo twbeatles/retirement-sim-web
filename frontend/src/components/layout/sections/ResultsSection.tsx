@@ -60,7 +60,7 @@ export function ResultsSection({
     return (
         <>
             {summary && (
-                <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-6 lg:mb-8">
+                <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4 mb-6 lg:mb-8">
                     <div className="bg-white/60 dark:bg-zinc-800/60 backdrop-blur-md rounded-[1.5rem] p-5 sm:p-6 border border-slate-200/50 dark:border-zinc-700/50 shadow-sm flex flex-col items-center justify-center text-center hover:-translate-y-1 transition-all duration-300 group">
                         <div className="text-xs sm:text-sm font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider mb-2">은퇴 성공 확률</div>
                         <div

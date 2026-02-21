@@ -69,7 +69,7 @@ export const SimpleDashboard = React.memo(function SimpleDashboard({ input, resu
     };
 
     return (
-        <div className="bg-white/80 dark:bg-zinc-900/80 backdrop-blur-2xl rounded-[2rem] p-6 lg:p-10 shadow-xl shadow-slate-200/50 dark:shadow-zinc-900/50 border border-slate-200/60 dark:border-zinc-700/50 transition-all max-w-4xl mx-auto w-full relative overflow-hidden">
+        <div className="bg-white/80 dark:bg-zinc-900/80 backdrop-blur-2xl rounded-[2rem] p-6 lg:p-10 shadow-xl shadow-slate-200/50 dark:shadow-zinc-900/50 border border-slate-200/60 dark:border-zinc-700/50 transition-all max-w-4xl mx-auto w-full min-w-full relative overflow-hidden">
             {/* Inner ambient glow */}
             <div className="absolute inset-x-0 top-0 h-40 bg-gradient-to-b from-blue-50/50 dark:from-blue-900/10 to-transparent pointer-events-none" />
             <div className="flex justify-between items-center mb-10 relative">
@@ -96,16 +96,16 @@ export const SimpleDashboard = React.memo(function SimpleDashboard({ input, resu
                 />
             </div>
 
-            <div className="min-h-[400px]">
+            <div className="min-h-[400px] w-full min-w-full">
                 {currentStep === 0 && (
-                    <div className="animate-in slide-in-from-right-4 fade-in duration-500 flex flex-col gap-8">
-                        <div className="text-center mb-2">
+                    <div className="animate-in slide-in-from-right-4 fade-in duration-500 flex flex-col items-stretch gap-8 w-full min-w-full">
+                        <div className="text-center mb-2 w-full">
                             <h2 className="text-2xl lg:text-3xl font-extrabold text-slate-900 dark:text-white mb-3 flex items-center justify-center gap-3 shrink-0 whitespace-nowrap text-wrap sm:whitespace-normal break-keep">
                                 <span className="text-3xl lg:text-4xl shrink-0">{STEPS[0].icon}</span> {STEPS[0].title}
                             </h2>
                             <p className="text-slate-500 dark:text-slate-400 text-base">{STEPS[0].description}</p>
                         </div>
-                        <div className="flex flex-col gap-8 max-w-2xl mx-auto w-full">
+                        <div className="flex flex-col items-stretch gap-8 max-w-[600px] mx-auto w-full min-w-full">
                             <InputSlider
                                 label="현재 나이"
                                 value={input.current_age}
@@ -138,15 +138,15 @@ export const SimpleDashboard = React.memo(function SimpleDashboard({ input, resu
                 )}
 
                 {currentStep === 1 && (
-                    <div className="animate-in slide-in-from-right-4 fade-in duration-500 flex flex-col gap-8">
-                        <div className="text-center mb-2">
+                    <div className="animate-in slide-in-from-right-4 fade-in duration-500 flex flex-col items-stretch gap-8 w-full min-w-full">
+                        <div className="text-center mb-2 w-full">
                             <h2 className="text-2xl lg:text-3xl font-extrabold text-slate-900 dark:text-white mb-3 flex items-center justify-center gap-3 shrink-0 whitespace-nowrap text-wrap sm:whitespace-normal break-keep">
                                 <span className="text-3xl lg:text-4xl shrink-0">{STEPS[1].icon}</span> {STEPS[1].title}
                             </h2>
                             <p className="text-slate-500 dark:text-slate-400 text-base">{STEPS[1].description}</p>
                         </div>
 
-                        <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 max-w-3xl mx-auto w-full mb-4">
+                        <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 max-w-3xl mx-auto w-full min-w-full mb-4">
                             {PRESETS.map((preset) => (
                                 <button
                                     key={preset.id}
@@ -160,7 +160,7 @@ export const SimpleDashboard = React.memo(function SimpleDashboard({ input, resu
                             ))}
                         </div>
 
-                        <div className="flex flex-col gap-8 max-w-2xl mx-auto w-full">
+                        <div className="flex flex-col items-stretch gap-8 max-w-[600px] mx-auto w-full min-w-full">
                             <InputSlider
                                 label="현재 모은 돈 (총 자산)"
                                 value={Math.round(input.general.current_balance / 10000)}
@@ -182,15 +182,15 @@ export const SimpleDashboard = React.memo(function SimpleDashboard({ input, resu
                 )}
 
                 {currentStep === 2 && (
-                    <div className="animate-in slide-in-from-right-4 fade-in duration-500 flex flex-col gap-8">
-                        <div className="text-center mb-2">
+                    <div className="animate-in slide-in-from-right-4 fade-in duration-500 flex flex-col items-stretch gap-8 w-full min-w-full">
+                        <div className="text-center mb-2 w-full">
                             <h2 className="text-2xl lg:text-3xl font-extrabold text-slate-900 dark:text-white mb-3 flex items-center justify-center gap-3 shrink-0 whitespace-nowrap text-wrap sm:whitespace-normal break-keep">
                                 <span className="text-3xl lg:text-4xl shrink-0">{STEPS[2].icon}</span> {STEPS[2].title}
                             </h2>
                             <p className="text-slate-500 dark:text-slate-400 text-base">{STEPS[2].description}</p>
                         </div>
 
-                        <div className="flex flex-col gap-8 max-w-2xl mx-auto w-full">
+                        <div className="flex flex-col items-stretch gap-8 max-w-[600px] mx-auto w-full min-w-full">
                             <InputSlider
                                 label="매월 저축 가능액"
                                 value={Math.round(input.general.monthly_contribution / 10000)}
@@ -201,11 +201,11 @@ export const SimpleDashboard = React.memo(function SimpleDashboard({ input, resu
                                     })
                                 }
                                 min={0}
-                                max={1000}
+                                max={2000}
                                 step={10}
                                 unit="만원"
                                 formatValue={(value) => value.toLocaleString()}
-                                hint={`연간 저축액: ${((input.general.monthly_contribution * 12) / 10000).toLocaleString()}만원`}
+                                hint="💡 은퇴 전까지 매월 저축하거나 투자할 금액"
                             />
 
                             <div className="bg-gradient-to-br from-slate-50/80 to-slate-100/50 dark:from-zinc-800/80 dark:to-zinc-900/50 backdrop-blur-md rounded-3xl p-6 md:p-8 border border-slate-200/50 dark:border-zinc-700/50 flex flex-col sm:flex-row gap-6 justify-between items-center mt-4 relative overflow-hidden">
