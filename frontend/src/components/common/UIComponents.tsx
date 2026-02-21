@@ -24,8 +24,8 @@ export const Field = React.memo(function Field(props: { label: string; value: an
     };
 
     return (
-        <div className="flex flex-col gap-1.5 mb-3 w-full">
-            <label className="text-sm font-semibold text-slate-700 dark:text-slate-300">{props.label}</label>
+        <div className="flex flex-col gap-1.5 mb-3 w-full min-w-0">
+            <label className="text-sm font-semibold text-slate-700 dark:text-slate-300 whitespace-nowrap shrink-0">{props.label}</label>
             <div className="relative flex items-center bg-white dark:bg-zinc-900 border border-slate-200 dark:border-zinc-700 rounded-lg overflow-hidden shadow-sm transition-all focus-within:ring-2 focus-within:ring-blue-500/20 focus-within:border-blue-500 hover:border-slate-300 dark:hover:border-zinc-600">
                 <input
                     className={`flex-1 w-full py-2 px-3 bg-transparent border-none text-right font-medium text-slate-900 dark:text-white placeholder:text-slate-400 dark:placeholder:text-slate-500 outline-none ${props.suffix ? "pr-1" : ""}`}

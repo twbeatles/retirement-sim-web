@@ -79,10 +79,10 @@ export const SimpleDashboard = React.memo(function SimpleDashboard({ input, resu
                         className={`flex flex-col items-center gap-3 z-10 transition-all cursor-pointer group flex-1 ${index === currentStep ? "text-blue-600 dark:text-blue-400" : index < currentStep ? "text-emerald-500 dark:text-emerald-400" : "text-slate-400 dark:text-slate-500 hover:text-slate-600 dark:hover:text-slate-300"}`}
                         onClick={() => setCurrentStep(index)}
                     >
-                        <span className={`w-12 h-12 rounded-full flex items-center justify-center text-xl sm:text-2xl transition-all duration-300 shadow-sm group-hover:scale-110 group-active:scale-95 ${index === currentStep ? "bg-gradient-to-tr from-blue-600 to-indigo-500 text-white shadow-blue-500/40 shadow-lg ring-4 ring-blue-500/20" : index < currentStep ? "bg-gradient-to-tr from-emerald-500 to-teal-400 text-white shadow-emerald-500/40 shadow-lg" : "bg-white/90 dark:bg-zinc-800/90 border-2 border-slate-200/80 dark:border-zinc-700/80 backdrop-blur-md"}`}>
+                        <span className={`w-12 h-12 shrink-0 rounded-full flex items-center justify-center text-xl sm:text-2xl transition-all duration-300 shadow-sm group-hover:scale-110 group-active:scale-95 ${index === currentStep ? "bg-gradient-to-tr from-blue-600 to-indigo-500 text-white shadow-blue-500/40 shadow-lg ring-4 ring-blue-500/20" : index < currentStep ? "bg-gradient-to-tr from-emerald-500 to-teal-400 text-white shadow-emerald-500/40 shadow-lg" : "bg-white/90 dark:bg-zinc-800/90 border-2 border-slate-200/80 dark:border-zinc-700/80 backdrop-blur-md"}`}>
                             {index < currentStep ? "✓" : step.icon}
                         </span>
-                        <span className="text-xs sm:text-sm font-bold tracking-tight">{step.title}</span>
+                        <span className="text-[11px] sm:text-sm font-bold tracking-tight whitespace-nowrap">{step.title}</span>
                     </button>
                 ))}
                 {/* Progress bar background line */}
@@ -100,8 +100,8 @@ export const SimpleDashboard = React.memo(function SimpleDashboard({ input, resu
                 {currentStep === 0 && (
                     <div className="animate-in slide-in-from-right-4 fade-in duration-500 flex flex-col gap-8">
                         <div className="text-center mb-2">
-                            <h2 className="text-2xl lg:text-3xl font-extrabold text-slate-900 dark:text-white mb-3 flex items-center justify-center gap-3">
-                                <span className="text-3xl lg:text-4xl">{STEPS[0].icon}</span> {STEPS[0].title}
+                            <h2 className="text-2xl lg:text-3xl font-extrabold text-slate-900 dark:text-white mb-3 flex items-center justify-center gap-3 shrink-0 whitespace-nowrap text-wrap sm:whitespace-normal break-keep">
+                                <span className="text-3xl lg:text-4xl shrink-0">{STEPS[0].icon}</span> {STEPS[0].title}
                             </h2>
                             <p className="text-slate-500 dark:text-slate-400 text-base">{STEPS[0].description}</p>
                         </div>
@@ -140,8 +140,8 @@ export const SimpleDashboard = React.memo(function SimpleDashboard({ input, resu
                 {currentStep === 1 && (
                     <div className="animate-in slide-in-from-right-4 fade-in duration-500 flex flex-col gap-8">
                         <div className="text-center mb-2">
-                            <h2 className="text-2xl lg:text-3xl font-extrabold text-slate-900 dark:text-white mb-3 flex items-center justify-center gap-3">
-                                <span className="text-3xl lg:text-4xl">{STEPS[1].icon}</span> {STEPS[1].title}
+                            <h2 className="text-2xl lg:text-3xl font-extrabold text-slate-900 dark:text-white mb-3 flex items-center justify-center gap-3 shrink-0 whitespace-nowrap text-wrap sm:whitespace-normal break-keep">
+                                <span className="text-3xl lg:text-4xl shrink-0">{STEPS[1].icon}</span> {STEPS[1].title}
                             </h2>
                             <p className="text-slate-500 dark:text-slate-400 text-base">{STEPS[1].description}</p>
                         </div>
@@ -153,9 +153,9 @@ export const SimpleDashboard = React.memo(function SimpleDashboard({ input, resu
                                     className="flex flex-col items-center justify-center gap-3 p-6 rounded-3xl border border-slate-200/80 dark:border-zinc-700/80 bg-white/50 dark:bg-zinc-800/30 hover:bg-white dark:hover:bg-zinc-800 hover:border-blue-400/80 dark:hover:border-blue-500/80 hover:shadow-xl hover:shadow-blue-500/10 transition-all duration-300 cursor-pointer group active:scale-[0.97]"
                                     onClick={() => handlePreset(preset)}
                                 >
-                                    <span className="text-4xl transition-transform group-hover:scale-110">{preset.icon}</span>
-                                    <span className="font-bold text-slate-700 dark:text-slate-300">{preset.label}</span>
-                                    <span className="text-sm font-semibold text-blue-600 dark:text-blue-400">{(preset.asset / 10000).toLocaleString()}만원</span>
+                                    <span className="text-4xl transition-transform group-hover:scale-110 shrink-0">{preset.icon}</span>
+                                    <span className="font-bold text-slate-700 dark:text-slate-300 whitespace-nowrap">{preset.label}</span>
+                                    <span className="text-sm font-semibold text-blue-600 dark:text-blue-400 whitespace-nowrap shrink-0">{(preset.asset / 10000).toLocaleString()}만원</span>
                                 </button>
                             ))}
                         </div>
@@ -184,8 +184,8 @@ export const SimpleDashboard = React.memo(function SimpleDashboard({ input, resu
                 {currentStep === 2 && (
                     <div className="animate-in slide-in-from-right-4 fade-in duration-500 flex flex-col gap-8">
                         <div className="text-center mb-2">
-                            <h2 className="text-2xl lg:text-3xl font-extrabold text-slate-900 dark:text-white mb-3 flex items-center justify-center gap-3">
-                                <span className="text-3xl lg:text-4xl">{STEPS[2].icon}</span> {STEPS[2].title}
+                            <h2 className="text-2xl lg:text-3xl font-extrabold text-slate-900 dark:text-white mb-3 flex items-center justify-center gap-3 shrink-0 whitespace-nowrap text-wrap sm:whitespace-normal break-keep">
+                                <span className="text-3xl lg:text-4xl shrink-0">{STEPS[2].icon}</span> {STEPS[2].title}
                             </h2>
                             <p className="text-slate-500 dark:text-slate-400 text-base">{STEPS[2].description}</p>
                         </div>
@@ -234,7 +234,7 @@ export const SimpleDashboard = React.memo(function SimpleDashboard({ input, resu
                 {currentStep === 3 && (
                     <div className="animate-in slide-in-from-right-4 fade-in duration-500 flex flex-col gap-8">
                         <div className="text-center mb-6">
-                            <h2 className="text-2xl lg:text-3xl font-extrabold text-slate-900 dark:text-white mb-3">📊 은퇴 준비도 분석 결과</h2>
+                            <h2 className="text-2xl lg:text-3xl font-extrabold text-slate-900 dark:text-white mb-3 shrink-0 whitespace-nowrap text-wrap sm:whitespace-normal break-keep">📊 은퇴 준비도 분석 결과</h2>
                         </div>
 
                         <div className="grid grid-cols-1 md:grid-cols-2 gap-6 lg:gap-8 max-w-4xl mx-auto w-full">
@@ -274,17 +274,17 @@ export const SimpleDashboard = React.memo(function SimpleDashboard({ input, resu
                             </div>
 
                             <div className="flex flex-col gap-4">
-                                <div className="bg-white/60 dark:bg-zinc-800/60 backdrop-blur-md border border-slate-200/60 dark:border-zinc-700/60 rounded-3xl p-5 md:p-6 shadow-md shadow-slate-200/40 dark:shadow-none flex items-center justify-between hover:bg-white/90 dark:hover:bg-zinc-800/90 transition-colors">
-                                    <span className="text-sm font-semibold text-slate-500 dark:text-slate-400">은퇴 성공 확률</span>
-                                    <span className="text-xl font-bold" style={{ color: gaugeColor }}>{(successRate * 100).toFixed(1)}%</span>
+                                <div className="bg-white/60 dark:bg-zinc-800/60 backdrop-blur-md border border-slate-200/60 dark:border-zinc-700/60 rounded-3xl p-5 md:p-6 shadow-md shadow-slate-200/40 dark:shadow-none flex items-center justify-between hover:bg-white/90 dark:hover:bg-zinc-800/90 transition-colors gap-2">
+                                    <span className="text-sm font-semibold text-slate-500 dark:text-slate-400 whitespace-nowrap shrink-0">은퇴 성공 확률</span>
+                                    <span className="text-xl font-bold whitespace-nowrap shrink-0" style={{ color: gaugeColor }}>{(successRate * 100).toFixed(1)}%</span>
                                 </div>
-                                <div className="bg-white/60 dark:bg-zinc-800/60 backdrop-blur-md border border-slate-200/60 dark:border-zinc-700/60 rounded-3xl p-5 md:p-6 shadow-md shadow-slate-200/40 dark:shadow-none flex items-center justify-between hover:bg-white/90 dark:hover:bg-zinc-800/90 transition-colors">
-                                    <span className="text-sm font-semibold text-slate-500 dark:text-slate-400">예상 은퇴 자산 (중위값)</span>
-                                    <span className="text-xl font-bold text-slate-900 dark:text-white">{Math.round(endAsset / 100000000).toLocaleString()}억원</span>
+                                <div className="bg-white/60 dark:bg-zinc-800/60 backdrop-blur-md border border-slate-200/60 dark:border-zinc-700/60 rounded-3xl p-5 md:p-6 shadow-md shadow-slate-200/40 dark:shadow-none flex items-center justify-between hover:bg-white/90 dark:hover:bg-zinc-800/90 transition-colors gap-2">
+                                    <span className="text-sm font-semibold text-slate-500 dark:text-slate-400 whitespace-nowrap shrink-0">예상 은퇴 자산 (중위값)</span>
+                                    <span className="text-xl font-bold text-slate-900 dark:text-white whitespace-nowrap shrink-0">{Math.round(endAsset / 100000000).toLocaleString()}억원</span>
                                 </div>
-                                <div className="bg-white/60 dark:bg-zinc-800/60 backdrop-blur-md border border-slate-200/60 dark:border-zinc-700/60 rounded-3xl p-5 md:p-6 shadow-md shadow-slate-200/40 dark:shadow-none flex items-center justify-between hover:bg-white/90 dark:hover:bg-zinc-800/90 transition-colors">
-                                    <span className="text-sm font-semibold text-slate-500 dark:text-slate-400">은퇴까지 남은 기간</span>
-                                    <span className="text-xl font-bold text-slate-900 dark:text-white">{yearsToRetire}년</span>
+                                <div className="bg-white/60 dark:bg-zinc-800/60 backdrop-blur-md border border-slate-200/60 dark:border-zinc-700/60 rounded-3xl p-5 md:p-6 shadow-md shadow-slate-200/40 dark:shadow-none flex items-center justify-between hover:bg-white/90 dark:hover:bg-zinc-800/90 transition-colors gap-2">
+                                    <span className="text-sm font-semibold text-slate-500 dark:text-slate-400 whitespace-nowrap shrink-0">은퇴까지 남은 기간</span>
+                                    <span className="text-xl font-bold text-slate-900 dark:text-white whitespace-nowrap shrink-0">{yearsToRetire}년</span>
                                 </div>
                             </div>
                         </div>
