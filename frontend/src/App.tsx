@@ -29,6 +29,52 @@ export default function App() {
         return () => window.removeEventListener("afterprint", handleAfterPrint);
     }, []);
 
+    const prefetchProModules = useCallback(() => {
+        void Promise.allSettled([
+            import("./components/layout/Layout"),
+            import("./components/RiskDashboard"),
+            import("./components/ScenarioComparison"),
+            import("./components/WhatIfSlider"),
+            import("./components/Charts/SurvivalChart"),
+            import("./components/Charts/AssetBreakdownChart"),
+            import("./components/Charts/CashflowStackChart"),
+            import("./components/Charts/FanChart"),
+            import("./components/YearlyReportTable")
+        ]);
+    }, []);
+
+    useEffect(() => {
+        if (viewMode !== "simple") {
+            return;
+        }
+
+        const idleWindow = window as Window & {
+            requestIdleCallback?: (callback: IdleRequestCallback, options?: IdleRequestOptions) => number;
+            cancelIdleCallback?: (id: number) => void;
+        };
+        let timeoutId: number | null = null;
+        let idleId: number | null = null;
+
+        if (idleWindow.requestIdleCallback) {
+            idleId = idleWindow.requestIdleCallback(() => {
+                prefetchProModules();
+            }, { timeout: 1500 });
+        } else {
+            timeoutId = window.setTimeout(() => {
+                prefetchProModules();
+            }, 900);
+        }
+
+        return () => {
+            if (idleId !== null && idleWindow.cancelIdleCallback) {
+                idleWindow.cancelIdleCallback(idleId);
+            }
+            if (timeoutId !== null) {
+                window.clearTimeout(timeoutId);
+            }
+        };
+    }, [prefetchProModules, viewMode]);
+
     const validationWarnings = useMemo<ValidationWarning[]>(() => validateSimulationInput(input), [input]);
     const { runSimulation, isCalculating, result, error } = useSimulation();
     useAutoSimulation({ input, viewMode, runSimulation });

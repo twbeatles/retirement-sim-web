@@ -45,6 +45,12 @@
 - [x] Section-level lazy loading for heavy asset modules
 - [x] Chart module split for results section
 - [x] Service worker static asset SWR cache policy
+- [x] Dual-worker broker (`interactive` / `compute`) with latest-wins simulation coalescing
+- [x] Input fingerprint dedupe + hidden-tab full simulation skip
+- [x] Engine kernel split (sample timeline capture only, typed-array trajectory accumulation)
+- [x] Results viewport-near lazy mount + chart animation disable
+- [x] Scenario comparison data merge optimization (map-based)
+- [x] Regression tests for worker queueing/fan-out and seed-fixed engine parity
 
 ---
 

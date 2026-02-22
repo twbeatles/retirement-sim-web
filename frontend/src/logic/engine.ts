@@ -21,8 +21,8 @@ import {
     HISTORICAL_YEARS,
 } from "./historicalData";
 import {
-    mean,
-    percentile,
+    percentileSorted,
+    meanTyped,
     monthlyRateFromAnnual,
     randomNormalArray,
     randomNormal,
@@ -155,16 +155,47 @@ interface SimulationContext {
     tradingCostRate?: number;      // Trading cost as decimal
 }
 
+type PathSimulationOptions = {
+    captureTimeline?: boolean;
+    trajectorySink?: Float64Array | null;
+    trajectoryPathIndex?: number;
+    trajectoryLength?: number;
+};
+
+type PathSimulationResult = {
+    timeline: TimelineRow[];
+    finalTotalAssets: number;
+    finalTotalAssetsReal: number;
+    monthsSimulated: number;
+};
+
 function simulateOnePath(
     input: SimulationInput,
     ctx: SimulationContext,
     stochastic: boolean,
     historicalPathIndex?: number, // For historical mode: which rolling window
-): TimelineRow[] {
-    const { current_age, retire_age } = input;
+    runOptions: PathSimulationOptions = {}
+): PathSimulationResult {
+    const { current_age } = input;
     const { mu_m, sig_m, r_private, infl_m, eventsMap, monthsToRetire, totalMonths, initialDebt, debtMonthlyRate, contributionByMonth } = ctx;
+    const captureTimeline = runOptions.captureTimeline ?? true;
 
-    if (totalMonths <= 0) return [];
+    if (totalMonths <= 0) {
+        return {
+            timeline: [],
+            finalTotalAssets: 0,
+            finalTotalAssetsReal: 0,
+            monthsSimulated: 0
+        };
+    }
+
+    const trajectorySink = runOptions.trajectorySink ?? null;
+    const trajectoryPathIndex = runOptions.trajectoryPathIndex ?? -1;
+    const trajectoryLength = runOptions.trajectoryLength ?? totalMonths;
+    const trajectoryBaseOffset =
+        trajectorySink && trajectoryPathIndex >= 0
+            ? trajectoryPathIndex * trajectoryLength
+            : -1;
 
     let r_general: number[] | Float64Array;
 
@@ -209,15 +240,18 @@ function simulateOnePath(
     // Determine Annuity Payout at retirement
     let privateMonthlyPayout = 0;
 
-    // Use a pre-sized array for timeline to avoid push() overhead? 
-    // Push is actually quite fast in V8, but pre-allocation is better for very large sizes.
-    // For 50 years * 12 = 600 items, push is fine.
-    const timeline: TimelineRow[] = new Array(totalMonths);
+    // Use a pre-sized array for timeline to avoid push() overhead.
+    const timeline: TimelineRow[] = captureTimeline ? new Array(totalMonths) : [];
     let cpi = 1.0;
 
     // SWR State
     let swrBaseAmount = 0;
     let cpiAtRetire = 1.0;
+
+    // Used by VPW/Guardrails without requiring timeline object access.
+    let lastWithdrawalGross = 0;
+    let finalTotalAssets = 0;
+    let finalTotalAssetsReal = 0;
 
     // Bucket State (Future expansion)
     // let bucketShort = 0;
@@ -519,7 +553,7 @@ function simulateOnePath(
                 if (input.withdrawal.vpwMaxYoYChange) {
                     const prevMonth = m - 1;
                     if (prevMonth >= monthsToRetire) {
-                        const lastWithdrawal = timeline[prevMonth]?.cashflow.withdrawalGross || targetWithdrawal;
+                        const lastWithdrawal = lastWithdrawalGross > 0 ? lastWithdrawalGross : targetWithdrawal;
                         // Limit monthly change to approximate the annual max YoY change
                         const maxChangePerMonth = Math.pow(1 + input.withdrawal.vpwMaxYoYChange, 1 / 12) - 1;
                         const upperBound = lastWithdrawal * (1 + maxChangePerMonth);
@@ -540,10 +574,7 @@ function simulateOnePath(
                 if (monthsAfterRetire > 0) {
                     // Calculate current withdrawal rate
                     // Fix: Only reference previous month if it's after retirement started
-                    const prevMonth = m - 1;
-                    const lastWithdrawal = prevMonth >= monthsToRetire
-                        ? timeline[prevMonth]?.cashflow.withdrawalGross || targetWithdrawal
-                        : targetWithdrawal;
+                    const lastWithdrawal = lastWithdrawalGross > 0 ? lastWithdrawalGross : targetWithdrawal;
                     const currentRate = balGeneral > 0 ? (lastWithdrawal * 12) / balGeneral : 0;
 
                     // Apply guardrails adjustment
@@ -578,6 +609,7 @@ function simulateOnePath(
                 withdrawalGross = balGeneral;
             }
             balGeneral -= withdrawalGross;
+            lastWithdrawalGross = withdrawalGross;
 
             // NEW: Health Insurance Deduction (건강보험료)
             // NEW: Health Insurance Deduction (건강보험료)
@@ -682,32 +714,50 @@ function simulateOnePath(
         const totalIncomeNet = totalIncomeForTax - taxPaid;
         const totalAssets = balGeneral + balPrivate - debt + realEstateTotal + additionalPensionTotal;
         const totalAssetsReal = totalAssets / cpi;
+        finalTotalAssets = totalAssets;
+        finalTotalAssetsReal = totalAssetsReal;
 
-        // Assign TimelineRow to timeline array
-        timeline[m] = {
-            month: m,
-            age,
-            isRetired,
-            general: balGeneral,
-            privatePension: balPrivate,
-            debt,
-            realEstate: realEstateTotal,
-            additionalPension: additionalPensionTotal,
-            totalAssets,
-            totalAssetsReal,
-            cashflow: {
-                nationalPension: natPension,
-                privatePension: privPension,
-                additionalPension: additionalPensionPayout, // NEW
-                withdrawalGross,
-                withdrawalNet,
-                taxPaid,
-                totalIncomeNet
-            }
-        };
+        if (trajectoryBaseOffset >= 0) {
+            trajectorySink![trajectoryBaseOffset + m] = totalAssetsReal;
+        }
+
+        if (captureTimeline) {
+            timeline[m] = {
+                month: m,
+                age,
+                isRetired,
+                general: balGeneral,
+                privatePension: balPrivate,
+                debt,
+                realEstate: realEstateTotal,
+                additionalPension: additionalPensionTotal,
+                totalAssets,
+                totalAssetsReal,
+                cashflow: {
+                    nationalPension: natPension,
+                    privatePension: privPension,
+                    additionalPension: additionalPensionPayout, // NEW
+                    withdrawalGross,
+                    withdrawalNet,
+                    taxPaid,
+                    totalIncomeNet
+                }
+            };
+        }
+    }
+    // For variable path lengths (longevity risk), pad remaining months with terminal values.
+    if (trajectoryBaseOffset >= 0 && totalMonths < trajectoryLength) {
+        for (let m = totalMonths; m < trajectoryLength; m++) {
+            trajectorySink![trajectoryBaseOffset + m] = finalTotalAssetsReal;
+        }
     }
 
-    return timeline;
+    return {
+        timeline,
+        finalTotalAssets,
+        finalTotalAssetsReal,
+        monthsSimulated: totalMonths
+    };
 }
 
 export function runSimulation(
@@ -955,13 +1005,12 @@ export function runSimulation(
         const finalAssetsReal = new Float64Array(numScenarios);
 
         for (let p = 0; p < numScenarios; p++) {
-            const timeline = simulateOnePath(input, ctx, false, p);
-            const last = timeline[timeline.length - 1];
-            finalAssets[p] = last.totalAssets;
-            finalAssetsReal[p] = last.totalAssetsReal;
+            const simulation = simulateOnePath(input, ctx, false, p, { captureTimeline: true });
+            finalAssets[p] = simulation.finalTotalAssets;
+            finalAssetsReal[p] = simulation.finalTotalAssetsReal;
 
             if (MAX_SAMPLE_PATHS > 0 && p < MAX_SAMPLE_PATHS) {
-                sampleTimelines.push(timeline);
+                sampleTimelines.push(simulation.timeline);
             }
         }
 
@@ -971,27 +1020,31 @@ export function runSimulation(
             if (finalAssets[i] > 0) successes++;
         }
 
-        const sortedReal = Array.from(finalAssetsReal).sort((a, b) => a - b);
-        const sortedNom = Array.from(finalAssets).sort((a, b) => a - b);
+        const sortedReal = Float64Array.from(finalAssetsReal);
+        sortedReal.sort();
+        const sortedNom = Float64Array.from(finalAssets);
+        sortedNom.sort();
+        const meanNom = meanTyped(finalAssets);
+        const meanReal = meanTyped(finalAssetsReal);
 
         const summary: SimulationSummary = {
             retireAge: input.retire_age,
             endAge: input.end_age,
-            finalTotalAssets: mean(Array.from(finalAssets)),
-            finalTotalAssetsReal: mean(Array.from(finalAssetsReal)),
+            finalTotalAssets: meanNom,
+            finalTotalAssetsReal: meanReal,
             successRate: successes / numScenarios,
             mc: {
                 totalAssetsReal: {
-                    p10: percentile(sortedReal, 10),
-                    p50: percentile(sortedReal, 50),
-                    p90: percentile(sortedReal, 90),
-                    mean: mean(Array.from(finalAssetsReal))
+                    p10: percentileSorted(sortedReal, 10),
+                    p50: percentileSorted(sortedReal, 50),
+                    p90: percentileSorted(sortedReal, 90),
+                    mean: meanReal
                 },
                 totalAssets: {
-                    p10: percentile(sortedNom, 10),
-                    p50: percentile(sortedNom, 50),
-                    p90: percentile(sortedNom, 90),
-                    mean: mean(Array.from(finalAssets))
+                    p10: percentileSorted(sortedNom, 10),
+                    p50: percentileSorted(sortedNom, 50),
+                    p90: percentileSorted(sortedNom, 90),
+                    mean: meanNom
                 }
             }
         };
@@ -1007,20 +1060,19 @@ export function runSimulation(
 
     if (!stochastic) {
         // Deterministic Run
-        const timeline = simulateOnePath(input, ctx, false);
-        const last = timeline[timeline.length - 1];
+        const deterministic = simulateOnePath(input, ctx, false, undefined, { captureTimeline: true });
         const summary: SimulationSummary = {
             retireAge: input.retire_age,
             endAge: input.end_age,
-            finalTotalAssets: last.totalAssets,
-            finalTotalAssetsReal: last.totalAssetsReal,
-            successRate: last.totalAssets > 0 ? 1.0 : 0.0
+            finalTotalAssets: deterministic.finalTotalAssets,
+            finalTotalAssetsReal: deterministic.finalTotalAssetsReal,
+            successRate: deterministic.finalTotalAssets > 0 ? 1.0 : 0.0
         };
 
         return {
             mode: "deterministic",
             detailLevel,
-            timeline,
+            timeline: deterministic.timeline,
             summary
         };
     } else {
@@ -1060,34 +1112,23 @@ export function runSimulation(
             // Create modified context with adjusted totalMonths for this path
             const pathTotalMonths = (pathEndAge - input.current_age) * 12;
             const pathCtx = { ...ctx, totalMonths: pathTotalMonths };
+            const shouldCaptureTimeline = MAX_SAMPLE_PATHS > 0 && i < MAX_SAMPLE_PATHS;
+            const simulation = simulateOnePath(input, pathCtx, true, undefined, {
+                captureTimeline: shouldCaptureTimeline,
+                trajectorySink: allTraj,
+                trajectoryPathIndex: i,
+                trajectoryLength: totalMonths
+            });
 
-            const tl = simulateOnePath(input, pathCtx, true);
-
-            // Store sample
-            if (MAX_SAMPLE_PATHS > 0 && i < MAX_SAMPLE_PATHS) {
-                sampleTimelines.push(tl);
+            if (shouldCaptureTimeline) {
+                sampleTimelines.push(simulation.timeline);
             }
 
-            // Store Trajectory Data (use original totalMonths for consistent array size)
-            if (allTraj) {
-                for (let m = 0; m < totalMonths; m++) {
-                    // If path ended earlier, use final value for remaining months
-                    const tlIndex = Math.min(m, tl.length - 1);
-                    allTraj[i * totalMonths + m] = tl[tlIndex]?.totalAssetsReal || 0;
-                }
-            }
+            finalAssets[i] = simulation.finalTotalAssets;
+            finalAssetsReal[i] = simulation.finalTotalAssetsReal;
 
-            const last = tl[tl.length - 1];
-            finalAssets[i] = last?.totalAssets || 0;
-            finalAssetsReal[i] = last?.totalAssetsReal || 0;
-
-            if ((last?.totalAssets || 0) > 0) successCount++;
+            if (simulation.finalTotalAssets > 0) successCount++;
         }
-
-        // Convert Float64Array to number[] for math utils (or update math utils to support TypedArray)
-        // Array.from is fast enough for 100-1000 items.
-        const fa = Array.from(finalAssets);
-        const far = Array.from(finalAssetsReal);
 
         // Calculate Trajectory Stats (for Fan Chart)
         const trajStats = includeTrajectoryStats ? {
@@ -1122,11 +1163,11 @@ export function runSimulation(
                     column!.sort((a, b) => a - b);
 
                     trajStats!.month.push(m);
-                    trajStats!.p10.push(column![Math.floor(paths * 0.10)]);
-                    trajStats!.p25.push(column![Math.floor(paths * 0.25)]);
-                    trajStats!.p50.push(column![Math.floor(paths * 0.50)]);
-                    trajStats!.p75.push(column![Math.floor(paths * 0.75)]);
-                    trajStats!.p90.push(column![Math.floor(paths * 0.90)]);
+                    trajStats!.p10.push(percentileSorted(column!, 10));
+                    trajStats!.p25.push(percentileSorted(column!, 25));
+                    trajStats!.p50.push(percentileSorted(column!, 50));
+                    trajStats!.p75.push(percentileSorted(column!, 75));
+                    trajStats!.p90.push(percentileSorted(column!, 90));
                 } else if (needsSurvivalSeries) {
                     for (let p = 0; p < paths; p++) {
                         const value = allTraj[p * totalMonths + m];
@@ -1143,25 +1184,32 @@ export function runSimulation(
                 }
             }
         }
+        const sortedNom = Float64Array.from(finalAssets);
+        sortedNom.sort();
+        const sortedReal = Float64Array.from(finalAssetsReal);
+        sortedReal.sort();
+
+        const meanNom = meanTyped(finalAssets);
+        const meanReal = meanTyped(finalAssetsReal);
 
         const summary: SimulationSummary = {
             retireAge: input.retire_age,
             endAge: input.end_age,
-            finalTotalAssets: mean(fa),
-            finalTotalAssetsReal: mean(far),
+            finalTotalAssets: meanNom,
+            finalTotalAssetsReal: meanReal,
             successRate: successCount / paths,
             mc: {
                 totalAssets: {
-                    p10: percentile(fa, 10),
-                    p50: percentile(fa, 50),
-                    p90: percentile(fa, 90),
-                    mean: mean(fa)
+                    p10: percentileSorted(sortedNom, 10),
+                    p50: percentileSorted(sortedNom, 50),
+                    p90: percentileSorted(sortedNom, 90),
+                    mean: meanNom
                 },
                 totalAssetsReal: {
-                    p10: percentile(far, 10),
-                    p50: percentile(far, 50),
-                    p90: percentile(far, 90),
-                    mean: mean(far)
+                    p10: percentileSorted(sortedReal, 10),
+                    p50: percentileSorted(sortedReal, 50),
+                    p90: percentileSorted(sortedReal, 90),
+                    mean: meanReal
                 }
             }
         };

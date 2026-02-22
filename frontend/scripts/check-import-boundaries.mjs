@@ -6,6 +6,13 @@ const SRC_DIR = path.join(ROOT, "src");
 const COMPONENTS_DIR = path.join(SRC_DIR, "components");
 const TARGET_EXTENSIONS = new Set([".ts", ".tsx"]);
 const DISALLOWED_DUPLICATE_PATTERN = /\s?\((?:1|2)\)(?=\.[^./\\]+$)/;
+const HIGH_COST_SIMULATION_CALL_PATTERN = /\brequestSimulation(?:Batch)?\s*\(/;
+const SIMULATION_CLIENT_IMPORT_PATTERN =
+  /from\s+["'][^"']*logic\/simulationClient["']/;
+const ALLOWED_HIGH_COST_COMPONENT_CALLERS = new Set([
+  "src/components/WhatIfSlider.tsx",
+  "src/components/ScenarioComparison.tsx"
+]);
 
 async function walkFiles(dir) {
   const entries = await fs.readdir(dir, { withFileTypes: true });
@@ -54,6 +61,20 @@ async function main() {
     if (content.includes("new Worker(")) {
       violations.push(
         `${relPath}: direct Worker construction is not allowed in components (use simulationClient)`
+      );
+    }
+
+    const isAllowedHighCostCaller =
+      ALLOWED_HIGH_COST_COMPONENT_CALLERS.has(relPath);
+    if (
+      SIMULATION_CLIENT_IMPORT_PATTERN.test(content) &&
+      HIGH_COST_SIMULATION_CALL_PATTERN.test(content) &&
+      !isAllowedHighCostCaller
+    ) {
+      violations.push(
+        `${relPath}: direct high-cost simulation call is not allowed in components; route via hooks/useSimulation (allowed exceptions: ${[
+          ...ALLOWED_HIGH_COST_COMPONENT_CALLERS
+        ].join(", ")})`
       );
     }
   }
@@ -113,6 +134,11 @@ async function main() {
   console.log("[check:imports] OK");
   console.log("- components do not reference logic/engine");
   console.log("- components do not construct workers directly");
+  console.log(
+    `- components avoid direct high-cost simulation calls (allowed: ${[
+      ...ALLOWED_HIGH_COST_COMPONENT_CALLERS
+    ].join(", ")})`
+  );
   console.log("- no legacy SOLVER_RESULT event usage found");
   console.log("- desktop/mobile layouts avoid static imports for heavy analysis/chart modules");
   console.log("- duplicate-style filenames are not present in src");

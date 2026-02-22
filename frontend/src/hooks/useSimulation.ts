@@ -5,12 +5,7 @@ import {
     SimulationResult,
     SimulationRunOptions
 } from "../logic/types";
-import {
-    requestSensitivityAnalysis,
-    requestSimulation,
-    requestSolveContribution,
-    requestSolveRetireAge
-} from "../logic/simulationClient";
+import { createPreviewSimulationOptions } from "../logic/simulationRequestPolicy";
 
 type SimulationHookReturn = {
     runSimulation: (input: SimulationInput, options?: SimulationRunOptions) => Promise<SimulationResult>;
@@ -28,6 +23,17 @@ type SimulationHookReturn = {
     error: string | null;
 };
 
+type SimulationClientModule = typeof import("../logic/simulationClient");
+
+let simulationClientPromise: Promise<SimulationClientModule> | null = null;
+
+function loadSimulationClient(): Promise<SimulationClientModule> {
+    if (!simulationClientPromise) {
+        simulationClientPromise = import("../logic/simulationClient");
+    }
+    return simulationClientPromise;
+}
+
 export function useSimulation(): SimulationHookReturn {
     const latestSimulationSeq = useRef(0);
     const [result, setResult] = useState<SimulationResult | null>(null);
@@ -40,6 +46,7 @@ export function useSimulation(): SimulationHookReturn {
         setIsCalculating(true);
 
         try {
+            const { requestSimulation } = await loadSimulationClient();
             const response = await requestSimulation(input, options);
             if (seq === latestSimulationSeq.current) {
                 setResult(response);
@@ -60,21 +67,18 @@ export function useSimulation(): SimulationHookReturn {
     }, []);
 
     const runSimulationPreview = useCallback((input: SimulationInput, previewPathCap = 80) => {
-        return requestSimulation(input, {
-            detailLevel: "preview",
-            previewPathCap,
-            includeSampleTimelines: false,
-            includeTrajectoryStats: false,
-            includeSurvivalSeries: false,
-            maxSampleTimelines: 0
-        });
+        return loadSimulationClient().then(({ requestSimulation }) =>
+            requestSimulation(input, createPreviewSimulationOptions(previewPathCap))
+        );
     }, []);
 
-    const solveContribution = useCallback((input: SimulationInput, targetSuccessRate: number) => {
+    const solveContribution = useCallback(async (input: SimulationInput, targetSuccessRate: number) => {
+        const { requestSolveContribution } = await loadSimulationClient();
         return requestSolveContribution(input, targetSuccessRate);
     }, []);
 
-    const solveRetireAge = useCallback((input: SimulationInput, targetSuccessRate: number) => {
+    const solveRetireAge = useCallback(async (input: SimulationInput, targetSuccessRate: number) => {
+        const { requestSolveRetireAge } = await loadSimulationClient();
         return requestSolveRetireAge(input, targetSuccessRate);
     }, []);
 
@@ -84,6 +88,7 @@ export function useSimulation(): SimulationHookReturn {
             parameter: "annual_return" | "annual_inflation" | "withdrawal_rate",
             variations: number[]
         ) => {
+            const { requestSensitivityAnalysis } = await loadSimulationClient();
             const sensitivity = await requestSensitivityAnalysis(input, parameter, variations);
             setSensitivityResults((prev) => {
                 if (!prev) {

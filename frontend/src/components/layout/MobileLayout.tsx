@@ -11,7 +11,7 @@ import type { LayoutSectionId, LayoutSharedProps } from "./types";
 
 interface MobileLayoutProps extends LayoutSharedProps { }
 
-export function MobileLayout({
+export const MobileLayout = React.memo(function MobileLayout({
     input,
     setInput,
     result,
@@ -96,4 +96,4 @@ export function MobileLayout({
             </nav>
         </div>
     );
-}
+});

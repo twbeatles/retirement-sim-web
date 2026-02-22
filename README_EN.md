@@ -204,3 +204,24 @@ Bug reports, feature suggestions, and PRs are welcome!
 3. Commit your changes (`git commit -m 'Add some AmazingFeature'`)
 4. Push to the branch (`git push origin feature/AmazingFeature`)
 5. Open a Pull Request
+
+---
+
+## Performance Architecture (2026 Refactor)
+
+- Dual worker lanes:
+  - `interactive`: preview simulation
+  - `compute`: full simulation, batch compare, solver, sensitivity, pension optimization
+- Simulation queue policy:
+  - latest-wins coalescing by detail level (`preview` / `full`)
+  - per-lane queue cap: `inFlight 1 + queued 1`
+  - promise fan-out for queued callers
+- Auto scheduler:
+  - input fingerprint dedupe for preview/full requests
+  - skip full simulation while tab is hidden
+- Engine/runtime:
+  - timeline objects only for sampled paths
+  - typed-array accumulation for trajectory/survival stats
+- UI rendering:
+  - heavy results blocks mount near viewport
+  - chart animations disabled for lower first-render cost

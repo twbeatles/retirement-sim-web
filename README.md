@@ -211,3 +211,24 @@ MIT License - 자세한 내용은 [LICENSE](LICENSE) 파일 참조.
 ## Deployment Guide
 
 - [docs/deployment.md](docs/deployment.md) - Netlify, GitHub Pages, Vercel 배포 가이드
+
+---
+
+## Performance Architecture (2026 Refactor)
+
+- Dual worker lanes:
+  - `interactive`: preview simulation
+  - `compute`: full simulation, batch compare, solver, sensitivity, pension optimization
+- Simulation queue policy:
+  - latest-wins coalescing by detail level (`preview` / `full`)
+  - per-lane queue cap: `inFlight 1 + queued 1`
+  - promise fan-out for queued callers
+- Auto scheduler:
+  - input fingerprint dedupe for preview/full requests
+  - skip full simulation while tab is hidden
+- Engine/runtime:
+  - timeline objects only for sampled paths
+  - typed-array accumulation for trajectory/survival stats
+- UI rendering:
+  - heavy results blocks mount near viewport
+  - chart animations disabled for lower first-render cost

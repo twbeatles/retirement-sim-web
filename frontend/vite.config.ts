@@ -9,6 +9,8 @@ export default defineConfig({
     rollupOptions: {
       output: {
         manualChunks(id: string) {
+          const normalizedId = id.replace(/\\/g, "/");
+
           if (id.includes("node_modules")) {
             if (
               id.includes("recharts") ||
@@ -19,9 +21,16 @@ export default defineConfig({
             }
             return "vendor";
           }
-          if (id.includes("historicalData.ts") || id.includes("engine.ts")) {
-            return "simulation-core";
+
+          if (
+            normalizedId.includes("/src/components/Charts/SurvivalChart.tsx") ||
+            normalizedId.includes("/src/components/Charts/FanChart.tsx") ||
+            normalizedId.includes("/src/components/Charts/AssetBreakdownChart.tsx") ||
+            normalizedId.includes("/src/components/Charts/CashflowStackChart.tsx")
+          ) {
+            return "analysis-charts";
           }
+
           return undefined;
         },
       },

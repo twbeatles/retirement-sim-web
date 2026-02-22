@@ -54,10 +54,10 @@ export const AssetBreakdownChart = React.memo(function AssetBreakdownChart({ dat
                     <YAxis tickFormatter={fmt} width={60} />
                     <Tooltip formatter={(v: any) => fmtFull(Number(v))} />
                     <Legend />
-                    <Area type="monotone" dataKey="realEstate" stackId="1" stroke="#ffc658" fill="#ffc658" name="부동산" />
-                    <Area type="monotone" dataKey="additionalPension" stackId="1" stroke="#ff8042" fill="#ff8042" name="추가연금" />
-                    <Area type="monotone" dataKey="privatePension" stackId="1" stroke="#8884d8" fill="#8884d8" name="개인연금" />
-                    <Area type="monotone" dataKey="general" stackId="1" stroke="#82ca9d" fill="#82ca9d" name="금융자산(일반)" />
+                    <Area type="monotone" dataKey="realEstate" stackId="1" stroke="#ffc658" fill="#ffc658" name="부동산" isAnimationActive={false} />
+                    <Area type="monotone" dataKey="additionalPension" stackId="1" stroke="#ff8042" fill="#ff8042" name="추가연금" isAnimationActive={false} />
+                    <Area type="monotone" dataKey="privatePension" stackId="1" stroke="#8884d8" fill="#8884d8" name="개인연금" isAnimationActive={false} />
+                    <Area type="monotone" dataKey="general" stackId="1" stroke="#82ca9d" fill="#82ca9d" name="금융자산(일반)" isAnimationActive={false} />
                 </AreaChart>
             </ResponsiveContainer>
         </div>

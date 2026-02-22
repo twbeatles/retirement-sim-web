@@ -5,6 +5,10 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { SimulationInput, WhatIfParameter } from '../logic/types';
 import { requestSimulation } from '../logic/simulationClient';
+import {
+    createPreviewSimulationOptions,
+    createSimulationFingerprint
+} from '../logic/simulationRequestPolicy';
 
 interface Props {
     input: SimulationInput;
@@ -85,6 +89,7 @@ export const WhatIfSlider = React.memo(function WhatIfSlider({ input, onInputCha
     const [successRate, setSuccessRate] = useState<number | null>(null);
     const [isCalculating, setIsCalculating] = useState(false);
     const latestPreviewSeq = useRef(0);
+    const lastPreviewFingerprintRef = useRef<string | null>(null);
 
     useEffect(() => {
         setTempValues({
@@ -99,7 +104,6 @@ export const WhatIfSlider = React.memo(function WhatIfSlider({ input, onInputCha
     useEffect(() => {
         const timer = setTimeout(async () => {
             const seq = ++latestPreviewSeq.current;
-            setIsCalculating(true);
 
             let testInput = { ...input };
             SLIDERS.forEach((slider) => {
@@ -114,20 +118,25 @@ export const WhatIfSlider = React.memo(function WhatIfSlider({ input, onInputCha
                 }
             };
 
+            const previewOptions = createPreviewSimulationOptions(80);
+            const fingerprint = createSimulationFingerprint(testInput, previewOptions);
+            if (fingerprint === lastPreviewFingerprintRef.current) {
+                return;
+            }
+
+            lastPreviewFingerprintRef.current = fingerprint;
+            setIsCalculating(true);
+
             try {
-                const result = await requestSimulation(testInput, {
-                    detailLevel: 'preview',
-                    previewPathCap: 80,
-                    includeSampleTimelines: false,
-                    includeTrajectoryStats: false,
-                    includeSurvivalSeries: false,
-                    maxSampleTimelines: 0
-                });
+                const result = await requestSimulation(testInput, previewOptions);
 
                 if (seq === latestPreviewSeq.current) {
                     setSuccessRate(result.summary.successRate);
                 }
             } catch (error) {
+                if (lastPreviewFingerprintRef.current === fingerprint) {
+                    lastPreviewFingerprintRef.current = null;
+                }
                 console.error('What-if preview failed:', error);
             } finally {
                 if (seq === latestPreviewSeq.current) {

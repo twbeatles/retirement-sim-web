@@ -8,7 +8,7 @@ export interface LayoutProps extends LayoutSharedProps {
     isMobileOverride?: boolean; // For testing or manual override
 }
 
-export function Layout(props: LayoutProps) {
+export const Layout = React.memo(function Layout(props: LayoutProps) {
     // Use media query for mobile detection (max-width: 768px)
     const isMobileQuery = useMediaQuery('(max-width: 768px)');
 
@@ -20,4 +20,4 @@ export function Layout(props: LayoutProps) {
     }
 
     return <DesktopLayout {...props} />;
-}
+});

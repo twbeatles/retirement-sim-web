@@ -85,6 +85,7 @@ export const SurvivalChart = React.memo(function SurvivalChart({ result }: { res
                         strokeWidth={3}
                         dot={false}
                         name="자산 생존 확률"
+                        isAnimationActive={false}
                     />
                 </LineChart>
             </ResponsiveContainer>

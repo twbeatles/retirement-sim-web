@@ -148,19 +148,20 @@ export function ScenarioComparison({ currentResult }: Props) {
     const chartData = useMemo<ChartPoint[]>(() => {
         if (comparisonData.length === 0) return [];
 
-        const maxLength = Math.max(...comparisonData.map((item) => item.trajectory.length));
-        const data: ChartPoint[] = [];
+        const pointByMonth = new Map<number, ChartPoint>();
 
-        for (let month = 0; month < maxLength; month += 12) {
-            const point: ChartPoint = { month };
-            comparisonData.forEach((item) => {
-                const value = item.trajectory.find((t) => t.month === month);
-                point[item.id] = value?.value;
-            });
-            data.push(point);
+        for (const item of comparisonData) {
+            for (const row of item.trajectory) {
+                if (row.month % 12 !== 0) {
+                    continue;
+                }
+                const existing = pointByMonth.get(row.month) ?? { month: row.month };
+                existing[item.id] = row.value;
+                pointByMonth.set(row.month, existing);
+            }
         }
 
-        return data;
+        return Array.from(pointByMonth.values()).sort((a, b) => a.month - b.month);
     }, [comparisonData]);
 
     return (
@@ -289,6 +290,7 @@ export function ScenarioComparison({ currentResult }: Props) {
                                                 strokeWidth={2.5}
                                                 dot={false}
                                                 activeDot={{ r: 6, strokeWidth: 0 }}
+                                                isAnimationActive={false}
                                             />
                                         ))}
                                     </LineChart>

@@ -47,6 +47,55 @@ const createBaseInput = (): SimulationInput => ({
     }
 });
 
+const createKernelParityInput = (): SimulationInput => ({
+    current_age: 45,
+    retire_age: 60,
+    end_age: 90,
+    annual_inflation: 0.02,
+    portfolio: {
+        assetClasses: [
+            { id: 'stock', name: 'Stock', allocation: 0.7, expectedAnnualReturn: 0.07, annualVolatility: 0.18 },
+            { id: 'bond', name: 'Bond', allocation: 0.3, expectedAnnualReturn: 0.03, annualVolatility: 0.06 }
+        ],
+        manualCorrelation: 0.2
+    },
+    general: {
+        current_balance: 400000000,
+        monthly_contribution: 1500000
+    },
+    private_pension: {
+        current_balance: 60000000,
+        monthly_contribution: 300000,
+        annual_return: 0.035,
+        payout_years: 25,
+        annuity_annual_rate: 0.03
+    },
+    national_pension: {
+        expected_monthly_benefit_at_retirement: 1800000,
+        inflation_linked: true
+    },
+    debt: {
+        current_balance: 120000000,
+        annual_interest: 0.04,
+        monthly_payment: 900000
+    },
+    withdrawal: {
+        strategy: 'target_spending',
+        targetMonthlySpending: 4500000,
+        taxRate: 0.12,
+        taxStrategy: 'simple'
+    },
+    events: [
+        { month_index: 24, amount: -10000000, name: 'car' },
+        { month_index: 144, amount: 30000000, name: 'inheritance' }
+    ],
+    simulation_settings: {
+        mode: 'montecarlo',
+        mc_paths: 64,
+        seed: 20260222
+    }
+});
+
 describe('Simulation Engine', () => {
     it('calculates compound interest correctly (Deterministic)', () => {
         const input = createBaseInput();
@@ -238,5 +287,44 @@ describe('Simulation Engine', () => {
         const expectedW1Min = w0 * (1 - Math.pow(1 - 0.10, 1 / 12));
 
         expect(w1).toBeGreaterThanOrEqual(expectedW1Min * 0.999);
+    });
+
+    it('keeps seed-fixed montecarlo summary and sample timelines stable', () => {
+        const input = createKernelParityInput();
+        const result = runSimulation(input, {
+            detailLevel: 'full',
+            includeSampleTimelines: true,
+            includeTrajectoryStats: true,
+            includeSurvivalSeries: true,
+            maxSampleTimelines: 3
+        });
+
+        expect(result.mode).toBe('montecarlo');
+        if (result.mode !== 'montecarlo') return;
+
+        expect(result.pathCount).toBe(64);
+        expect(result.sampleTimelines).toHaveLength(3);
+        expect(result.sampleTimelines.map((timeline) => timeline.length)).toEqual([540, 540, 540]);
+
+        expect(result.summary.finalTotalAssets).toBeCloseTo(4796906554.014606, 6);
+        expect(result.summary.finalTotalAssetsReal).toBeCloseTo(1967675730.395671, 6);
+        expect(result.summary.successRate).toBeCloseTo(1, 8);
+
+        expect(result.summary.mc?.totalAssets.p10).toBeCloseTo(466516058.5331348, 6);
+        expect(result.summary.mc?.totalAssets.p50).toBeCloseTo(2802316493.1167784, 6);
+        expect(result.summary.mc?.totalAssets.p90).toBeCloseTo(11042208541.582485, 6);
+        expect(result.summary.mc?.totalAssetsReal.p10).toBeCloseTo(191363395.52982277, 6);
+        expect(result.summary.mc?.totalAssetsReal.p50).toBeCloseTo(1149501265.0973158, 6);
+        expect(result.summary.mc?.totalAssetsReal.p90).toBeCloseTo(4529478636.404866, 6);
+
+        expect(result.trajectoryStats?.month).toHaveLength(540);
+        expect(result.survivalSeries?.month).toHaveLength(540);
+
+        const last = result.sampleTimelines[0][539];
+        expect(last.month).toBe(539);
+        expect(last.age).toBeCloseTo(89.91666666666666, 8);
+        expect(last.totalAssets).toBeCloseTo(2053615134.526869, 6);
+        expect(last.totalAssetsReal).toBeCloseTo(842386361.7689017, 6);
+        expect(last.cashflow.nationalPension).toBeCloseTo(3255074.8306594263, 6);
     });
 });

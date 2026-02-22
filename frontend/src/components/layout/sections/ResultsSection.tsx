@@ -4,6 +4,7 @@ import { formatMoney } from "../../../utils/format";
 import { ANALYSIS_TABS } from "../../../logic/uiConstants";
 import type { AnalysisTabType } from "../types";
 import type { SimulationInput, SimulationResult } from "../../../logic/types";
+import { useNearViewport } from "../../../hooks/useNearViewport";
 
 const RiskDashboard = lazy(() => import("../../RiskDashboard").then((m) => ({ default: m.RiskDashboard })));
 const ScenarioComparison = lazy(() => import("../../ScenarioComparison").then((m) => ({ default: m.ScenarioComparison })));
@@ -13,6 +14,23 @@ const AssetBreakdownChart = lazy(() => import("../../Charts/AssetBreakdownChart"
 const CashflowStackChart = lazy(() => import("../../Charts/CashflowStackChart").then((m) => ({ default: m.CashflowStackChart })));
 const SurvivalChart = lazy(() => import("../../Charts/SurvivalChart").then((m) => ({ default: m.SurvivalChart })));
 const YearlyReportTable = lazy(() => import("../../YearlyReportTable").then((m) => ({ default: m.YearlyReportTable })));
+
+type DeferredRenderProps = {
+    enabled: boolean;
+    placeholder: React.ReactNode;
+    children: React.ReactNode;
+    rootMargin?: string;
+};
+
+function DeferredRender({ enabled, placeholder, children, rootMargin = "360px" }: DeferredRenderProps) {
+    const { ref, isNearViewport } = useNearViewport({ enabled, rootMargin, once: true });
+
+    if (!enabled) {
+        return <>{placeholder}</>;
+    }
+
+    return <div ref={ref}>{isNearViewport ? children : placeholder}</div>;
+}
 
 interface ResultsSectionProps {
     input: SimulationInput;
@@ -24,7 +42,7 @@ interface ResultsSectionProps {
     compact?: boolean;
 }
 
-export function ResultsSection({
+export const ResultsSection = React.memo(function ResultsSection({
     input,
     setInput,
     result,
@@ -106,11 +124,16 @@ export function ResultsSection({
                     은퇴 후 나이가 들면서 자산이 남아있을 확률을 보여줍니다. (몬테카를로 분석)
                 </p>
                 {result && !isPreviewResult ? (
-                    <Suspense fallback={<div className="text-center text-slate-400 py-4">차트 로딩 중...</div>}>
-                        <div className="bg-white/50 dark:bg-black/20 rounded-2xl p-4 sm:p-6 border border-slate-100/50 dark:border-zinc-800/50 shadow-inner">
-                            <SurvivalChart result={result} />
-                        </div>
-                    </Suspense>
+                    <DeferredRender
+                        enabled={Boolean(result)}
+                        placeholder={<div className="text-center text-slate-400 py-4">차트 로딩 중...</div>}
+                    >
+                        <Suspense fallback={<div className="text-center text-slate-400 py-4">차트 로딩 중...</div>}>
+                            <div className="bg-white/50 dark:bg-black/20 rounded-2xl p-4 sm:p-6 border border-slate-100/50 dark:border-zinc-800/50 shadow-inner">
+                                <SurvivalChart result={result} />
+                            </div>
+                        </Suspense>
+                    </DeferredRender>
                 ) : (
                     <div className="text-center text-slate-400 py-10 font-medium">최종 계산 결과를 기다리는 중...</div>
                 )}
@@ -122,17 +145,27 @@ export function ResultsSection({
                 {isPreviewResult ? (
                     <div className="text-center text-slate-400 py-10 font-medium">빠른 추정값 계산 완료. 최종 차트 계산 중...</div>
                 ) : result?.mode === "deterministic" ? (
-                    <Suspense fallback={<div className="text-center text-slate-400 py-4">차트 로딩 중...</div>}>
-                        <div className="bg-white/50 dark:bg-black/20 rounded-2xl p-4 sm:p-6 border border-slate-100/50 dark:border-zinc-800/50 shadow-inner overflow-hidden">
-                            <AssetBreakdownChart data={timeline} />
-                        </div>
-                    </Suspense>
+                    <DeferredRender
+                        enabled={timeline.length > 0}
+                        placeholder={<div className="text-center text-slate-400 py-4">차트 로딩 중...</div>}
+                    >
+                        <Suspense fallback={<div className="text-center text-slate-400 py-4">차트 로딩 중...</div>}>
+                            <div className="bg-white/50 dark:bg-black/20 rounded-2xl p-4 sm:p-6 border border-slate-100/50 dark:border-zinc-800/50 shadow-inner overflow-hidden">
+                                <AssetBreakdownChart data={timeline} />
+                            </div>
+                        </Suspense>
+                    </DeferredRender>
                 ) : result?.mode === "montecarlo" && result.trajectoryStats ? (
-                    <Suspense fallback={<div className="text-center text-slate-400 py-4">차트 로딩 중...</div>}>
-                        <div className="bg-white/50 dark:bg-black/20 rounded-2xl p-4 sm:p-6 border border-slate-100/50 dark:border-zinc-800/50 shadow-inner overflow-hidden">
-                            <FanChart stats={result.trajectoryStats} />
-                        </div>
-                    </Suspense>
+                    <DeferredRender
+                        enabled={Boolean(result.trajectoryStats)}
+                        placeholder={<div className="text-center text-slate-400 py-4">차트 로딩 중...</div>}
+                    >
+                        <Suspense fallback={<div className="text-center text-slate-400 py-4">차트 로딩 중...</div>}>
+                            <div className="bg-white/50 dark:bg-black/20 rounded-2xl p-4 sm:p-6 border border-slate-100/50 dark:border-zinc-800/50 shadow-inner overflow-hidden">
+                                <FanChart stats={result.trajectoryStats} />
+                            </div>
+                        </Suspense>
+                    </DeferredRender>
                 ) : (
                     <div className="text-center text-slate-400 py-10 font-medium">시뮬레이션 결과를 기다리는 중...</div>
                 )}
@@ -142,11 +175,16 @@ export function ResultsSection({
                 <h3 className="text-xl sm:text-2xl font-extrabold text-slate-900 dark:text-white mb-2 flex items-center gap-2">💵 은퇴 후 현금 흐름</h3>
                 <p className="text-xs sm:text-sm font-semibold text-slate-500 dark:text-slate-400 mb-6">연금 소득과 자산 인출이 생활비를 어떻게 충당하는지 보여줍니다.</p>
                 {timeline.length > 0 && !isPreviewResult ? (
-                    <Suspense fallback={<div className="text-center text-slate-400 py-4">차트 로딩 중...</div>}>
-                        <div className="bg-white/50 dark:bg-black/20 rounded-2xl p-4 sm:p-6 border border-slate-100/50 dark:border-zinc-800/50 shadow-inner overflow-hidden">
-                            <CashflowStackChart data={timeline} />
-                        </div>
-                    </Suspense>
+                    <DeferredRender
+                        enabled={timeline.length > 0}
+                        placeholder={<div className="text-center text-slate-400 py-4">차트 로딩 중...</div>}
+                    >
+                        <Suspense fallback={<div className="text-center text-slate-400 py-4">차트 로딩 중...</div>}>
+                            <div className="bg-white/50 dark:bg-black/20 rounded-2xl p-4 sm:p-6 border border-slate-100/50 dark:border-zinc-800/50 shadow-inner overflow-hidden">
+                                <CashflowStackChart data={timeline} />
+                            </div>
+                        </Suspense>
+                    </DeferredRender>
                 ) : (
                     <div className="text-center text-slate-400 py-10 font-medium">최종 계산 결과를 기다리는 중...</div>
                 )}
@@ -156,9 +194,14 @@ export function ResultsSection({
                 <h3 className="text-xl sm:text-2xl font-extrabold text-slate-900 dark:text-white mb-4 flex items-center gap-2">📋 연도별 상세 리포트</h3>
                 <div className="overflow-x-auto w-full max-h-[600px] overflow-y-auto no-scrollbar rounded-[1.5rem] border border-slate-200/60 dark:border-zinc-700/50 bg-white/40 dark:bg-black/30 p-2 sm:p-6 shadow-inner relative">
                     {timeline.length > 0 && !isPreviewResult ? (
-                        <Suspense fallback={<div className="text-center text-slate-400 py-4">표 로딩 중...</div>}>
-                            <YearlyReportTable data={timeline} />
-                        </Suspense>
+                        <DeferredRender
+                            enabled={timeline.length > 0}
+                            placeholder={<div className="text-center text-slate-400 py-4">표 로딩 중...</div>}
+                        >
+                            <Suspense fallback={<div className="text-center text-slate-400 py-4">표 로딩 중...</div>}>
+                                <YearlyReportTable data={timeline} />
+                            </Suspense>
+                        </DeferredRender>
                     ) : (
                         <div className="text-center text-slate-400 py-10 font-medium">최종 계산 결과를 기다리는 중...</div>
                     )}
@@ -181,23 +224,29 @@ export function ResultsSection({
                 {isPreviewResult ? (
                     <div className="text-center text-slate-400 py-10 font-medium">고급 분석은 최종 계산 완료 후 표시됩니다.</div>
                 ) : (
-                    <div className="bg-slate-50/40 dark:bg-black/10 rounded-2xl sm:p-4 border border-slate-100/50 dark:border-zinc-800/30">
-                        {analysisTab === "risk" && (
-                            <Suspense fallback={<div className="text-center text-slate-400 py-4">로딩 중...</div>}>
-                                <RiskDashboard input={input} result={result} onInputChange={setInput} />
-                            </Suspense>
-                        )}
-                        {analysisTab === "compare" && (
-                            <Suspense fallback={<div className="text-center text-slate-400 py-4">로딩 중...</div>}>
-                                <ScenarioComparison currentResult={result} />
-                            </Suspense>
-                        )}
-                        {analysisTab === "whatif" && (
-                            <Suspense fallback={<div className="text-center text-slate-400 py-4">로딩 중...</div>}>
-                                <WhatIfSlider input={input} onInputChange={setInput} />
-                            </Suspense>
-                        )}
-                    </div>
+                    <DeferredRender
+                        enabled={Boolean(result)}
+                        placeholder={<div className="text-center text-slate-400 py-4">로딩 중...</div>}
+                        rootMargin="420px"
+                    >
+                        <div className="bg-slate-50/40 dark:bg-black/10 rounded-2xl sm:p-4 border border-slate-100/50 dark:border-zinc-800/30">
+                            {analysisTab === "risk" && (
+                                <Suspense fallback={<div className="text-center text-slate-400 py-4">로딩 중...</div>}>
+                                    <RiskDashboard input={input} result={result} onInputChange={setInput} />
+                                </Suspense>
+                            )}
+                            {analysisTab === "compare" && (
+                                <Suspense fallback={<div className="text-center text-slate-400 py-4">로딩 중...</div>}>
+                                    <ScenarioComparison currentResult={result} />
+                                </Suspense>
+                            )}
+                            {analysisTab === "whatif" && (
+                                <Suspense fallback={<div className="text-center text-slate-400 py-4">로딩 중...</div>}>
+                                    <WhatIfSlider input={input} onInputChange={setInput} />
+                                </Suspense>
+                            )}
+                        </div>
+                    </DeferredRender>
                 )}
             </div>
 
@@ -210,4 +259,4 @@ export function ResultsSection({
             </footer>
         </>
     );
-}
+});

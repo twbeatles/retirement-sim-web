@@ -53,13 +53,13 @@ export const CashflowStackChart = React.memo(function CashflowStackChart({ data 
                     <Tooltip formatter={(v: any) => Math.round(Number(v) / 10000).toLocaleString() + "만원"} />
                     <Legend />
 
-                    <Area type="monotone" dataKey="national" stackId="1" stroke="#ffc658" fill="#ffc658" name="국민연금" />
-                    <Area type="monotone" dataKey="privateP" stackId="1" stroke="#8884d8" fill="#8884d8" name="개인연금" />
-                    <Area type="monotone" dataKey="additionalP" stackId="1" stroke="#a855f7" fill="#a855f7" name="추가연금" />
-                    <Area type="monotone" dataKey="withdraw" stackId="1" stroke="#82ca9d" fill="#82ca9d" name="자산인출" />
-                    <Area type="monotone" dataKey="other" stackId="1" stroke="#ff8042" fill="#ff8042" name="기타소득" />
+                    <Area type="monotone" dataKey="national" stackId="1" stroke="#ffc658" fill="#ffc658" name="국민연금" isAnimationActive={false} />
+                    <Area type="monotone" dataKey="privateP" stackId="1" stroke="#8884d8" fill="#8884d8" name="개인연금" isAnimationActive={false} />
+                    <Area type="monotone" dataKey="additionalP" stackId="1" stroke="#a855f7" fill="#a855f7" name="추가연금" isAnimationActive={false} />
+                    <Area type="monotone" dataKey="withdraw" stackId="1" stroke="#82ca9d" fill="#82ca9d" name="자산인출" isAnimationActive={false} />
+                    <Area type="monotone" dataKey="other" stackId="1" stroke="#ff8042" fill="#ff8042" name="기타소득" isAnimationActive={false} />
 
-                    <Line type="monotone" dataKey="totalIncome" stroke="#333" strokeWidth={2} dot={false} name="총 가처분소득" />
+                    <Line type="monotone" dataKey="totalIncome" stroke="#333" strokeWidth={2} dot={false} name="총 가처분소득" isAnimationActive={false} />
                 </ComposedChart>
             </ResponsiveContainer>
         </div>

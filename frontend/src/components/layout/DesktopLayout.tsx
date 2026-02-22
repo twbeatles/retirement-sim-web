@@ -11,7 +11,7 @@ import type { LayoutSharedProps } from "./types";
 
 interface DesktopLayoutProps extends LayoutSharedProps { }
 
-export function DesktopLayout({
+export const DesktopLayout = React.memo(function DesktopLayout({
     input,
     setInput,
     result,
@@ -79,5 +79,5 @@ export function DesktopLayout({
             </main>
         </>
     );
-}
+});
 

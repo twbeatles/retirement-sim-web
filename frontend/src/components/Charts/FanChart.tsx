@@ -50,8 +50,8 @@ export const FanChart = React.memo(function FanChart({ stats }: { stats: Simulat
           <Tooltip formatter={(v: unknown) => Array.isArray(v) ? v.map((n) => fmtFull(Number(n))).join(" ~ ") : fmtFull(Number(v))} />
           <Legend wrapperStyle={legendStyle} />
 
-          <Area type="monotone" dataKey="range90" stroke="#8884d8" fill="#8884d8" fillOpacity={0.2} strokeOpacity={0} name="상위 10%~90%" />
-          <Area type="monotone" dataKey="range50" stroke="#8884d8" fill="#8884d8" fillOpacity={0.4} strokeOpacity={0} name="상위 25%~75%" />
+          <Area type="monotone" dataKey="range90" stroke="#8884d8" fill="#8884d8" fillOpacity={0.2} strokeOpacity={0} name="상위 10%~90%" isAnimationActive={false} />
+          <Area type="monotone" dataKey="range50" stroke="#8884d8" fill="#8884d8" fillOpacity={0.4} strokeOpacity={0} name="상위 25%~75%" isAnimationActive={false} />
           <Line type="monotone" dataKey="p50" stroke="#333" dot={false} strokeWidth={2} name="중위값 (50%)" isAnimationActive={false} />
         </AreaChart>
       </ResponsiveContainer>

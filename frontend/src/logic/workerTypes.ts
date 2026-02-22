@@ -13,6 +13,17 @@ export type WorkerRequestKind =
     | "SENSITIVITY_ANALYSIS"
     | "PENSION_OPTIMIZATION";
 
+export type SimulationRequestPriority = "preview" | "full";
+export type WorkerLane = "interactive" | "compute";
+
+export type WorkerLaneQueueMeta = {
+    lane: WorkerLane;
+    priority: SimulationRequestPriority;
+    inFlightRequestId: string | null;
+    queuedRequestId: string | null;
+    queuedConsumerCount: number;
+};
+
 export type SimulationRequestPayload = {
     input: SimulationInput;
     options?: SimulationRunOptions;

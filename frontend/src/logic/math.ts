@@ -52,6 +52,11 @@ export function randomNormalArray(size: number, mean: number = 0, std: number = 
 export function percentile(arr: number[], p: number): number {
     if (arr.length === 0) return 0;
     const sorted = [...arr].sort((a, b) => a - b);
+    return percentileSorted(sorted, p);
+}
+
+export function percentileSorted(sorted: ArrayLike<number>, p: number): number {
+    if (sorted.length === 0) return 0;
     const index = (p / 100) * (sorted.length - 1);
     const lower = Math.floor(index);
     const upper = Math.ceil(index);
@@ -63,8 +68,16 @@ export function percentile(arr: number[], p: number): number {
 
 // Calculate mean
 export function mean(arr: number[]): number {
+    return meanTyped(arr);
+}
+
+export function meanTyped(arr: ArrayLike<number>): number {
     if (arr.length === 0) return 0;
-    return arr.reduce((sum, val) => sum + val, 0) / arr.length;
+    let sum = 0;
+    for (let i = 0; i < arr.length; i++) {
+        sum += arr[i];
+    }
+    return sum / arr.length;
 }
 
 // Compound Interest Utils
