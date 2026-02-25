@@ -17,31 +17,45 @@ interface ExpenseItem {
     endAge?: number;
 }
 
+const EXPENSE_EVENT_PREFIX = "[EXPENSE]";
+
+function toExpenseEventName(item: ExpenseItem, age?: number) {
+    const ageSuffix = typeof age === "number" ? ` (${age}세)` : "";
+    return `${EXPENSE_EVENT_PREFIX}:${item.id}:${item.name}${ageSuffix}`;
+}
+
+function isExpenseEvent(event: LumpSumEvent): boolean {
+    return (event.name || "").startsWith(EXPENSE_EVENT_PREFIX);
+}
+
 export const ExpenseManager: React.FC<ExpenseManagerProps> = React.memo(({ input, onChange }) => {
-    // We don't store ExpenseItem[] in the main input to keep types.ts clean.
-    // Instead, we parse existing input.events to reconstruct (if possible) or just manage new ones.
-    // For simplicity in this version, we will maintain a local state that synchronizes ONE-WAY to input.events.
-    // However, to support editing, we ideally need to store the "definitions" in input.
-    // SINCE the user accepted 'types.ts' changes might be complex, we will stick to:
-    // "UI manages a list of events. On change, it completely replaces input.events with the generated list."
-
-    // Warn: If there are events from other sources (e.g. Severance), we must preserve them.
-    // We'll trust that 'severance' has its own dedicated logic in engine and doesn't pollute 'events' array permanently 
-    // OR we filter them out. 
-    // Current engine logic: Severance ADDS to eventsMap at runtime, or adds to input.events?
-    // Looking at engine.ts: "input.severance? ... eventsMap.set(...)". It does NOT modify input.events.
-    // So input.events is safe to own by this component for "User defined events".
-
     const [items, setItems] = useState<ExpenseItem[]>([]);
 
-    // Load initial items from input.events? 
-    // Since input.events is just {month, amount}, it's hard to reverse-engineer "Recurring Car Payment".
-    // For this MVP, we will start empty or strict mapping. 
-    // BETTER UX: Let's assume input.events ONLY contains what this manager produced + maybe simple manual ones.
-    // We will effectively RESET input.events when this component mounts/updates if we want full control.
-    // BUT that destroys data. 
-    // STRATEGY: We will just write to input.events. Re-reading is hard. 
-    // We will use a local state for the "Rich" definitions and re-generate input.events on every change.
+    useEffect(() => {
+        if (input.expense_definitions && input.expense_definitions.length > 0) {
+            setItems(input.expense_definitions as ExpenseItem[]);
+            return;
+        }
+
+        const migratedItems: ExpenseItem[] = input.events
+            .filter((event) => isExpenseEvent(event))
+            .map((event, idx) => {
+                const parts = (event.name || "").split(":");
+                const id = parts[1] || `migrated_${idx + 1}`;
+                const rawName = parts.slice(2).join(":").replace(/\s+\(\d+세\)\s*$/, "");
+                return {
+                    id,
+                    name: rawName || `지출 ${idx + 1}`,
+                    amount: Math.abs(event.amount),
+                    startAge: input.current_age + (event.month_index / 12),
+                    isRecurring: false
+                };
+            });
+
+        if (migratedItems.length > 0) {
+            setItems(migratedItems);
+        }
+    }, [input.current_age, input.events, input.expense_definitions]);
 
     const additem = () => {
         const newItem: ExpenseItem = {
@@ -76,7 +90,7 @@ export const ExpenseManager: React.FC<ExpenseManagerProps> = React.memo(({ input
                         newLumpSums.push({
                             month_index: monthIdx,
                             amount: expenseAmount,
-                            name: `${item.name} (${currentAge}세)`
+                            name: toExpenseEventName(item, currentAge)
                         });
                     }
                     currentAge += item.intervalYears;
@@ -88,16 +102,18 @@ export const ExpenseManager: React.FC<ExpenseManagerProps> = React.memo(({ input
                     newLumpSums.push({
                         month_index: monthIdx,
                         amount: expenseAmount,
-                        name: item.name
+                        name: toExpenseEventName(item)
                     });
                 }
             }
         });
 
-        // Update parent
+        const externalEvents = input.events.filter((event) => !isExpenseEvent(event));
+
         onChange({
             ...input,
-            events: newLumpSums
+            expense_definitions: newItems,
+            events: [...externalEvents, ...newLumpSums]
         });
     };
 

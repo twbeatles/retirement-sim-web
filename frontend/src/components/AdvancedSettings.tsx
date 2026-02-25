@@ -8,7 +8,7 @@
  * - Reverse annuity
  */
 import React, { useState } from 'react';
-import { SimulationInput, InflationScenario, HealthInsurance, SeveranceSettings, ReverseAnnuity, GuardrailsSettings, BucketSettings, LongevityRisk, RebalancingSettings } from '../logic/types';
+import { SimulationInput, InflationScenario, HealthInsurance, TaxCredit, SeveranceSettings, ReverseAnnuity, GuardrailsSettings, BucketSettings, LongevityRisk, RebalancingSettings } from '../logic/types';
 
 interface Props {
     input: SimulationInput;
@@ -19,6 +19,7 @@ const INFLATION_PRESETS: { type: InflationScenario['type']; label: string; rate:
     { type: 'low', label: '저인플레 (1.5%)', rate: 0.015 },
     { type: 'normal', label: '정상 (2.0%)', rate: 0.02 },
     { type: 'high', label: '고인플레 (3.5%)', rate: 0.035 },
+    { type: 'custom', label: '커스텀', rate: 0.02 },
     { type: 'spike', label: '스파이크 시나리오', rate: 0.02 }
 ];
 
@@ -37,9 +38,28 @@ export const AdvancedSettings = React.memo(function AdvancedSettings({ input, on
 
     // Update helpers
     const updateInflation = (scenario: Partial<InflationScenario>) => {
+        const nextInflation = { ...input.inflation_scenario, ...scenario } as InflationScenario;
         onChange({
             ...input,
-            inflation_scenario: { ...input.inflation_scenario, ...scenario } as InflationScenario
+            annual_inflation: nextInflation.baseRate ?? input.annual_inflation,
+            inflation_scenario: nextInflation
+        });
+    };
+
+    const updateTaxCredit = (taxCredit: Partial<TaxCredit>) => {
+        onChange({
+            ...input,
+            tax_credit: {
+                enabled: false,
+                mode: "law_2026",
+                lawYear: 2026,
+                incomeBasis: "simulated_taxable_income",
+                pensionSavingsContribution: 0,
+                irpContribution: 0,
+                creditRate: 0.15,
+                ...input.tax_credit,
+                ...taxCredit
+            } as TaxCredit
         });
     };
 
@@ -145,6 +165,18 @@ export const AdvancedSettings = React.memo(function AdvancedSettings({ input, on
                                 onChange={e => updateInflation({ spikeRate: Number(e.target.value) })}
                             />
                         </div>
+                    </div>
+                )}
+                {input.inflation_scenario?.type === 'custom' && (
+                    <div className="mt-4 flex flex-col gap-1.5">
+                        <label className="text-xs font-semibold text-slate-700 dark:text-slate-300">커스텀 연간 인플레이션율</label>
+                        <input
+                            type="number"
+                            className="w-full px-3 py-2 bg-white dark:bg-zinc-900 border border-slate-200 dark:border-zinc-700 rounded-lg text-sm text-right font-medium text-slate-900 dark:text-white placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-all"
+                            step="0.001"
+                            value={input.inflation_scenario.baseRate ?? input.annual_inflation}
+                            onChange={e => updateInflation({ baseRate: Number(e.target.value) })}
+                        />
                     </div>
                 )}
             </CollapsibleSection>
@@ -266,6 +298,88 @@ export const AdvancedSettings = React.memo(function AdvancedSettings({ input, on
                 )}
                 <div className="text-xs font-medium text-slate-500 dark:text-slate-400 mt-2">
                     * 2024년 지역가입자 평균: 약 20만원 (장기요양 포함)
+                </div>
+            </CollapsibleSection>
+
+            {/* Tax Credit */}
+            <CollapsibleSection
+                title="🧾 세액공제 (연금저축/IRP)"
+                isOpen={isExpanded('tax_credit')}
+                onToggle={() => toggleSection('tax_credit')}
+            >
+                <label className="flex items-center gap-2 cursor-pointer text-sm font-semibold text-slate-700 dark:text-slate-300 mb-4">
+                    <input
+                        type="checkbox"
+                        className="w-4 h-4 text-blue-600 bg-slate-100 border-slate-300 rounded focus:ring-blue-500 dark:focus:ring-blue-600 dark:ring-offset-zinc-800 focus:ring-2 dark:bg-zinc-700 dark:border-zinc-600"
+                        checked={input.tax_credit?.enabled ?? false}
+                        onChange={e => updateTaxCredit({ enabled: e.target.checked })}
+                    />
+                    세액공제 반영
+                </label>
+
+                {input.tax_credit?.enabled && (
+                    <div className="flex flex-col gap-4 p-4 bg-slate-50 dark:bg-zinc-800/50 border border-slate-100 dark:border-zinc-700/50 rounded-xl">
+                        <div className="flex flex-col gap-1.5">
+                            <label className="text-sm font-semibold text-slate-700 dark:text-slate-300">공제 모델</label>
+                            <div className="flex gap-3">
+                                <label className="flex items-center gap-2 cursor-pointer text-sm font-medium text-slate-700 dark:text-slate-300">
+                                    <input
+                                        type="radio"
+                                        name="tax_credit_mode"
+                                        checked={(input.tax_credit?.mode ?? 'law_2026') === 'law_2026'}
+                                        onChange={() => updateTaxCredit({ mode: 'law_2026', lawYear: 2026, incomeBasis: 'simulated_taxable_income' })}
+                                    />
+                                    세법 연동 (2026)
+                                </label>
+                                <label className="flex items-center gap-2 cursor-pointer text-sm font-medium text-slate-700 dark:text-slate-300">
+                                    <input
+                                        type="radio"
+                                        name="tax_credit_mode"
+                                        checked={input.tax_credit?.mode === 'manual'}
+                                        onChange={() => updateTaxCredit({ mode: 'manual' })}
+                                    />
+                                    수동 공제율
+                                </label>
+                            </div>
+                        </div>
+
+                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                            <div className="flex flex-col gap-1.5">
+                                <label className="text-sm font-semibold text-slate-700 dark:text-slate-300">연금저축 납입액 (연)</label>
+                                <input
+                                    type="number"
+                                    className="w-full px-3 py-2 bg-white dark:bg-zinc-900 border border-slate-200 dark:border-zinc-700 rounded-lg text-sm text-right font-medium text-slate-900 dark:text-white"
+                                    value={input.tax_credit?.pensionSavingsContribution ?? 0}
+                                    onChange={e => updateTaxCredit({ pensionSavingsContribution: Number(e.target.value) })}
+                                />
+                            </div>
+                            <div className="flex flex-col gap-1.5">
+                                <label className="text-sm font-semibold text-slate-700 dark:text-slate-300">IRP 납입액 (연)</label>
+                                <input
+                                    type="number"
+                                    className="w-full px-3 py-2 bg-white dark:bg-zinc-900 border border-slate-200 dark:border-zinc-700 rounded-lg text-sm text-right font-medium text-slate-900 dark:text-white"
+                                    value={input.tax_credit?.irpContribution ?? 0}
+                                    onChange={e => updateTaxCredit({ irpContribution: Number(e.target.value) })}
+                                />
+                            </div>
+                        </div>
+
+                        {input.tax_credit?.mode === 'manual' && (
+                            <div className="flex flex-col gap-1.5">
+                                <label className="text-sm font-semibold text-slate-700 dark:text-slate-300">수동 공제율 (0~1)</label>
+                                <input
+                                    type="number"
+                                    step="0.01"
+                                    className="w-full px-3 py-2 bg-white dark:bg-zinc-900 border border-slate-200 dark:border-zinc-700 rounded-lg text-sm text-right font-medium text-slate-900 dark:text-white"
+                                    value={input.tax_credit?.creditRate ?? 0.15}
+                                    onChange={e => updateTaxCredit({ creditRate: Number(e.target.value) })}
+                                />
+                            </div>
+                        )}
+                    </div>
+                )}
+                <div className="text-xs font-medium text-slate-500 dark:text-slate-400 mt-2">
+                    * 세법 연동 모드는 2026년 기준 공제율/한도를 적용하며 과세소득(시뮬레이션)을 사용합니다.
                 </div>
             </CollapsibleSection>
 
@@ -442,6 +556,66 @@ export const AdvancedSettings = React.memo(function AdvancedSettings({ input, on
                                 value={input.guardrails?.adjustmentRate || 0.1}
                                 onChange={e => updateGuardrails({ adjustmentRate: Number(e.target.value) })}
                             />
+                        </div>
+                    </div>
+                </CollapsibleSection>
+            )}
+
+            {input.withdrawal.strategy === 'bucket' && (
+                <CollapsibleSection
+                    title="🪣 Bucket 설정"
+                    isOpen={isExpanded('bucket')}
+                    onToggle={() => toggleSection('bucket')}
+                >
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-4 gap-y-3">
+                        <div className="flex flex-col gap-1.5">
+                            <label className="text-sm font-semibold text-slate-700 dark:text-slate-300">단기 버킷 (년)</label>
+                            <input
+                                type="number"
+                                className="w-full px-3 py-2 bg-white dark:bg-zinc-900 border border-slate-200 dark:border-zinc-700 rounded-lg text-sm text-right font-medium text-slate-900 dark:text-white"
+                                value={input.bucket?.shortTermYears || 2}
+                                onChange={e => updateBucket({ shortTermYears: Number(e.target.value) })}
+                            />
+                        </div>
+                        <div className="flex flex-col gap-1.5">
+                            <label className="text-sm font-semibold text-slate-700 dark:text-slate-300">중기 버킷 (년)</label>
+                            <input
+                                type="number"
+                                className="w-full px-3 py-2 bg-white dark:bg-zinc-900 border border-slate-200 dark:border-zinc-700 rounded-lg text-sm text-right font-medium text-slate-900 dark:text-white"
+                                value={input.bucket?.midTermYears || 5}
+                                onChange={e => updateBucket({ midTermYears: Number(e.target.value) })}
+                            />
+                        </div>
+                        <div className="flex flex-col gap-1.5">
+                            <label className="text-sm font-semibold text-slate-700 dark:text-slate-300">단기 수익률 (연)</label>
+                            <input
+                                type="number"
+                                step="0.001"
+                                className="w-full px-3 py-2 bg-white dark:bg-zinc-900 border border-slate-200 dark:border-zinc-700 rounded-lg text-sm text-right font-medium text-slate-900 dark:text-white"
+                                value={input.bucket?.shortTermReturn || 0.02}
+                                onChange={e => updateBucket({ shortTermReturn: Number(e.target.value) })}
+                            />
+                        </div>
+                        <div className="flex flex-col gap-1.5">
+                            <label className="text-sm font-semibold text-slate-700 dark:text-slate-300">중기 수익률 (연)</label>
+                            <input
+                                type="number"
+                                step="0.001"
+                                className="w-full px-3 py-2 bg-white dark:bg-zinc-900 border border-slate-200 dark:border-zinc-700 rounded-lg text-sm text-right font-medium text-slate-900 dark:text-white"
+                                value={input.bucket?.midTermReturn || 0.04}
+                                onChange={e => updateBucket({ midTermReturn: Number(e.target.value) })}
+                            />
+                        </div>
+                        <div className="flex flex-col gap-1.5 sm:col-span-2">
+                            <label className="text-sm font-semibold text-slate-700 dark:text-slate-300">버킷 리밸런싱 주기</label>
+                            <select
+                                className="w-full appearance-none bg-white dark:bg-zinc-900 border border-slate-200 dark:border-zinc-700 rounded-lg py-2 px-3 text-sm font-medium text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-all cursor-pointer"
+                                value={input.bucket?.rebalanceFrequency || 'annual'}
+                                onChange={e => updateBucket({ rebalanceFrequency: e.target.value as BucketSettings['rebalanceFrequency'] })}
+                            >
+                                <option value="annual">연간</option>
+                                <option value="semi-annual">반기</option>
+                            </select>
                         </div>
                     </div>
                 </CollapsibleSection>

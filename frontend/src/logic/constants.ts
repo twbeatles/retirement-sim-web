@@ -44,6 +44,7 @@ export const INITIAL_INPUT: SimulationInput = {
     },
 
     events: [],
+    expense_definitions: [],
 
     simulation_settings: {
         mode: "montecarlo", // Default to MC for "wow" factor
@@ -130,5 +131,14 @@ export const INITIAL_INPUT: SimulationInput = {
     inflation_scenario: {
         type: 'normal' as const,
         baseRate: 0.02
+    },
+    tax_credit: {
+        enabled: false,
+        mode: "law_2026",
+        lawYear: 2026,
+        incomeBasis: "simulated_taxable_income",
+        pensionSavingsContribution: 0,
+        irpContribution: 0,
+        creditRate: 0.15
     }
 };

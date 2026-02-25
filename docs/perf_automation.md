@@ -2,12 +2,12 @@
 
 This project includes lightweight performance/refactor checks that can run without extra dependencies beyond the existing Node toolchain.
 
-## Current baseline (2026-02-22)
+## Current baseline (2026-02-25)
 
 From `frontend/` after `npm run build` and `npm run perf:report`:
 
-- Entry JS: `~20.5 KiB`
-- Initial JS total (index + modulepreload): `~231.0 KiB`
+- Entry JS: `~22.8 KiB`
+- Initial JS total (index + modulepreload): `~233.2 KiB`
 
 Performance regression checks should compare against this baseline unless a newer baseline refresh is explicitly recorded.
 
@@ -44,7 +44,7 @@ npm run perf:gate:hard
 If `git` reports dubious ownership on Windows:
 
 ```bash
-git config --global --add safe.directory "D:/google antigravity/retirement-sim-web"
+git config --global --add safe.directory "D:/twbeatles-repos/retirement-sim-web"
 ```
 
 If `npm ci` fails with `EPERM` on Windows, close file indexers/editors or restart shell, then rerun.

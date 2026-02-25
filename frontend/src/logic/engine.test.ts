@@ -263,6 +263,114 @@ describe('Simulation Engine', () => {
         expect(resultA.summary.finalTotalAssetsReal).toBeCloseTo(resultB.summary.finalTotalAssetsReal, 8);
     });
 
+    it('marks historical runs with summary.source = historical', () => {
+        const input = createBaseInput();
+        input.current_age = 60;
+        input.retire_age = 60;
+        input.end_age = 62;
+        input.simulation_settings = {
+            mode: 'historical',
+            mc_paths: 20,
+            historical_start_year: 2000
+        };
+
+        const result = runSimulation(input);
+        expect(result.mode).toBe('montecarlo');
+        expect(result.summary.source).toBe('historical');
+    });
+
+    it('prioritizes historical_asset_mapping by asset id', () => {
+        const base = createBaseInput();
+        base.current_age = 60;
+        base.retire_age = 60;
+        base.end_age = 63;
+        base.general.current_balance = 1000000;
+        base.portfolio.assetClasses = [
+            { id: 'asset_bond_like', name: '채권', allocation: 1, expectedAnnualReturn: 0.03, annualVolatility: 0 }
+        ];
+        base.simulation_settings = {
+            mode: 'historical',
+            mc_paths: 20,
+            historical_start_year: 1995
+        };
+
+        const mapped = structuredClone(base);
+        mapped.simulation_settings = {
+            ...mapped.simulation_settings,
+            historical_asset_mapping: {
+                asset_bond_like: 'us_stock'
+            }
+        };
+
+        const defaultResult = runSimulation(base);
+        const mappedResult = runSimulation(mapped);
+        expect(defaultResult.summary.finalTotalAssetsReal).not.toBeCloseTo(mappedResult.summary.finalTotalAssetsReal, 2);
+    });
+
+    it('changes outcomes between annual and threshold rebalancing modes', () => {
+        const annual = createBaseInput();
+        annual.current_age = 60;
+        annual.retire_age = 60;
+        annual.end_age = 62;
+        annual.general.current_balance = 1000000;
+        annual.withdrawal.fixedMonthlyAmount = 0;
+        annual.simulation_settings = { mode: 'deterministic', mc_paths: 1 };
+        annual.portfolio.assetClasses = [
+            { id: 'stock', name: 'Stock', allocation: 0.5, expectedAnnualReturn: 0.3, annualVolatility: 0 },
+            { id: 'bond', name: 'Bond', allocation: 0.5, expectedAnnualReturn: -0.05, annualVolatility: 0 }
+        ];
+        annual.rebalancing = {
+            enabled: true,
+            frequency: 'annual',
+            thresholdPercent: 0.05,
+            taxEfficient: false,
+            tradingCostPercent: 0.01
+        };
+
+        const threshold = structuredClone(annual);
+        threshold.rebalancing = {
+            ...threshold.rebalancing!,
+            frequency: 'threshold',
+            thresholdPercent: 0.01
+        };
+
+        const annualResult = runSimulation(annual);
+        const thresholdResult = runSimulation(threshold);
+        expect(thresholdResult.summary.finalTotalAssetsReal).not.toBeCloseTo(annualResult.summary.finalTotalAssetsReal, 6);
+    });
+
+    it('changes outcomes between taxEfficient on/off in rebalancing', () => {
+        const standard = createBaseInput();
+        standard.current_age = 40;
+        standard.retire_age = 45;
+        standard.end_age = 46;
+        standard.general.current_balance = 1000000;
+        standard.general.monthly_contribution = 100000;
+        standard.withdrawal.fixedMonthlyAmount = 0;
+        standard.simulation_settings = { mode: 'deterministic', mc_paths: 1 };
+        standard.portfolio.assetClasses = [
+            { id: 'stock', name: 'Stock', allocation: 0.7, expectedAnnualReturn: 0.18, annualVolatility: 0 },
+            { id: 'bond', name: 'Bond', allocation: 0.3, expectedAnnualReturn: -0.02, annualVolatility: 0 }
+        ];
+        standard.rebalancing = {
+            enabled: true,
+            frequency: 'monthly',
+            thresholdPercent: 0.05,
+            taxEfficient: false,
+            tradingCostPercent: 0.01
+        };
+
+        const taxEfficient = structuredClone(standard);
+        taxEfficient.rebalancing = {
+            ...taxEfficient.rebalancing!,
+            taxEfficient: true
+        };
+
+        const standardResult = runSimulation(standard);
+        const taxEfficientResult = runSimulation(taxEfficient);
+        expect(taxEfficientResult.summary.finalTotalAssetsReal).not.toBeCloseTo(standardResult.summary.finalTotalAssetsReal, 6);
+    });
+
     it('limits VPW withdrawal YoY changes when vpwMaxYoYChange is set', () => {
         const input = createBaseInput();
         input.current_age = 65;
@@ -284,9 +392,61 @@ describe('Simulation Engine', () => {
         // Since balance dropped by -50% annually, applied rate would plummet the withdrawal.
         // But the smoothing limits it to ~0.79% per month.
         const maxChangePerMonth = Math.pow(1 + 0.10, 1 / 12) - 1;
-        const expectedW1Min = w0 * (1 - Math.pow(1 - 0.10, 1 / 12));
+        const expectedW1Min = w0 * (1 - maxChangePerMonth);
 
         expect(w1).toBeGreaterThanOrEqual(expectedW1Min * 0.999);
+    });
+
+    it('aggregates events that occur in the same month', () => {
+        const input = createBaseInput();
+        input.current_age = 65;
+        input.retire_age = 66;
+        input.end_age = 67;
+        input.portfolio.assetClasses[0].expectedAnnualReturn = 0;
+        input.general.current_balance = 1000;
+        input.events = [
+            { month_index: 0, amount: 200, name: 'a' },
+            { month_index: 0, amount: -50, name: 'b' }
+        ];
+
+        const result = runSimulation(input);
+        const timeline = 'timeline' in result ? result.timeline : [];
+        expect(timeline[0].general).toBeCloseTo(1150, 6);
+    });
+
+    it('clamps non-positive montecarlo path count to 1', () => {
+        const input = createBaseInput();
+        input.simulation_settings = {
+            mode: 'montecarlo',
+            mc_paths: -10
+        };
+
+        const result = runSimulation(input);
+        expect(result.mode).toBe('montecarlo');
+        if (result.mode !== 'montecarlo') return;
+        expect(result.pathCount).toBe(1);
+    });
+
+    it('includes path-level depletion summary for montecarlo results', () => {
+        const input = createBaseInput();
+        input.current_age = 65;
+        input.retire_age = 65;
+        input.end_age = 70;
+        input.general.current_balance = 5000;
+        input.portfolio.assetClasses[0].expectedAnnualReturn = 0;
+        input.withdrawal.strategy = 'fixed_amount';
+        input.withdrawal.fixedMonthlyAmount = 400;
+        input.simulation_settings = {
+            mode: 'montecarlo',
+            mc_paths: 5,
+            seed: 42
+        };
+
+        const result = runSimulation(input);
+        expect(result.mode).toBe('montecarlo');
+        if (result.mode !== 'montecarlo') return;
+        expect(result.summary.depletion).toBeTruthy();
+        expect(result.summary.depletion?.firstDepletionMonthByPath).toHaveLength(5);
     });
 
     it('keeps seed-fixed montecarlo summary and sample timelines stable', () => {

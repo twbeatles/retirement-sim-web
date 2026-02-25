@@ -11,6 +11,7 @@ type SimulationHookReturn = {
     runSimulation: (input: SimulationInput, options?: SimulationRunOptions) => Promise<SimulationResult>;
     runSimulationPreview: (input: SimulationInput, previewPathCap?: number) => Promise<SimulationResult>;
     solveContribution: (input: SimulationInput, targetSuccessRate: number) => Promise<number | null>;
+    solveLaborSavingsRate: (input: SimulationInput, targetSuccessRate: number) => Promise<number | null>;
     solveRetireAge: (input: SimulationInput, targetSuccessRate: number) => Promise<number | null>;
     runSensitivityAnalysis: (
         input: SimulationInput,
@@ -77,6 +78,11 @@ export function useSimulation(): SimulationHookReturn {
         return requestSolveContribution(input, targetSuccessRate);
     }, []);
 
+    const solveLaborSavingsRate = useCallback(async (input: SimulationInput, targetSuccessRate: number) => {
+        const { requestSolveLaborSavingsRate } = await loadSimulationClient();
+        return requestSolveLaborSavingsRate(input, targetSuccessRate);
+    }, []);
+
     const solveRetireAge = useCallback(async (input: SimulationInput, targetSuccessRate: number) => {
         const { requestSolveRetireAge } = await loadSimulationClient();
         return requestSolveRetireAge(input, targetSuccessRate);
@@ -106,6 +112,7 @@ export function useSimulation(): SimulationHookReturn {
         runSimulation,
         runSimulationPreview,
         solveContribution,
+        solveLaborSavingsRate,
         solveRetireAge,
         runSensitivityAnalysis: runSensitivityAnalysisFunc,
         isCalculating,

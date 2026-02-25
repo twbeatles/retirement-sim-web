@@ -16,7 +16,7 @@ S(t+1) = S(t) × (1 + μ_monthly + σ_monthly × Z)
 ```
 
 Where:
-- `μ_monthly = μ_annual / 12`
+- `μ_monthly = (1 + μ_annual)^(1/12) - 1`
 - `σ_monthly = σ_annual / √12`
 - `Z ~ N(0,1)` - Standard normal random variable
 
@@ -66,12 +66,30 @@ VPW Rate = 1 / remaining_life_expectancy
 Monthly = Assets × VPW_Rate / 12
 ```
 
+With annual change limiter (`vpwMaxYoYChange`):
+```
+maxChangePerMonth = (1 + vpwMaxYoYChange)^(1/12) - 1
+lowerBound = lastWithdrawal × (1 - maxChangePerMonth)
+upperBound = lastWithdrawal × (1 + maxChangePerMonth)
+```
+
 ### Guardrails Strategy
 ```
 if (current_rate > ceiling):
   withdrawal *= 0.90  // -10%
 if (current_rate < floor):
   withdrawal *= 1.10  // +10%
+```
+
+### Rebalancing (Threshold / Tax-efficient)
+Threshold trigger:
+```
+trigger when max_i |actualWeight_i - targetWeight_i| > thresholdPercent
+```
+
+Tax-efficient mode:
+```
+buy-only rebalance (no forced sells), turnover-based trading cost
 ```
 
 ---
@@ -124,5 +142,5 @@ SoRR Impact = Success_Rate(normal) - Success_Rate(early_crash)
 ### Sensitivity Analysis
 ```
 ΔP = P(base + δ) - P(base)
-Where δ ∈ {±0.5%, ±1.0%} for return/inflation
+Where δ ∈ {-2.0%, -1.0%, 0%, +1.0%, +2.0%} for return/inflation
 ```

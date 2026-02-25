@@ -137,7 +137,7 @@ export const RiskDashboard = React.memo(function RiskDashboard({ input, result, 
                                 </div>
                                 {depletionAnalysis.medianDepletionAge && (
                                     <div className="bg-orange-50 dark:bg-orange-900/10 p-4 rounded-xl border border-orange-100 dark:border-orange-900/30">
-                                        <div className="text-xs uppercase tracking-wider font-semibold text-orange-700 dark:text-orange-400 mb-1">고갈 예상 평균 연령</div>
+                                        <div className="text-xs uppercase tracking-wider font-semibold text-orange-700 dark:text-orange-400 mb-1">고갈 예상 중위 연령</div>
                                         <div className="text-2xl font-extrabold text-orange-600 dark:text-orange-500">
                                             {Math.round(depletionAnalysis.medianDepletionAge)}세
                                         </div>

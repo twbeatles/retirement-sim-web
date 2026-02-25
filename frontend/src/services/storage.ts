@@ -1,5 +1,5 @@
-import { INITIAL_INPUT } from "../logic/constants";
 import { SimulationInput } from "../logic/types";
+import { migrateSimulationInput } from "../logic/migration";
 
 export interface ScenarioData {
     name: string;
@@ -100,69 +100,15 @@ class ScenarioStorage {
                 results.sort((a, b) => b.updatedAt - a.updatedAt);
 
                 // Migration: Merge with defaults to handle missing fields from older versions
-                const migratedResults = results.map(scenario => ({
+                const migratedResults = results.map((scenario) => ({
                     ...scenario,
-                    input: this.migrateInput(scenario.input)
+                    input: migrateSimulationInput(scenario.input)
                 }));
 
                 resolve(migratedResults);
             };
             request.onerror = () => reject(request.error);
         });
-    }
-
-    /**
-     * Migrate old scenario input by filling in missing fields with defaults
-     */
-    private migrateInput(input?: Partial<SimulationInput>): SimulationInput {
-        const source = input ?? {};
-        const base = INITIAL_INPUT;
-
-        return {
-            ...base,
-            ...source,
-            general: { ...base.general, ...source.general },
-            private_pension: { ...base.private_pension, ...source.private_pension },
-            national_pension: { ...base.national_pension, ...source.national_pension },
-            debt: { ...base.debt, ...source.debt },
-            portfolio: {
-                ...base.portfolio,
-                ...source.portfolio,
-                assetClasses: source.portfolio?.assetClasses ?? base.portfolio.assetClasses
-            },
-            withdrawal: { ...base.withdrawal, ...source.withdrawal },
-            simulation_settings: { ...base.simulation_settings, ...source.simulation_settings },
-            rebalancing: { ...base.rebalancing!, ...source.rebalancing },
-            stress_test: { ...base.stress_test!, ...source.stress_test },
-            labor_income: {
-                ...base.labor_income!,
-                ...source.labor_income,
-                events: source.labor_income?.events ?? base.labor_income!.events
-            },
-            guardrails: { ...base.guardrails!, ...source.guardrails },
-            bucket: { ...base.bucket!, ...source.bucket },
-            health_insurance: { ...base.health_insurance!, ...source.health_insurance },
-            severance: { ...base.severance!, ...source.severance },
-            longevity_risk: { ...base.longevity_risk!, ...source.longevity_risk },
-            medical_shocks: {
-                ...base.medical_shocks!,
-                ...source.medical_shocks,
-                occurrences: source.medical_shocks?.occurrences ?? base.medical_shocks!.occurrences
-            },
-            reverse_annuity: { ...base.reverse_annuity!, ...source.reverse_annuity },
-            inflation_scenario: { ...base.inflation_scenario!, ...source.inflation_scenario },
-            tax_credit: {
-                enabled: false,
-                pensionSavingsContribution: 0,
-                irpContribution: 0,
-                creditRate: 0.15,
-                ...source.tax_credit
-            },
-            realEstate: source.realEstate ?? base.realEstate,
-            additionalPensions: source.additionalPensions ?? base.additionalPensions,
-            businessIncome: source.businessIncome ?? base.businessIncome,
-            events: source.events ?? base.events
-        } as SimulationInput;
     }
 
     async deleteScenario(id: number): Promise<void> {

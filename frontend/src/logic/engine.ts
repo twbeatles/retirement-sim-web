@@ -18,7 +18,6 @@ import {
     getHistoricalInflation,
     mapAssetClassToHistorical,
     annualToMonthlyReturns,
-    HISTORICAL_YEARS,
 } from "./historicalData";
 import {
     percentileSorted,
@@ -90,7 +89,7 @@ function calculatePortfolioMetrics(input: SimulationInput) {
         varianceSum /= (totalAlloc * totalAlloc);
     }
 
-    const portfolioVol = Math.sqrt(varianceSum);
+    const portfolioVol = Math.sqrt(Math.max(0, varianceSum));
 
     // Default to 0 if no assets
     return { mu: weightedReturn, sigma: portfolioVol };
@@ -147,12 +146,19 @@ interface SimulationContext {
 
     // Phase 7: Historical Returns (pre-computed monthly returns)
     historicalReturns?: Float64Array;
+    historicalAssetReturns?: Float64Array[];
     historicalInflation?: Float64Array;
 
     // Phase 7: Rebalancing
     rebalanceMonths?: Set<number>; // Months when rebalancing occurs
     targetAllocations?: number[];  // Target allocation for each asset class
     tradingCostRate?: number;      // Trading cost as decimal
+    thresholdPercent?: number;
+    rebalancingFrequency?: NonNullable<SimulationInput["rebalancing"]>["frequency"];
+    taxEfficientRebalance?: boolean;
+    assetExpectedMonthlyReturns?: number[];
+    assetMonthlyVolatility?: number[];
+    correlation?: number;
 }
 
 type PathSimulationOptions = {
@@ -166,8 +172,49 @@ type PathSimulationResult = {
     timeline: TimelineRow[];
     finalTotalAssets: number;
     finalTotalAssetsReal: number;
+    retirementTotalAssets: number;
+    retirementTotalAssetsReal: number;
+    retirementAge: number;
+    firstDepletionMonth: number;
     monthsSimulated: number;
 };
+
+const TAX_CREDIT_LAW_2026 = {
+    lowIncomeThreshold: 55000000,
+    lowRate: 0.165,
+    highRate: 0.132,
+    pensionLimit: 6000000,
+    irpLimit: 3000000,
+    totalLimit: 9000000
+} as const;
+
+function calculateAnnualTaxCredit(input: SimulationInput, annualTaxableIncome: number): number {
+    const taxCredit = input.tax_credit;
+    if (!taxCredit?.enabled) {
+        return 0;
+    }
+
+    const eligiblePension = Math.min(
+        Math.max(0, taxCredit.pensionSavingsContribution),
+        TAX_CREDIT_LAW_2026.pensionLimit
+    );
+    const eligibleIRP = Math.min(
+        Math.max(0, taxCredit.irpContribution),
+        TAX_CREDIT_LAW_2026.irpLimit
+    );
+    const totalEligible = Math.min(
+        eligiblePension + eligibleIRP,
+        TAX_CREDIT_LAW_2026.totalLimit
+    );
+
+    const effectiveRate = taxCredit.mode === "manual"
+        ? (taxCredit.creditRate ?? TAX_CREDIT_LAW_2026.highRate)
+        : annualTaxableIncome <= TAX_CREDIT_LAW_2026.lowIncomeThreshold
+            ? TAX_CREDIT_LAW_2026.lowRate
+            : TAX_CREDIT_LAW_2026.highRate;
+
+    return totalEligible * Math.max(0, effectiveRate);
+}
 
 function simulateOnePath(
     input: SimulationInput,
@@ -185,6 +232,10 @@ function simulateOnePath(
             timeline: [],
             finalTotalAssets: 0,
             finalTotalAssetsReal: 0,
+            retirementTotalAssets: 0,
+            retirementTotalAssetsReal: 0,
+            retirementAge: input.retire_age,
+            firstDepletionMonth: -1,
             monthsSimulated: 0
         };
     }
@@ -233,6 +284,154 @@ function simulateOnePath(
     let balPrivate = input.private_pension.current_balance;
     let debt = initialDebt;
 
+    const configuredAllocations = ctx.targetAllocations ?? input.portfolio.assetClasses.map((asset) => asset.allocation);
+    const totalTargetAllocation = configuredAllocations.reduce((sum, weight) => sum + Math.max(0, weight), 0);
+    const normalizedAllocations = configuredAllocations.map((weight) =>
+        totalTargetAllocation > 0 ? Math.max(0, weight) / totalTargetAllocation : 0
+    );
+    const useAssetLevelTracking =
+        Boolean(input.rebalancing?.enabled) &&
+        totalTargetAllocation > 0 &&
+        input.portfolio.assetClasses.length > 0 &&
+        normalizedAllocations.length === input.portfolio.assetClasses.length;
+    let assetBalances: Float64Array | null = null;
+    if (useAssetLevelTracking) {
+        assetBalances = new Float64Array(normalizedAllocations.length);
+        for (let i = 0; i < normalizedAllocations.length; i++) {
+            assetBalances[i] = Math.max(0, balGeneral * normalizedAllocations[i]);
+        }
+        balGeneral = assetBalances.reduce((sum, value) => sum + value, 0);
+    }
+
+    const syncGeneralFromAssets = () => {
+        if (!assetBalances) return;
+        let sum = 0;
+        for (let i = 0; i < assetBalances.length; i++) {
+            sum += assetBalances[i];
+        }
+        balGeneral = Math.max(0, sum);
+    };
+
+    const applyGeneralDelta = (delta: number, prioritizeUnderweightBuys = false) => {
+        if (!assetBalances) {
+            balGeneral = Math.max(0, balGeneral + delta);
+            return;
+        }
+
+        if (Math.abs(delta) < 1e-9) {
+            return;
+        }
+
+        if (delta > 0) {
+            const totalBefore = assetBalances.reduce((sum, value) => sum + value, 0);
+            const totalAfter = totalBefore + delta;
+            let remaining = delta;
+
+            if (prioritizeUnderweightBuys && totalAfter > 0) {
+                const deficits = new Float64Array(assetBalances.length);
+                let deficitSum = 0;
+                for (let i = 0; i < assetBalances.length; i++) {
+                    const targetValue = totalAfter * normalizedAllocations[i];
+                    const deficit = Math.max(0, targetValue - assetBalances[i]);
+                    deficits[i] = deficit;
+                    deficitSum += deficit;
+                }
+                if (deficitSum > 0) {
+                    const allocatable = Math.min(remaining, deficitSum);
+                    for (let i = 0; i < assetBalances.length; i++) {
+                        if (deficits[i] <= 0) continue;
+                        assetBalances[i] += allocatable * (deficits[i] / deficitSum);
+                    }
+                    remaining -= allocatable;
+                }
+            }
+
+            if (remaining > 0) {
+                for (let i = 0; i < assetBalances.length; i++) {
+                    assetBalances[i] += remaining * normalizedAllocations[i];
+                }
+            }
+        } else {
+            let remainingWithdrawal = Math.abs(delta);
+            while (remainingWithdrawal > 1e-6) {
+                const total = assetBalances.reduce((sum, value) => sum + value, 0);
+                if (total <= 0) {
+                    break;
+                }
+                let deducted = 0;
+                for (let i = 0; i < assetBalances.length; i++) {
+                    const share = assetBalances[i] / total;
+                    const cut = Math.min(assetBalances[i], remainingWithdrawal * share);
+                    assetBalances[i] -= cut;
+                    deducted += cut;
+                }
+                if (deducted <= 1e-9) break;
+                remainingWithdrawal -= deducted;
+            }
+        }
+
+        syncGeneralFromAssets();
+    };
+
+    const computeMaxDrift = () => {
+        if (!assetBalances || balGeneral <= 0) return 0;
+        let maxDrift = 0;
+        for (let i = 0; i < assetBalances.length; i++) {
+            const currentWeight = assetBalances[i] / balGeneral;
+            const drift = Math.abs(currentWeight - normalizedAllocations[i]);
+            if (drift > maxDrift) {
+                maxDrift = drift;
+            }
+        }
+        return maxDrift;
+    };
+
+    const rebalanceToTargets = (allowSell: boolean) => {
+        if (!assetBalances) return 0;
+        syncGeneralFromAssets();
+        if (balGeneral <= 0) return 0;
+
+        const targetValues = normalizedAllocations.map((weight) => balGeneral * weight);
+        const beforeBalances = Float64Array.from(assetBalances);
+        let turnoverAmount = 0;
+
+        if (allowSell) {
+            for (let i = 0; i < assetBalances.length; i++) {
+                const diff = targetValues[i] - assetBalances[i];
+                turnoverAmount += Math.abs(diff);
+                assetBalances[i] = targetValues[i];
+            }
+            turnoverAmount *= 0.5;
+        } else {
+            let availableBuyBudget = 0;
+            const deficits = new Float64Array(assetBalances.length);
+            for (let i = 0; i < assetBalances.length; i++) {
+                const diff = targetValues[i] - assetBalances[i];
+                if (diff > 0) {
+                    deficits[i] = diff;
+                    availableBuyBudget += diff;
+                }
+            }
+            // Buy-only mode: consume only existing unallocated cashflow budget.
+            // Since this model does not track separate cash buckets, no forced sells are executed.
+            turnoverAmount = 0;
+            void availableBuyBudget;
+        }
+
+        syncGeneralFromAssets();
+        if (balGeneral <= 0) return 0;
+
+        if (!allowSell) {
+            return 0;
+        }
+
+        let moved = 0;
+        for (let i = 0; i < assetBalances.length; i++) {
+            moved += Math.abs(assetBalances[i] - beforeBalances[i]);
+        }
+        return moved * 0.5;
+    };
+
     // Phase 1: New Assets State
     const realEstateValues = ctx.realEstateState ? Float64Array.from(ctx.realEstateState.initialValues) : null;
     const pensionValues = ctx.pensionState ? Float64Array.from(ctx.pensionState.initialValues) : null;
@@ -252,6 +451,9 @@ function simulateOnePath(
     let lastWithdrawalGross = 0;
     let finalTotalAssets = 0;
     let finalTotalAssetsReal = 0;
+    let retirementTotalAssets = 0;
+    let retirementTotalAssetsReal = 0;
+    let firstDepletionMonth = -1;
 
     // Bucket State (Future expansion)
     // let bucketShort = 0;
@@ -276,14 +478,7 @@ function simulateOnePath(
         // 1. One-off events (Inflation Adjusted)
         const eventAmountRaw = eventsMap.get(m);
         if (eventAmountRaw) {
-            // Assume event amounts are in "Present Value" (Current purchasing power)
-            // So we inflate them by CPI to get Nominal amount at time m.
-            // Exception: If user intends "Nominal", this might over-inflate. 
-            // But standard planning assumes PV.
-            // For negative amounts (Expense), this increases the cost.
-            // For positive amounts (Windfall), this increases the gain.
-            // We use cpi (which is 1.0 at start).
-            balGeneral += eventAmountRaw * cpi;
+            applyGeneralDelta(eventAmountRaw * cpi, Boolean(ctx.taxEfficientRebalance));
         }
 
         // 2. Debt
@@ -291,60 +486,105 @@ function simulateOnePath(
             debt *= (1.0 + debtMonthlyRate);
             const pay = input.debt.monthly_payment > 0 ? Math.min(input.debt.monthly_payment, debt) : 0;
             debt -= pay;
-            balGeneral -= pay;
+            applyGeneralDelta(-pay);
         }
 
         // 3. Contributions (Working years)
         if (!isRetired) {
-            // Apply dynamic contribution if enabled, otherwise static
             const contribution = contributionByMonth ? contributionByMonth[m] : input.general.monthly_contribution;
-            balGeneral += contribution;
+            applyGeneralDelta(contribution, Boolean(ctx.taxEfficientRebalance));
             balPrivate += input.private_pension.monthly_contribution;
         }
 
         // Phase 1: Business Income
         if (ctx.businessIncomeByMonth) {
-            balGeneral += ctx.businessIncomeByMonth[m];
+            applyGeneralDelta(ctx.businessIncomeByMonth[m], Boolean(ctx.taxEfficientRebalance));
         }
 
         // 4. Returns
-        balGeneral *= (1.0 + r_general[m]);
+        const beforeGeneralReturn = balGeneral;
+        if (assetBalances) {
+            const historicalAssetReturns = ctx.historicalAssetReturns;
+            const correlation = Math.max(-0.99, Math.min(0.99, ctx.correlation ?? (input.portfolio.manualCorrelation ?? 0)));
+            const idioScale = Math.sqrt(Math.max(0, 1 - correlation * correlation));
+            const commonShock = stochastic ? randomNormal() : 0;
+
+            const stressStart = input.stress_test?.enabled
+                ? (input.stress_test.startFromRetirement ? monthsToRetire : 0)
+                : -1;
+            const stressEnd = input.stress_test?.enabled
+                ? Math.min(totalMonths, stressStart + input.stress_test.durationMonths)
+                : -1;
+            const stressRate = input.stress_test?.enabled
+                ? Math.pow(1 - input.stress_test.annualDeclineRate, 1.0 / 12.0) - 1
+                : 0;
+
+            for (let i = 0; i < assetBalances.length; i++) {
+                let assetReturn = ctx.assetExpectedMonthlyReturns?.[i] ?? mu_m;
+
+                if (historicalAssetReturns && historicalPathIndex !== undefined && historicalAssetReturns[i]) {
+                    const idx = (historicalOffset + m) % historicalAssetReturns[i].length;
+                    assetReturn = historicalAssetReturns[i][idx];
+                } else if (stochastic) {
+                    const vol = ctx.assetMonthlyVolatility?.[i] ?? 0;
+                    const idiosyncraticShock = randomNormal();
+                    const combinedShock = (correlation * commonShock) + (idioScale * idiosyncraticShock);
+                    assetReturn += (vol * combinedShock);
+                }
+
+                if (input.stress_test?.enabled && m >= stressStart && m < stressEnd) {
+                    assetReturn = stressRate;
+                }
+
+                const safeGrowth = Math.max(-0.99, assetReturn);
+                assetBalances[i] *= (1 + safeGrowth);
+            }
+            syncGeneralFromAssets();
+        } else {
+            balGeneral *= (1.0 + r_general[m]);
+        }
+
+        const realizedGeneralReturn = beforeGeneralReturn > 0
+            ? (balGeneral / beforeGeneralReturn) - 1
+            : 0;
 
         // Bucket Strategy: Simulate Cash Buffer Return
-        // If retired and using bucket strategy, the "Short Term" bucket should yield safer returns (e.g. inflation or low rate)
-        // instead of the volatile portfolio return.
         if (isRetired && input.withdrawal.strategy === 'bucket' && input.bucket) {
             const targetMon = input.withdrawal.targetMonthlySpending || 0;
             const cashYears = input.bucket.shortTermYears || 2;
             const cashTarget = targetMon * 12 * cashYears;
-
-            // Calculate previous balance (before r_general was applied) to determine cash portion
-            const r_gen = r_general[m];
-            const prevBal = balGeneral / (1.0 + r_gen);
-
-            // Determine how much was in cash
-            const prevCash = Math.min(prevBal, cashTarget);
+            const prevCash = Math.min(beforeGeneralReturn, cashTarget);
 
             if (prevCash > 0) {
-                // The cash portion should have grown by infl_m (safe rate) instead of r_gen
-                // We subtract the wrong growth (r_gen) and add the correct growth (infl_m)
-                const correction = prevCash * (infl_m - r_gen);
-                balGeneral += correction;
+                const correction = prevCash * (infl_m - realizedGeneralReturn);
+                applyGeneralDelta(correction, Boolean(ctx.taxEfficientRebalance));
             }
         }
 
         // Phase 7: Auto-Rebalancing
-        // Apply trading cost when rebalancing occurs
-        if (ctx.rebalanceMonths?.has(m) && ctx.tradingCostRate && balGeneral > 0) {
-            // Simplified rebalancing: deduct trading cost from balance
-            // NOTE: Since the main simulation assumes Constant Mix (implicit rebalancing),
-            // this deduction represents the "friction" of maintaining that mix.
-            // A precise simulation would track individual asset drifts and calculate turnover.
-            const tradingCost = balGeneral * ctx.tradingCostRate;
-            balGeneral -= tradingCost;
+        let shouldRebalance = false;
+        if (input.rebalancing?.enabled) {
+            if (ctx.rebalancingFrequency === "threshold") {
+                const threshold = Math.max(0, ctx.thresholdPercent ?? 0.05);
+                shouldRebalance = computeMaxDrift() > threshold;
+            } else {
+                shouldRebalance = Boolean(ctx.rebalanceMonths?.has(m));
+            }
         }
 
-        balGeneral = Math.max(0, balGeneral); // Safety clamp
+        if (shouldRebalance) {
+            if (assetBalances) {
+                const turnover = rebalanceToTargets(!(ctx.taxEfficientRebalance ?? false));
+                if (ctx.tradingCostRate && turnover > 0) {
+                    applyGeneralDelta(-(turnover * ctx.tradingCostRate));
+                }
+            } else if (ctx.tradingCostRate && balGeneral > 0) {
+                const tradingCost = balGeneral * ctx.tradingCostRate;
+                applyGeneralDelta(-tradingCost);
+            }
+        }
+
+        balGeneral = Math.max(0, balGeneral);
         balPrivate *= (1.0 + r_private);
 
         // Phase 1: Real Estate Growth & Income
@@ -358,7 +598,7 @@ function simulateOnePath(
                 // Income (Rent - Management)
                 const rent = realEstateValues[i] * ctx.realEstateState.rentalYields[i];
                 const cost = realEstateValues[i] * ctx.realEstateState.managementCosts[i];
-                balGeneral += (rent - cost);
+                applyGeneralDelta(rent - cost, Boolean(ctx.taxEfficientRebalance));
             }
         }
 
@@ -557,7 +797,7 @@ function simulateOnePath(
                         // Limit monthly change to approximate the annual max YoY change
                         const maxChangePerMonth = Math.pow(1 + input.withdrawal.vpwMaxYoYChange, 1 / 12) - 1;
                         const upperBound = lastWithdrawal * (1 + maxChangePerMonth);
-                        const lowerBound = lastWithdrawal * (1 - Math.pow(1 - input.withdrawal.vpwMaxYoYChange, 1 / 12));
+                        const lowerBound = lastWithdrawal * (1 - maxChangePerMonth);
                         targetWithdrawal = Math.min(upperBound, Math.max(lowerBound, targetWithdrawal));
                     }
                 }
@@ -608,7 +848,7 @@ function simulateOnePath(
             if (withdrawalGross > balGeneral) {
                 withdrawalGross = balGeneral;
             }
-            balGeneral -= withdrawalGross;
+            applyGeneralDelta(-withdrawalGross);
             lastWithdrawalGross = withdrawalGross;
 
             // NEW: Health Insurance Deduction (건강보험료)
@@ -665,13 +905,13 @@ function simulateOnePath(
                         : base;
                 }
 
-                balGeneral = Math.max(0, balGeneral - healthInsurancePremium);
+                applyGeneralDelta(-healthInsurancePremium);
             }
 
             // NEW: Medical Shock (의료비 충격)
             const medicalShock = ctx.medicalShockMonths?.get(m);
             if (medicalShock) {
-                balGeneral = Math.max(0, balGeneral - medicalShock);
+                applyGeneralDelta(-medicalShock);
             }
         }
 
@@ -708,12 +948,25 @@ function simulateOnePath(
 
         // Fix: Prevent NaN when totalIncome is 0
         const totalIncomeForTax = natPension + privPension + additionalPensionPayout + reverseAnnuityIncome + severancePayout + withdrawalGross;
+        const annualTaxableIncome = Math.max(0, totalIncomeForTax * 12);
+        const monthlyTaxCredit = calculateAnnualTaxCredit(input, annualTaxableIncome) / 12;
+        taxPaid = Math.max(0, taxPaid - monthlyTaxCredit);
+
         const withdrawalNet = withdrawalGross > 0 && totalIncomeForTax > 0
             ? withdrawalGross - (taxPaid * (withdrawalGross / totalIncomeForTax))
             : withdrawalGross;
         const totalIncomeNet = totalIncomeForTax - taxPaid;
         const totalAssets = balGeneral + balPrivate - debt + realEstateTotal + additionalPensionTotal;
         const totalAssetsReal = totalAssets / cpi;
+
+        if (m === monthsToRetire) {
+            retirementTotalAssets = totalAssets;
+            retirementTotalAssetsReal = totalAssetsReal;
+        }
+        if (firstDepletionMonth < 0 && totalAssets <= 0) {
+            firstDepletionMonth = m;
+        }
+
         finalTotalAssets = totalAssets;
         finalTotalAssetsReal = totalAssetsReal;
 
@@ -756,6 +1009,16 @@ function simulateOnePath(
         timeline,
         finalTotalAssets,
         finalTotalAssetsReal,
+        retirementTotalAssets:
+            monthsToRetire >= 0 && monthsToRetire < totalMonths
+                ? retirementTotalAssets
+                : finalTotalAssets,
+        retirementTotalAssetsReal:
+            monthsToRetire >= 0 && monthsToRetire < totalMonths
+                ? retirementTotalAssetsReal
+                : finalTotalAssetsReal,
+        retirementAge: input.retire_age,
+        firstDepletionMonth,
         monthsSimulated: totalMonths
     };
 }
@@ -780,29 +1043,40 @@ export function runSimulation(
     const mu_m = monthlyRateFromAnnual(mu);
     const sig_m = sigma / Math.sqrt(12.0);
     const r_private = monthlyRateFromAnnual(input.private_pension.annual_return);
-    const infl_m = monthlyRateFromAnnual(input.annual_inflation);
+    const scenarioBaseInflation = input.inflation_scenario?.baseRate;
+    const annualInflation = typeof scenarioBaseInflation === "number"
+        ? scenarioBaseInflation
+        : input.annual_inflation;
+    const infl_m = monthlyRateFromAnnual(annualInflation);
 
     const eventsMap = new Map<number, number>();
-    input.events.forEach(e => eventsMap.set(e.month_index, e.amount));
+    input.events.forEach((e) => {
+        const existing = eventsMap.get(e.month_index) || 0;
+        eventsMap.set(e.month_index, existing + e.amount);
+    });
 
     const monthsToRetire = (input.retire_age - input.current_age) * 12;
     const totalMonths = (input.end_age - input.current_age) * 12;
 
-    // NEW: Prepare dynamic inflation array for spike scenarios
+    // NEW: Prepare dynamic inflation array
     let inflationByMonth: Float64Array | undefined;
-    if (input.inflation_scenario?.type === 'spike' &&
-        input.inflation_scenario.spikeStartAge !== undefined) {
+    if (input.inflation_scenario) {
         inflationByMonth = new Float64Array(totalMonths);
         const baseInflM = monthlyRateFromAnnual(input.inflation_scenario.baseRate);
-        const spikeInflM = monthlyRateFromAnnual(input.inflation_scenario.spikeRate || 0.06);
-        const spikeStartMonth = (input.inflation_scenario.spikeStartAge - input.current_age) * 12;
-        const spikeDuration = (input.inflation_scenario.spikeDurationYears || 3) * 12;
+        inflationByMonth.fill(baseInflM);
 
-        for (let m = 0; m < totalMonths; m++) {
-            if (m >= spikeStartMonth && m < spikeStartMonth + spikeDuration) {
-                inflationByMonth[m] = spikeInflM;
-            } else {
-                inflationByMonth[m] = baseInflM;
+        if (
+            input.inflation_scenario.type === 'spike' &&
+            input.inflation_scenario.spikeStartAge !== undefined
+        ) {
+            const spikeInflM = monthlyRateFromAnnual(input.inflation_scenario.spikeRate || 0.06);
+            const spikeStartMonth = (input.inflation_scenario.spikeStartAge - input.current_age) * 12;
+            const spikeDuration = (input.inflation_scenario.spikeDurationYears || 3) * 12;
+
+            for (let m = 0; m < totalMonths; m++) {
+                if (m >= spikeStartMonth && m < spikeStartMonth + spikeDuration) {
+                    inflationByMonth[m] = spikeInflM;
+                }
             }
         }
     }
@@ -933,8 +1207,18 @@ export function runSimulation(
         pensionState,
         // VPW optimization
         annualPortfolioReturn: mu,
-        annualInflation: input.annual_inflation
+        annualInflation
     };
+
+    if (input.rebalancing?.enabled) {
+        ctx.assetExpectedMonthlyReturns = input.portfolio.assetClasses.map((asset) =>
+            monthlyRateFromAnnual(asset.expectedAnnualReturn)
+        );
+        ctx.assetMonthlyVolatility = input.portfolio.assetClasses.map((asset) =>
+            asset.annualVolatility / Math.sqrt(12.0)
+        );
+        ctx.correlation = Math.max(-0.99, Math.min(0.99, input.portfolio.manualCorrelation ?? 0));
+    }
 
     // Phase 7: Historical Mode - Prepare historical returns
     const isHistorical = input.simulation_settings.mode === "historical";
@@ -945,17 +1229,23 @@ export function runSimulation(
         // Calculate weighted portfolio historical returns
         const assets = input.portfolio.assetClasses;
         const annualReturns: number[] = [];
+        const configuredMapping = input.simulation_settings.historical_asset_mapping ?? {};
+        const assetAnnualReturns = assets.map((asset) => {
+            const mappedType = configuredMapping[asset.id] ?? configuredMapping[asset.name];
+            const histType = mappedType || mapAssetClassToHistorical(asset.name);
+            return getHistoricalReturns(histType, startYear, yearsNeeded);
+        });
+        ctx.historicalAssetReturns = assetAnnualReturns.map((series) =>
+            Float64Array.from(annualToMonthlyReturns(series, false))
+        );
 
         for (let y = 0; y < yearsNeeded; y++) {
-            const yearIdx = (HISTORICAL_YEARS.indexOf(startYear) + y) % 40;
             let weightedReturn = 0;
             let totalAlloc = 0;
 
-            for (const asset of assets) {
-                const histType = mapAssetClassToHistorical(asset.name);
-                const histReturns = getHistoricalReturns(histType, startYear, yearsNeeded);
-                weightedReturn += (histReturns[y] || 0) * asset.allocation;
-                totalAlloc += asset.allocation;
+            for (let i = 0; i < assets.length; i++) {
+                weightedReturn += (assetAnnualReturns[i][y] || 0) * assets[i].allocation;
+                totalAlloc += assets[i].allocation;
             }
 
             if (totalAlloc > 0) weightedReturn /= totalAlloc;
@@ -977,19 +1267,23 @@ export function runSimulation(
         ctx.rebalanceMonths = new Set<number>();
         ctx.tradingCostRate = input.rebalancing.tradingCostPercent || 0.001;
         ctx.targetAllocations = input.portfolio.assetClasses.map(a => a.allocation);
+        ctx.thresholdPercent = input.rebalancing.thresholdPercent ?? 0.05;
+        ctx.rebalancingFrequency = input.rebalancing.frequency;
+        ctx.taxEfficientRebalance = input.rebalancing.taxEfficient ?? false;
 
         const freq = input.rebalancing.frequency;
-        for (let m = 0; m < totalMonths; m++) {
-            if (freq === 'monthly') {
-                ctx.rebalanceMonths.add(m);
-            } else if (freq === 'quarterly' && m % 3 === 0) {
-                ctx.rebalanceMonths.add(m);
-            } else if (freq === 'semi-annual' && m % 6 === 0) {
-                ctx.rebalanceMonths.add(m);
-            } else if (freq === 'annual' && m % 12 === 0 && m > 0) {
-                ctx.rebalanceMonths.add(m);
+        if (freq !== "threshold") {
+            for (let m = 0; m < totalMonths; m++) {
+                if (freq === 'monthly') {
+                    ctx.rebalanceMonths.add(m);
+                } else if (freq === 'quarterly' && m % 3 === 0) {
+                    ctx.rebalanceMonths.add(m);
+                } else if (freq === 'semi-annual' && m % 6 === 0) {
+                    ctx.rebalanceMonths.add(m);
+                } else if (freq === 'annual' && m % 12 === 0 && m > 0) {
+                    ctx.rebalanceMonths.add(m);
+                }
             }
-            // 'threshold' mode would require tracking asset values during simulation
         }
     }
 
@@ -1003,11 +1297,21 @@ export function runSimulation(
         const sampleTimelines: TimelineRow[][] = [];
         const finalAssets = new Float64Array(numScenarios);
         const finalAssetsReal = new Float64Array(numScenarios);
+        const retirementAssets = new Float64Array(numScenarios);
+        const retirementAssetsReal = new Float64Array(numScenarios);
+        const firstDepletionMonthByPath = new Int32Array(numScenarios).fill(-1);
+        const firstDepletionAgeByPath = new Float64Array(numScenarios).fill(-1);
 
         for (let p = 0; p < numScenarios; p++) {
             const simulation = simulateOnePath(input, ctx, false, p, { captureTimeline: true });
             finalAssets[p] = simulation.finalTotalAssets;
             finalAssetsReal[p] = simulation.finalTotalAssetsReal;
+            retirementAssets[p] = simulation.retirementTotalAssets;
+            retirementAssetsReal[p] = simulation.retirementTotalAssetsReal;
+            firstDepletionMonthByPath[p] = simulation.firstDepletionMonth;
+            firstDepletionAgeByPath[p] = simulation.firstDepletionMonth >= 0
+                ? (input.current_age + (simulation.firstDepletionMonth / 12))
+                : -1;
 
             if (MAX_SAMPLE_PATHS > 0 && p < MAX_SAMPLE_PATHS) {
                 sampleTimelines.push(simulation.timeline);
@@ -1024,15 +1328,33 @@ export function runSimulation(
         sortedReal.sort();
         const sortedNom = Float64Array.from(finalAssets);
         sortedNom.sort();
+        const sortedRetNom = Float64Array.from(retirementAssets);
+        sortedRetNom.sort();
+        const sortedRetReal = Float64Array.from(retirementAssetsReal);
+        sortedRetReal.sort();
         const meanNom = meanTyped(finalAssets);
         const meanReal = meanTyped(finalAssetsReal);
+        const neverDepletedCount = Array.from(firstDepletionMonthByPath).filter((month) => month < 0).length;
+        const depletedAges = Array.from(firstDepletionAgeByPath).filter((age) => age >= 0).sort((a, b) => a - b);
 
         const summary: SimulationSummary = {
             retireAge: input.retire_age,
             endAge: input.end_age,
+            source: "historical",
             finalTotalAssets: meanNom,
             finalTotalAssetsReal: meanReal,
+            retirementPoint: {
+                age: input.retire_age,
+                totalAssets: percentileSorted(sortedRetNom, 50),
+                totalAssetsReal: percentileSorted(sortedRetReal, 50)
+            },
             successRate: successes / numScenarios,
+            depletion: {
+                firstDepletionMonthByPath: Array.from(firstDepletionMonthByPath),
+                firstDepletionAgeByPath: Array.from(firstDepletionAgeByPath),
+                neverDepletedRate: neverDepletedCount / numScenarios,
+                medianDepletionAge: depletedAges.length > 0 ? percentileSorted(depletedAges, 50) : null
+            },
             mc: {
                 totalAssetsReal: {
                     p10: percentileSorted(sortedReal, 10),
@@ -1064,8 +1386,14 @@ export function runSimulation(
         const summary: SimulationSummary = {
             retireAge: input.retire_age,
             endAge: input.end_age,
+            source: "deterministic",
             finalTotalAssets: deterministic.finalTotalAssets,
             finalTotalAssetsReal: deterministic.finalTotalAssetsReal,
+            retirementPoint: {
+                age: deterministic.retirementAge,
+                totalAssets: deterministic.retirementTotalAssets,
+                totalAssetsReal: deterministic.retirementTotalAssetsReal
+            },
             successRate: deterministic.finalTotalAssets > 0 ? 1.0 : 0.0
         };
 
@@ -1077,7 +1405,10 @@ export function runSimulation(
         };
     } else {
         // Monte Carlo Run
-        const configuredPaths = input.simulation_settings.mc_paths || 100;
+        const rawPaths = Number.isFinite(input.simulation_settings.mc_paths)
+            ? input.simulation_settings.mc_paths
+            : 100;
+        const configuredPaths = Math.max(1, Math.floor(rawPaths || 100));
         const paths = isPreview ? Math.min(configuredPaths, previewPathCap) : configuredPaths;
 
         // Memory Optimization: Store only sample timelines
@@ -1087,6 +1418,10 @@ export function runSimulation(
         // Store only final values for stats
         const finalAssets = new Float64Array(paths);
         const finalAssetsReal = new Float64Array(paths);
+        const retirementAssets = new Float64Array(paths);
+        const retirementAssetsReal = new Float64Array(paths);
+        const firstDepletionMonthByPath = new Int32Array(paths).fill(-1);
+        const firstDepletionAgeByPath = new Float64Array(paths).fill(-1);
 
         // Fan Chart Accumulation: Store all "Total Assets Real" for all paths/months
         // Index = path * totalMonths + month
@@ -1126,6 +1461,12 @@ export function runSimulation(
 
             finalAssets[i] = simulation.finalTotalAssets;
             finalAssetsReal[i] = simulation.finalTotalAssetsReal;
+            retirementAssets[i] = simulation.retirementTotalAssets;
+            retirementAssetsReal[i] = simulation.retirementTotalAssetsReal;
+            firstDepletionMonthByPath[i] = simulation.firstDepletionMonth;
+            firstDepletionAgeByPath[i] = simulation.firstDepletionMonth >= 0
+                ? (input.current_age + (simulation.firstDepletionMonth / 12))
+                : -1;
 
             if (simulation.finalTotalAssets > 0) successCount++;
         }
@@ -1188,16 +1529,34 @@ export function runSimulation(
         sortedNom.sort();
         const sortedReal = Float64Array.from(finalAssetsReal);
         sortedReal.sort();
+        const sortedRetNom = Float64Array.from(retirementAssets);
+        sortedRetNom.sort();
+        const sortedRetReal = Float64Array.from(retirementAssetsReal);
+        sortedRetReal.sort();
 
         const meanNom = meanTyped(finalAssets);
         const meanReal = meanTyped(finalAssetsReal);
+        const neverDepletedCount = Array.from(firstDepletionMonthByPath).filter((month) => month < 0).length;
+        const depletedAges = Array.from(firstDepletionAgeByPath).filter((age) => age >= 0).sort((a, b) => a - b);
 
         const summary: SimulationSummary = {
             retireAge: input.retire_age,
             endAge: input.end_age,
+            source: "montecarlo",
             finalTotalAssets: meanNom,
             finalTotalAssetsReal: meanReal,
+            retirementPoint: {
+                age: input.retire_age,
+                totalAssets: percentileSorted(sortedRetNom, 50),
+                totalAssetsReal: percentileSorted(sortedRetReal, 50)
+            },
             successRate: successCount / paths,
+            depletion: {
+                firstDepletionMonthByPath: Array.from(firstDepletionMonthByPath),
+                firstDepletionAgeByPath: Array.from(firstDepletionAgeByPath),
+                neverDepletedRate: neverDepletedCount / paths,
+                medianDepletionAge: depletedAges.length > 0 ? percentileSorted(depletedAges, 50) : null
+            },
             mc: {
                 totalAssets: {
                     p10: percentileSorted(sortedNom, 10),

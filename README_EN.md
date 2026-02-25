@@ -16,6 +16,7 @@
 - **Monte Carlo Simulation**: 1,000+ path analysis for statistical confidence
 - **GBM (Geometric Brownian Motion)**: Asset growth modeling
 - **Correlation Modeling**: Portfolio-wide correlation coefficient support
+- **Result Source Tagging**: Explicit `deterministic` / `montecarlo` / `historical` source in summary
 
 ### 💰 Diverse Asset Types
 - **Financial Assets**: Stocks, Bonds, Cash, Alternatives
@@ -23,18 +24,20 @@
 - **Pensions**: National Pension (Korea), Private Pension (IRP), DC/DB Plans
 - **Additional Income**: Business income, Labor income
 
-### 📈 Withdrawal Strategies (6 Types)
+### 📈 Withdrawal Strategies (7 Types)
 1. **Fixed Amount**: Constant monthly withdrawal
 2. **Fixed Percentage**: Percentage of remaining balance
 3. **4% Rule (SWR)**: Initial 4% + inflation adjustment
 4. **Gap Filler**: Target spending - Pension = Withdrawal
 5. **VPW**: Variable Percentage based on life expectancy
 6. **Guardrails**: Dynamic adjustment based on market conditions
+7. **Bucket**: Short/Mid/Long bucket-based spending stability
 
 ### 📊 Historical Backtesting (NEW)
 - **40 Years of Data**: Actual market returns from 1985-2024
 - **Rolling Windows**: 20 automatic scenario tests
 - **Preset Scenarios**: Dot-com crash, 2008 crisis, COVID, etc.
+- **Per-Asset Historical Mapping**: `historical_asset_mapping` override support
 
 ### ⚖️ Auto-Rebalancing (NEW)
 - **Frequency Options**: Monthly/Quarterly/Semi-annual/Annual/Threshold
@@ -43,6 +46,7 @@
 
 ### 🎯 Goal Planner (Reverse Calculator)
 - Target Amount → Required Monthly Savings
+- `labor_income` mode → Required savings **rate** (0~100%)
 - Target Success Rate → Optimal Retirement Age
 
 ### 📱 Responsive UI & Dark Mode
@@ -104,6 +108,7 @@ retirement-sim-web/
 │   │   │   ├── simulation.worker.ts  # Web Worker
 │   │   │   ├── workerTypes.ts    # Worker Communication Types
 │   │   │   ├── solver.ts         # Reverse Calculation
+│   │   │   ├── migration.ts      # Legacy schema migration
 │   │   │   ├── riskAnalysis.ts   # Risk Analysis
 │   │   │   ├── types.ts          # TypeScript Type Definitions
 │   │   │   ├── constants.ts      # Initial Values/Constants
@@ -185,6 +190,7 @@ npm run build
 - [GEMINI.md](GEMINI.md) - Simulation Engine Business Logic Details
 - [CLAUDE.md](CLAUDE.md) - Developer Guide and Code Conventions
 - [docs/modeling_notes.md](docs/modeling_notes.md) - Mathematical Modeling Notes
+- [docs/api_examples.md](docs/api_examples.md) - Current input schema and worker protocol examples
 - [docs/roadmap.md](docs/roadmap.md) - Development Roadmap
 
 ---

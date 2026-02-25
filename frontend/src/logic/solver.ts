@@ -3,7 +3,7 @@
  * Uses Binary Search to find simulation inputs that satisfy a target condition.
  */
 
-import { SimulationInput, SimulationResult } from "./types";
+import { SimulationInput } from "./types";
 import { runSimulation } from "./engine";
 
 const MAX_ITERATIONS = 20;
@@ -23,6 +23,12 @@ export function solveForMonthlyContribution(
     baseInput: SimulationInput,
     targetSuccessRate: number
 ): number | null {
+    if (baseInput.labor_income?.enabled) {
+        const solvedRate = solveForLaborSavingsRate(baseInput, targetSuccessRate);
+        if (solvedRate === null) return null;
+        return baseInput.labor_income.currentNetMonthlyIncome * solvedRate;
+    }
+
     // Range: 0 to 20,000,000 (2000 Manwon) - Reasonable savings limits
     let low = 0;
     let high = 50000000; // Max 50 million won/month
@@ -50,6 +56,61 @@ export function solveForMonthlyContribution(
         // Optimization: If close enough?
         // But for binary search minimizing 'amount', we usually run to iterations or monetary tolerance.
         if (high - low < 10000) { // 10,000 won tolerance
+            break;
+        }
+    }
+
+    return sol !== -1 ? sol : null;
+}
+
+/**
+ * Solves for required labor-income savings rate (0~1) when labor_income is enabled.
+ */
+export function solveForLaborSavingsRate(
+    baseInput: SimulationInput,
+    targetSuccessRate: number
+): number | null {
+    if (!baseInput.labor_income?.enabled) {
+        return null;
+    }
+
+    let low = 0;
+    let high = 1;
+    let sol = -1;
+
+    const solverInput = cloneInput(baseInput);
+    solverInput.simulation_settings.mc_paths = 100;
+    if (!solverInput.labor_income) {
+        return null;
+    }
+
+    const baseCurrentRate = Math.max(0, Math.min(1, solverInput.labor_income.currentSavingsRate));
+    const baseEventRates = solverInput.labor_income.events.map((event) => event.savingsRate);
+
+    for (let i = 0; i < MAX_ITERATIONS; i++) {
+        const mid = (low + high) / 2;
+        const scaledCurrentRate = Math.max(0, Math.min(1, mid));
+
+        solverInput.labor_income.currentSavingsRate = scaledCurrentRate;
+        const scale = baseCurrentRate > 0 ? (scaledCurrentRate / baseCurrentRate) : 1;
+        solverInput.labor_income.events = solverInput.labor_income.events.map((event, idx) => ({
+            ...event,
+            savingsRate: Math.max(0, Math.min(1, baseEventRates[idx] * scale))
+        }));
+        solverInput.general.monthly_contribution =
+            solverInput.labor_income.currentNetMonthlyIncome * scaledCurrentRate;
+
+        const result = runSimulation(solverInput);
+        const rate = result.summary.successRate;
+
+        if (rate >= targetSuccessRate) {
+            sol = scaledCurrentRate;
+            high = scaledCurrentRate;
+        } else {
+            low = scaledCurrentRate;
+        }
+
+        if (high - low < 0.001) {
             break;
         }
     }

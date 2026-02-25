@@ -3,8 +3,9 @@
  * Allows users to run historical backtesting simulations
  */
 import React, { useState } from "react";
-import type { SimulationInput } from "../logic/types";
+import type { HistoricalAssetType, SimulationInput } from "../logic/types";
 import { HISTORICAL_SCENARIOS, HISTORICAL_YEAR_MAX, HISTORICAL_YEAR_MIN } from "../logic/historicalScenarioMeta";
+import { mapAssetClassToHistorical } from "../logic/historicalData";
 import { Tooltip } from "./Tooltip";
 
 interface BacktestingPanelProps {
@@ -12,10 +13,20 @@ interface BacktestingPanelProps {
     onInputChange: (input: SimulationInput) => void;
 }
 
+const HISTORICAL_ASSET_OPTIONS: Array<{ value: HistoricalAssetType; label: string }> = [
+    { value: "us_stock", label: "미국 주식" },
+    { value: "global_stock", label: "글로벌 주식" },
+    { value: "us_bond", label: "미국 채권" },
+    { value: "korea_stock", label: "한국 주식" },
+    { value: "cash", label: "현금/단기채" },
+    { value: "reit", label: "리츠" }
+];
+
 export const BacktestingPanel: React.FC<BacktestingPanelProps> = ({ input, onInputChange }) => {
     const [selectedScenario, setSelectedScenario] = useState<string | null>(null);
     const isHistoricalMode = input.simulation_settings.mode === "historical";
     const startYear = input.simulation_settings.historical_start_year || 1985;
+    const historicalMapping = input.simulation_settings.historical_asset_mapping ?? {};
 
     const handleModeToggle = () => {
         const newMode = isHistoricalMode ? "montecarlo" : "historical";
@@ -44,6 +55,19 @@ export const BacktestingPanel: React.FC<BacktestingPanelProps> = ({ input, onInp
             setSelectedScenario(scenarioId);
             handleStartYearChange(scenario.startYear);
         }
+    };
+
+    const handleMappingChange = (assetId: string, mapping: HistoricalAssetType) => {
+        onInputChange({
+            ...input,
+            simulation_settings: {
+                ...input.simulation_settings,
+                historical_asset_mapping: {
+                    ...historicalMapping,
+                    [assetId]: mapping
+                }
+            }
+        });
     };
 
     return (
@@ -116,6 +140,36 @@ export const BacktestingPanel: React.FC<BacktestingPanelProps> = ({ input, onInp
                             <li>S&P 500, KOSPI, 채권, 리츠 실제 수익률 사용</li>
                             <li>각 시나리오는 1년씩 밀려 시작 (다양한 시장 진입 시점 테스트)</li>
                         </ul>
+                    </div>
+
+                    <div className="p-4 bg-white dark:bg-zinc-800 border border-slate-100 dark:border-zinc-700/50 rounded-xl">
+                        <div className="text-sm font-bold text-slate-800 dark:text-slate-200 mb-3">🧩 자산 매핑 (Historical Source)</div>
+                        <div className="flex flex-col gap-3">
+                            {input.portfolio.assetClasses.map((asset) => {
+                                const selected = historicalMapping[asset.id]
+                                    ?? historicalMapping[asset.name]
+                                    ?? mapAssetClassToHistorical(asset.name);
+                                return (
+                                    <div key={asset.id} className="grid grid-cols-1 sm:grid-cols-[1fr_220px] gap-2 items-center">
+                                        <div className="text-sm font-semibold text-slate-700 dark:text-slate-300">{asset.name}</div>
+                                        <select
+                                            className="w-full appearance-none bg-white dark:bg-zinc-900 border border-slate-200 dark:border-zinc-700 rounded-lg py-2 pl-3 pr-8 text-sm font-medium text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-all cursor-pointer"
+                                            value={selected}
+                                            onChange={(event) => handleMappingChange(asset.id, event.target.value as HistoricalAssetType)}
+                                        >
+                                            {HISTORICAL_ASSET_OPTIONS.map((option) => (
+                                                <option key={option.value} value={option.value}>
+                                                    {option.label}
+                                                </option>
+                                            ))}
+                                        </select>
+                                    </div>
+                                );
+                            })}
+                        </div>
+                        <div className="text-xs text-slate-500 dark:text-slate-400 mt-3">
+                            * 매핑은 `asset.id` 기준으로 저장되며, 엔진에서 기본 이름 매핑보다 우선 적용됩니다.
+                        </div>
                     </div>
                 </div>
             )}

@@ -8,7 +8,7 @@ type GoalPlannerProps = {
 };
 
 export const GoalPlanner: React.FC<GoalPlannerProps> = ({ input, onApply }) => {
-    const { solveContribution, solveRetireAge } = useSimulation();
+    const { solveContribution, solveLaborSavingsRate, solveRetireAge } = useSimulation();
     const [targetRate, setTargetRate] = useState(0.9);
     const [mode, setMode] = useState<'contribution' | 'retire_age'>('contribution');
     const [result, setResult] = useState<number | null>(null);
@@ -20,7 +20,9 @@ export const GoalPlanner: React.FC<GoalPlannerProps> = ({ input, onApply }) => {
 
         try {
             const solvedValue = mode === 'contribution'
-                ? await solveContribution(input, targetRate)
+                ? input.labor_income?.enabled
+                    ? await solveLaborSavingsRate(input, targetRate)
+                    : await solveContribution(input, targetRate)
                 : await solveRetireAge(input, targetRate);
             setResult(solvedValue);
         } catch (error) {
@@ -35,7 +37,19 @@ export const GoalPlanner: React.FC<GoalPlannerProps> = ({ input, onApply }) => {
         const newInput = { ...input };
 
         if (mode === 'contribution') {
-            newInput.general.monthly_contribution = result;
+            if (newInput.labor_income?.enabled) {
+                const prevRate = newInput.labor_income.currentSavingsRate || 0;
+                const nextRate = Math.max(0, Math.min(1, result));
+                const scale = prevRate > 0 ? (nextRate / prevRate) : 1;
+                newInput.labor_income.currentSavingsRate = nextRate;
+                newInput.labor_income.events = newInput.labor_income.events.map((event) => ({
+                    ...event,
+                    savingsRate: Math.max(0, Math.min(1, event.savingsRate * scale))
+                }));
+                newInput.general.monthly_contribution = newInput.labor_income.currentNetMonthlyIncome * nextRate;
+            } else {
+                newInput.general.monthly_contribution = result;
+            }
         } else {
             newInput.retire_age = result;
         }
@@ -106,13 +120,17 @@ export const GoalPlanner: React.FC<GoalPlannerProps> = ({ input, onApply }) => {
                         <div className="text-sm font-semibold text-blue-600/80 dark:text-blue-400/80">제안하는 권장 설정값</div>
                         <div className="text-3xl font-bold my-2 text-blue-700 dark:text-blue-400">
                             {mode === 'contribution'
-                                ? `${Math.round(result / 10000).toLocaleString()}만원 / 월`
+                                ? input.labor_income?.enabled
+                                    ? `저축률 ${(result * 100).toFixed(1)}%`
+                                    : `${Math.round(result / 10000).toLocaleString()}만원 / 월`
                                 : `${result}세 은퇴`
                             }
                         </div>
                         <div className="text-xs font-medium text-slate-500 dark:text-slate-400 mb-4">
                             (현재 입력값: {mode === 'contribution'
-                                ? `${Math.round(input.general.monthly_contribution / 10000).toLocaleString()}만원`
+                                ? input.labor_income?.enabled
+                                    ? `저축률 ${(input.labor_income.currentSavingsRate * 100).toFixed(1)}%`
+                                    : `${Math.round(input.general.monthly_contribution / 10000).toLocaleString()}만원`
                                 : `${input.retire_age}세`
                             })
                         </div>
@@ -129,7 +147,7 @@ export const GoalPlanner: React.FC<GoalPlannerProps> = ({ input, onApply }) => {
 
             {result === null && !isSolving && mode === 'contribution' && (
                 <div className="mt-4 p-3 bg-amber-50 dark:bg-amber-900/10 border border-amber-200 dark:border-amber-900/30 rounded-lg text-xs font-medium text-amber-700 dark:text-amber-500 flex items-center gap-2">
-                    <span className="text-base leading-none">💡</span> 주의: 탐색 범위는 0 ~ 5,000만원/월 입니다.
+                    <span className="text-base leading-none">💡</span> 주의: {input.labor_income?.enabled ? '저축률 탐색 범위는 0% ~ 100%입니다.' : '탐색 범위는 0 ~ 5,000만원/월 입니다.'}
                 </div>
             )}
         </div>

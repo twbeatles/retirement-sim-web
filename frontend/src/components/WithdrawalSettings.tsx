@@ -12,6 +12,8 @@ const STRATEGIES: { id: WithdrawalStrategy; label: string; desc: string }[] = [
     { id: "fixed_percentage", label: "자산 비율 인출 (정율)", desc: "현재 잔액의 N%를 매년(월할) 인출합니다." },
     { id: "safe_withdrawal_rate", label: "4% 룰 (Safe Withdrawal Rate)", desc: "초기 자산의 N%를 인출하되, 물가 상승분을 반영하여 구매력을 유지합니다." },
     { id: "vpw", label: "가변 인출 (VPW)", desc: "기대 수명을 고려하여, 자산이 고갈되지 않으면서 수익률에 따라 인출액을 조절합니다." },
+    { id: "guardrails", label: "가드레일 (Guardrails)", desc: "시장 상황에 따라 인출액을 자동으로 상/하향 조절합니다." },
+    { id: "bucket", label: "버킷 전략 (Bucket)", desc: "단기/중기/장기 버킷을 활용해 인출 안정성을 높입니다." },
 ];
 
 export function WithdrawalSettings({ withdrawal, onChange }: Props) {
@@ -125,6 +127,23 @@ export function WithdrawalSettings({ withdrawal, onChange }: Props) {
                             onChange={(e) => updateField("vpwMinWithdrawalRate", e.target.value ? Number(e.target.value) : undefined)}
                         />
                     </div>
+                    <div className="flex flex-col gap-1.5">
+                        <label className="text-sm font-semibold text-slate-700 dark:text-slate-300">연간 인출 변동 상한 (선택사항, 0~1)</label>
+                        <input
+                            className="w-full px-3 py-2 bg-white dark:bg-zinc-900 border border-slate-200 dark:border-zinc-700 rounded-lg text-sm text-right font-medium text-slate-900 dark:text-white placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-all"
+                            type="number" step="0.01"
+                            value={withdrawal.vpwMaxYoYChange || ""}
+                            placeholder="예: 0.10 (연 10%)"
+                            onChange={(e) => updateField("vpwMaxYoYChange", e.target.value ? Number(e.target.value) : undefined)}
+                        />
+                    </div>
+                </div>
+            )}
+
+            {(withdrawal.strategy === "guardrails" || withdrawal.strategy === "bucket") && (
+                <div className="mt-3 p-3 bg-amber-50 dark:bg-amber-900/20 border border-amber-100 dark:border-amber-900/30 rounded-lg text-sm text-amber-800 dark:text-amber-300 font-medium">
+                    <span className="font-bold">* </span>
+                    해당 전략의 상세 파라미터는 아래 고급 설정에서 조정할 수 있습니다.
                 </div>
             )}
 

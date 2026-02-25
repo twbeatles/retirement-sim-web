@@ -66,6 +66,7 @@ frontend/src/
 │   ├── simulation.worker.ts  # Web Worker (비동기 처리)
 │   ├── workerTypes.ts        # Worker 통신 타입 정의
 │   ├── solver.ts             # 역산 계산 (Binary Search)
+│   ├── migration.ts          # 구버전 입력 스키마 마이그레이션
 │   ├── riskAnalysis.ts       # 리스크 분석 함수
 │   ├── types.ts              # TypeScript 타입 정의
 │   ├── constants.ts          # 초기값/상수
@@ -112,6 +113,10 @@ frontend/src/
 - 다크모드: `[data-theme='dark']` 셀렉터로 오버라이드
 - 반응형: `@media (max-width: 768px)` 모바일 대응
 
+### 3-5. 스키마 호환성
+- Import/저장 데이터는 `logic/migration.ts`를 통해 최신 `SimulationInput`으로 승격 후 사용
+- Historical 결과는 `result.mode`를 유지하고 `result.summary.source`로 실제 출처를 구분
+
 ---
 
 ## 4. 주요 컴포넌트 가이드
@@ -138,9 +143,19 @@ useEffect(() => {
 ```typescript
 // 핵심 함수
 runSimulation(input: SimulationInput): SimulationResult
-simulateOnePath(ctx: SimulationContext): { timeline, depleted, depletionAge }
+simulateOnePath(ctx: SimulationContext): { timeline, finalTotalAssets, firstDepletionMonth }
 calculatePortfolioMetrics(portfolio): { ret, vol, totalAlloc }
 ```
+
+### 4-4. Worker 프로토콜
+`workerTypes.ts`의 `WorkerRequestKind` 기준:
+- `SIMULATION`
+- `SIMULATION_BATCH`
+- `SOLVE_CONTRIBUTION`
+- `SOLVE_LABOR_SAVINGS_RATE`
+- `SOLVE_RETIRE_AGE`
+- `SENSITIVITY_ANALYSIS`
+- `PENSION_OPTIMIZATION`
 
 ### 4-3. storage.ts (IndexedDB)
 ```typescript
@@ -204,6 +219,7 @@ npm run preview # 빌드 결과 미리보기
 - [ ] `types.ts`에 새 타입 정의했는가?
 - [ ] `constants.ts`에 초기값 추가했는가?
 - [ ] `INITIAL_INPUT` 업데이트했는가?
+- [ ] Import/Storage 경로에 `migration.ts` 적용했는가?
 - [ ] 빌드 에러 없는가? (`npm run build`)
 
 ---

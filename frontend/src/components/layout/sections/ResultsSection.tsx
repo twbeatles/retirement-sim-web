@@ -64,45 +64,57 @@ export const ResultsSection = React.memo(function ResultsSection({
             ? 1
             : result.pathCount
         : input.simulation_settings.mc_paths;
-    const medianRealAssets = summary
+    const retirementRealAssets = summary
         ? result?.mode === "deterministic"
-            ? summary.finalTotalAssetsReal
-            : (summary.mc?.totalAssetsReal.p50 ?? summary.finalTotalAssetsReal)
+            ? (summary.retirementPoint?.totalAssetsReal ?? summary.finalTotalAssetsReal)
+            : (summary.retirementPoint?.totalAssetsReal ?? summary.mc?.totalAssetsReal.p50 ?? summary.finalTotalAssetsReal)
         : 0;
     const meanRealAssets = summary
         ? result?.mode === "deterministic"
             ? summary.finalTotalAssetsReal
             : (summary.mc?.totalAssetsReal.mean ?? summary.finalTotalAssetsReal)
         : 0;
+    const sourceLabel = summary?.source === "historical"
+        ? "Historical"
+        : summary?.source === "montecarlo"
+            ? "Monte Carlo"
+            : "Deterministic";
 
     return (
         <>
             {summary && (
-                <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4 mb-6 lg:mb-8">
-                    <div className="bg-white/60 dark:bg-zinc-800/60 backdrop-blur-md rounded-[1.5rem] p-5 sm:p-6 border border-slate-200/50 dark:border-zinc-700/50 shadow-sm flex flex-col items-center justify-center text-center hover:-translate-y-1 transition-all duration-300 group">
-                        <div className="text-xs sm:text-sm font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider mb-2">은퇴 성공 확률</div>
-                        <div
-                            className={`text-3xl sm:text-4xl font-black tabular-nums tracking-tighter my-2 ${summary.successRate > 0.8 ? "text-emerald-500" : summary.successRate > 0.5 ? "text-amber-500" : "text-rose-500"}`}
-                        >
-                            {(summary.successRate * 100).toFixed(1)}%
-                        </div>
-                        <div className="text-xs font-semibold text-slate-400 dark:text-slate-500">
-                            {input.end_age}세까지 자산 유지 <br className="hidden sm:block" />({simulationCount}회 시뮬레이션)
-                        </div>
+                <div className="mb-6 lg:mb-8">
+                    <div className="mb-3">
+                        <span className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full text-xs font-bold tracking-wide uppercase bg-slate-100/80 dark:bg-zinc-800/80 text-slate-600 dark:text-slate-300 border border-slate-200/60 dark:border-zinc-700/60">
+                            결과 소스: {sourceLabel}
+                        </span>
                     </div>
-                    <div className="bg-white/60 dark:bg-zinc-800/60 backdrop-blur-md rounded-[1.5rem] p-5 sm:p-6 border border-slate-200/50 dark:border-zinc-700/50 shadow-sm flex flex-col items-center justify-center text-center hover:-translate-y-1 transition-all duration-300">
-                        <div className="text-xs sm:text-sm font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider mb-2">
-                            {result?.mode === "deterministic" ? "은퇴 시 자산" : "은퇴 시 자산 (중위값)"}
+                    <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
+                        <div className="bg-white/60 dark:bg-zinc-800/60 backdrop-blur-md rounded-[1.5rem] p-5 sm:p-6 border border-slate-200/50 dark:border-zinc-700/50 shadow-sm flex flex-col items-center justify-center text-center hover:-translate-y-1 transition-all duration-300 group">
+                            <div className="text-xs sm:text-sm font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider mb-2">은퇴 성공 확률</div>
+                            <div
+                                className={`text-3xl sm:text-4xl font-black tabular-nums tracking-tighter my-2 ${summary.successRate > 0.8 ? "text-emerald-500" : summary.successRate > 0.5 ? "text-amber-500" : "text-rose-500"}`}
+                            >
+                                {(summary.successRate * 100).toFixed(1)}%
+                            </div>
+                            <div className="text-xs font-semibold text-slate-400 dark:text-slate-500">
+                                {input.end_age}세까지 자산 유지 <br className="hidden sm:block" />({simulationCount}회 시뮬레이션)
+                            </div>
                         </div>
-                        <div className="text-2xl sm:text-3xl font-black text-slate-800 dark:text-white tabular-nums tracking-tight my-2">{formatMoney(medianRealAssets)}</div>
-                        <div className="text-xs font-semibold text-slate-400 dark:text-slate-500">현재 가치 기준 (물가 반영)</div>
-                    </div>
-                    <div className="bg-white/60 dark:bg-zinc-800/60 backdrop-blur-md rounded-[1.5rem] p-5 sm:p-6 border border-slate-200/50 dark:border-zinc-700/50 shadow-sm flex flex-col items-center justify-center text-center hover:-translate-y-1 transition-all duration-300">
-                        <div className="text-xs sm:text-sm font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider mb-2">
-                            {result?.mode === "deterministic" ? "최종 자산 잔존" : "최종 자산 잔존 (평균값)"}
+                        <div className="bg-white/60 dark:bg-zinc-800/60 backdrop-blur-md rounded-[1.5rem] p-5 sm:p-6 border border-slate-200/50 dark:border-zinc-700/50 shadow-sm flex flex-col items-center justify-center text-center hover:-translate-y-1 transition-all duration-300">
+                            <div className="text-xs sm:text-sm font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider mb-2">
+                                {result?.mode === "deterministic" ? "은퇴 시 자산" : "은퇴 시 자산 (중위값)"}
+                            </div>
+                            <div className="text-2xl sm:text-3xl font-black text-slate-800 dark:text-white tabular-nums tracking-tight my-2">{formatMoney(retirementRealAssets)}</div>
+                            <div className="text-xs font-semibold text-slate-400 dark:text-slate-500">현재 가치 기준 (물가 반영)</div>
                         </div>
-                        <div className="text-2xl sm:text-3xl font-black text-slate-800 dark:text-white tabular-nums tracking-tight my-2">{formatMoney(meanRealAssets)}</div>
-                        <div className="text-xs font-semibold text-slate-400 dark:text-slate-500">{input.end_age}세 시점 예상 잔고</div>
+                        <div className="bg-white/60 dark:bg-zinc-800/60 backdrop-blur-md rounded-[1.5rem] p-5 sm:p-6 border border-slate-200/50 dark:border-zinc-700/50 shadow-sm flex flex-col items-center justify-center text-center hover:-translate-y-1 transition-all duration-300">
+                            <div className="text-xs sm:text-sm font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider mb-2">
+                                {result?.mode === "deterministic" ? "최종 자산 잔존" : "최종 자산 잔존 (평균값)"}
+                            </div>
+                            <div className="text-2xl sm:text-3xl font-black text-slate-800 dark:text-white tabular-nums tracking-tight my-2">{formatMoney(meanRealAssets)}</div>
+                            <div className="text-xs font-semibold text-slate-400 dark:text-slate-500">{input.end_age}세 시점 예상 잔고</div>
+                        </div>
                     </div>
                 </div>
             )}

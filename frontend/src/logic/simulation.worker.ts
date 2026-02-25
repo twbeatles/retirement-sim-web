@@ -1,7 +1,7 @@
 /// <reference lib="webworker" />
 
 import { runSimulation } from "./engine";
-import { optimizePensionStartAge, solveForMonthlyContribution, solveForRetirementAge } from "./solver";
+import { optimizePensionStartAge, solveForLaborSavingsRate, solveForMonthlyContribution, solveForRetirementAge } from "./solver";
 import { runSensitivityAnalysis } from "./riskAnalysis";
 import {
     AnyWorkerRequest,
@@ -34,6 +34,14 @@ ctx.onmessage = (event: MessageEvent<AnyWorkerRequest>) => {
             case "SOLVE_CONTRIBUTION": {
                 const payload = msg.payload as WorkerRequestByKind["SOLVE_CONTRIBUTION"];
                 responsePayload = solveForMonthlyContribution(
+                    payload.input,
+                    payload.targetSuccessRate
+                );
+                break;
+            }
+            case "SOLVE_LABOR_SAVINGS_RATE": {
+                const payload = msg.payload as WorkerRequestByKind["SOLVE_LABOR_SAVINGS_RATE"];
+                responsePayload = solveForLaborSavingsRate(
                     payload.input,
                     payload.targetSuccessRate
                 );

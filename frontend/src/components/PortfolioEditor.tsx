@@ -249,10 +249,15 @@ export function PortfolioEditor({ portfolio, onChange }: Props) {
                     <input
                         type="number"
                         step="0.1"
-                        min="-1"
+                        min="-0.99"
                         max="1"
                         value={portfolio.manualCorrelation ?? 1.0}
-                        onChange={(event) => onChange({ ...portfolio, manualCorrelation: Number(event.target.value) })}
+                        onChange={(event) =>
+                            onChange({
+                                ...portfolio,
+                                manualCorrelation: Math.max(-0.99, Math.min(1, Number(event.target.value)))
+                            })
+                        }
                         className="w-full sm:w-28 px-3 py-1.5 bg-white dark:bg-zinc-900 border border-slate-200 dark:border-zinc-700 rounded-lg text-sm text-right font-medium text-slate-900 dark:text-white placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-all font-mono"
                     />
                 </div>

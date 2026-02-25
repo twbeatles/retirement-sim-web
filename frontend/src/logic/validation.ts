@@ -14,6 +14,15 @@ export function validateSimulationInput(input: SimulationInput): ValidationWarni
         warnings.push({ field: 'end_age', message: '종료 나이가 너무 높습니다 (120세 이하 권장).', severity: 'warning' });
     }
 
+    // Simulation settings validation
+    if (!Number.isFinite(input.simulation_settings.mc_paths) || !Number.isInteger(input.simulation_settings.mc_paths)) {
+        warnings.push({ field: 'simulation_settings', message: '시뮬레이션 횟수는 정수여야 합니다.', severity: 'error' });
+    } else if (input.simulation_settings.mc_paths < 1) {
+        warnings.push({ field: 'simulation_settings', message: '시뮬레이션 횟수는 1 이상이어야 합니다.', severity: 'error' });
+    } else if (input.simulation_settings.mc_paths > 20000) {
+        warnings.push({ field: 'simulation_settings', message: '시뮬레이션 횟수가 매우 큽니다. 성능 저하 가능성이 있습니다.', severity: 'warning' });
+    }
+
     // Portfolio validations
     if (!input.portfolio.assetClasses || input.portfolio.assetClasses.length === 0) {
         warnings.push({ field: 'portfolio', message: '포트폴리오에 최소 하나의 자산군이 포함되어야 합니다.', severity: 'error' });
@@ -21,6 +30,26 @@ export function validateSimulationInput(input: SimulationInput): ValidationWarni
         const totalAlloc = input.portfolio.assetClasses.reduce((sum, a) => sum + a.allocation, 0);
         if (Math.abs(totalAlloc - 1.0) > 0.01) {
             warnings.push({ field: 'portfolio', message: `포트폴리오 비중 합계가 ${(totalAlloc * 100).toFixed(0)}%입니다. 100%가 되어야 합니다.`, severity: 'error' });
+        }
+
+        const rho = input.portfolio.manualCorrelation ?? 1;
+        if (!Number.isFinite(rho) || rho < -1 || rho > 1) {
+            warnings.push({ field: 'portfolio', message: '상관계수는 -1 ~ 1 범위여야 합니다.', severity: 'error' });
+        } else {
+            let variance = 0;
+            for (let i = 0; i < input.portfolio.assetClasses.length; i++) {
+                for (let j = 0; j < input.portfolio.assetClasses.length; j++) {
+                    const a = input.portfolio.assetClasses[i];
+                    const b = input.portfolio.assetClasses[j];
+                    const cov = i === j
+                        ? a.annualVolatility * b.annualVolatility
+                        : rho * a.annualVolatility * b.annualVolatility;
+                    variance += a.allocation * b.allocation * cov;
+                }
+            }
+            if (variance < -1e-9) {
+                warnings.push({ field: 'portfolio', message: '현재 상관계수/변동성 조합은 유효한 공분산 행렬이 아닐 수 있습니다.', severity: 'error' });
+            }
         }
     }
 
@@ -71,11 +100,12 @@ export function validateSimulationInput(input: SimulationInput): ValidationWarni
     }
 
     // Bucket strategy validations
-    if (input.withdrawal.strategy === 'bucket' && input.bucket) {
-        if (!input.bucket.shortTermYears || input.bucket.shortTermYears < 1) {
+    if (input.withdrawal.strategy === 'bucket') {
+        if (!input.bucket) {
+            warnings.push({ field: 'bucket', message: 'Bucket 전략 설정이 필요합니다.', severity: 'error' });
+        } else if (!input.bucket.shortTermYears || input.bucket.shortTermYears < 1) {
             warnings.push({ field: 'bucket', message: 'Bucket 전략의 단기 버킷 기간이 설정되지 않았습니다.', severity: 'error' });
-        }
-        if (!input.bucket.midTermYears || input.bucket.midTermYears < 1) {
+        } else if (!input.bucket.midTermYears || input.bucket.midTermYears < 1) {
             warnings.push({ field: 'bucket', message: 'Bucket 전략의 중기 버킷 기간이 설정되지 않았습니다.', severity: 'error' });
         }
     }
@@ -166,14 +196,26 @@ export function validateSimulationInput(input: SimulationInput): ValidationWarni
 
     // Tax Credit validation
     if (input.tax_credit?.enabled) {
-        if (input.tax_credit.creditRate < 0 || input.tax_credit.creditRate > 1) {
-            warnings.push({ field: 'tax_credit', message: '세액공제율은 0%~100% 사이여야 합니다.', severity: 'error' });
-        }
         if (input.tax_credit.pensionSavingsContribution < 0) {
             warnings.push({ field: 'tax_credit', message: '연금저축 납입액은 0 이상이어야 합니다.', severity: 'error' });
         }
         if (input.tax_credit.irpContribution < 0) {
             warnings.push({ field: 'tax_credit', message: 'IRP 납입액은 0 이상이어야 합니다.', severity: 'error' });
+        }
+        if (input.tax_credit.mode === 'manual') {
+            const manualRate = input.tax_credit.creditRate ?? -1;
+            if (manualRate < 0 || manualRate > 1) {
+                warnings.push({ field: 'tax_credit', message: '수동 세액공제율은 0%~100% 사이여야 합니다.', severity: 'error' });
+            }
+        }
+        if (input.tax_credit.mode !== 'manual' && input.tax_credit.mode !== 'law_2026') {
+            warnings.push({ field: 'tax_credit', message: '세액공제 모드가 유효하지 않습니다.', severity: 'error' });
+        }
+        if (input.tax_credit.lawYear !== 2026) {
+            warnings.push({ field: 'tax_credit', message: '세액공제 법령 연도는 2026으로 고정됩니다.', severity: 'warning' });
+        }
+        if (input.tax_credit.incomeBasis !== 'simulated_taxable_income') {
+            warnings.push({ field: 'tax_credit', message: '세액공제 소득 기준은 시뮬레이션 과세소득으로 고정됩니다.', severity: 'warning' });
         }
     }
 
@@ -181,6 +223,12 @@ export function validateSimulationInput(input: SimulationInput): ValidationWarni
     if (input.rebalancing?.enabled) {
         if (input.rebalancing.tradingCostPercent && input.rebalancing.tradingCostPercent > 0.02) {
             warnings.push({ field: 'rebalancing', message: '거래 비용이 2% 이상입니다. 실제 비용을 확인해주세요.', severity: 'warning' });
+        }
+        if (input.rebalancing.frequency === 'threshold') {
+            const threshold = input.rebalancing.thresholdPercent ?? 0;
+            if (threshold <= 0 || threshold >= 1) {
+                warnings.push({ field: 'rebalancing', message: '임계값 기반 리밸런싱은 0%~100% 사이 값이 필요합니다.', severity: 'error' });
+            }
         }
         if (input.rebalancing.thresholdPercent && input.rebalancing.thresholdPercent > 0.20) {
             warnings.push({ field: 'rebalancing', message: '임계값이 20% 이상이면 리밸런싱 효과가 미미합니다.', severity: 'info' });

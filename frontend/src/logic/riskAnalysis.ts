@@ -5,23 +5,18 @@
 
 import { SimulationInput, SimulationResult, DepletionAnalysis, SensitivityResult, SoRRAnalysis } from './types';
 import { runSimulation } from './engine';
-import { percentile, mean } from './math';
+import { percentile } from './math';
 
 /**
  * Analyze when assets are depleted across Monte Carlo paths
  */
 export function analyzeDepletion(result: SimulationResult): DepletionAnalysis | null {
-    if (result.mode !== 'montecarlo' || !result.sampleTimelines) {
+    if (result.mode !== 'montecarlo') {
         return null;
     }
 
-    // For a proper analysis, we need to run simulation with more paths
-    // and track depletion for each path
-    // This is a simplified version using sample timelines
+    const summaryDepletionAges = result.summary.depletion?.firstDepletionAgeByPath;
     const depletionAges: number[] = [];
-
-    // We need the full trajectoryStats to analyze all paths
-    // For now, we'll create histogram buckets based on sample paths
     const histogramBuckets: { [key: string]: number } = {
         '60-64': 0,
         '65-69': 0,
@@ -34,29 +29,47 @@ export function analyzeDepletion(result: SimulationResult): DepletionAnalysis | 
         'never': 0
     };
 
-    result.sampleTimelines.forEach(timeline => {
-        let depleted = false;
-        for (const row of timeline) {
-            if (row.totalAssets <= 0) {
-                depletionAges.push(row.age);
-                const bucket = Math.floor(row.age / 5) * 5;
-                if (bucket < 60) histogramBuckets['60-64']++;
-                else if (bucket >= 95) histogramBuckets['95+']++;
-                else histogramBuckets[`${bucket}-${bucket + 4}`]++;
-                depleted = true;
-                break;
+    if (summaryDepletionAges && summaryDepletionAges.length > 0) {
+        for (const age of summaryDepletionAges) {
+            if (age < 0) {
+                depletionAges.push(-1);
+                histogramBuckets['never']++;
+                continue;
             }
+            depletionAges.push(age);
+            const bucket = Math.floor(age / 5) * 5;
+            if (bucket < 60) histogramBuckets['60-64']++;
+            else if (bucket >= 95) histogramBuckets['95+']++;
+            else histogramBuckets[`${bucket}-${bucket + 4}`]++;
         }
-        if (!depleted) {
-            depletionAges.push(-1);
-            histogramBuckets['never']++;
-        }
-    });
+    } else if (result.sampleTimelines) {
+        // Fallback for legacy payloads.
+        result.sampleTimelines.forEach((timeline) => {
+            let depleted = false;
+            for (const row of timeline) {
+                if (row.totalAssets <= 0) {
+                    depletionAges.push(row.age);
+                    const bucket = Math.floor(row.age / 5) * 5;
+                    if (bucket < 60) histogramBuckets['60-64']++;
+                    else if (bucket >= 95) histogramBuckets['95+']++;
+                    else histogramBuckets[`${bucket}-${bucket + 4}`]++;
+                    depleted = true;
+                    break;
+                }
+            }
+            if (!depleted) {
+                depletionAges.push(-1);
+                histogramBuckets['never']++;
+            }
+        });
+    } else {
+        return null;
+    }
 
     const depletedAges = depletionAges.filter(a => a > 0);
     const medianDepletionAge = depletedAges.length > 0 ? percentile(depletedAges, 50) : null;
 
-    const total = result.sampleTimelines.length;
+    const total = Math.max(1, depletionAges.length);
     const histogram = Object.entries(histogramBuckets).map(([ageRange, count]) => ({
         ageRange,
         count,
@@ -254,14 +267,13 @@ export function calculateTaxCredit(
     irpContribution: number,
     totalIncome: number
 ): { creditAmount: number; effectiveCreditRate: number } {
-    // Korean 2024 tax credit rates
-    // Income <= 55M KRW: 15%
-    // Income > 55M KRW: 12%
-
-    const creditRate = totalIncome <= 55000000 ? 0.15 : 0.12;
+    // Korean 2026 reference table (incl. local tax)
+    // Income <= 55M KRW: 16.5%
+    // Income > 55M KRW: 13.2%
+    const creditRate = totalIncome <= 55000000 ? 0.165 : 0.132;
 
     // Contribution limits
-    const pensionLimit = 4000000; // 400만원
+    const pensionLimit = 6000000; // 600만원
     const irpLimit = 3000000; // 300만원
     const totalLimit = 9000000; // 900만원 (연금저축 + IRP 합계)
 

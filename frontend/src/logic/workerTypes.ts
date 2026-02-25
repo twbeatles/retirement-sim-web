@@ -9,6 +9,7 @@ export type WorkerRequestKind =
     | "SIMULATION"
     | "SIMULATION_BATCH"
     | "SOLVE_CONTRIBUTION"
+    | "SOLVE_LABOR_SAVINGS_RATE"
     | "SOLVE_RETIRE_AGE"
     | "SENSITIVITY_ANALYSIS"
     | "PENSION_OPTIMIZATION";
@@ -35,6 +36,11 @@ export type SimulationBatchRequestPayload = {
 };
 
 export type SolveContributionRequestPayload = {
+    input: SimulationInput;
+    targetSuccessRate: number;
+};
+
+export type SolveLaborSavingsRateRequestPayload = {
     input: SimulationInput;
     targetSuccessRate: number;
 };
@@ -66,6 +72,7 @@ export type WorkerRequestByKind = {
     SIMULATION: SimulationRequestPayload;
     SIMULATION_BATCH: SimulationBatchRequestPayload;
     SOLVE_CONTRIBUTION: SolveContributionRequestPayload;
+    SOLVE_LABOR_SAVINGS_RATE: SolveLaborSavingsRateRequestPayload;
     SOLVE_RETIRE_AGE: SolveRetireAgeRequestPayload;
     SENSITIVITY_ANALYSIS: SensitivityAnalysisRequestPayload;
     PENSION_OPTIMIZATION: PensionOptimizationRequestPayload;
@@ -75,6 +82,7 @@ export type WorkerResponseByKind = {
     SIMULATION: SimulationResult;
     SIMULATION_BATCH: SimulationResult[];
     SOLVE_CONTRIBUTION: number | null;
+    SOLVE_LABOR_SAVINGS_RATE: number | null;
     SOLVE_RETIRE_AGE: number | null;
     SENSITIVITY_ANALYSIS: SensitivityResult;
     PENSION_OPTIMIZATION: PensionOptimizationResult[];

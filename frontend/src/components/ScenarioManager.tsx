@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from "react";
 import { SimulationInput } from "../logic/types";
 import { validateSimulationInput } from "../logic/validation";
+import { migrateSimulationInput } from "../logic/migration";
 
 import { scenarioStorage, SavedScenario } from "../services/storage";
 
@@ -138,7 +139,8 @@ export const ScenarioManager = React.memo(function ScenarioManager({ currentInpu
                                 const json = JSON.parse(ev.target?.result as string);
 
                                 // Validate using comprehensive validator
-                                const warnings = validateSimulationInput(json as SimulationInput);
+                                const migrated = migrateSimulationInput(json as Record<string, unknown>);
+                                const warnings = validateSimulationInput(migrated);
                                 const errors = warnings.filter(w => w.severity === 'error');
 
                                 if (errors.length > 0) {
@@ -146,8 +148,8 @@ export const ScenarioManager = React.memo(function ScenarioManager({ currentInpu
                                     return;
                                 }
 
-                                if (json.current_age && json.portfolio) {
-                                    load(json as SimulationInput, warnings.length > 0
+                                if (migrated.current_age && migrated.portfolio) {
+                                    load(migrated, warnings.length > 0
                                         ? `경고 사항이 있습니다:\n${warnings.map(w => w.message).join('\n')}\n\n그래도 불러오시겠습니까?`
                                         : "파일에서 설정을 불러오시겠습니까?");
                                 } else {

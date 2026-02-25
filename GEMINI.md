@@ -16,19 +16,31 @@
     - $\mu$ (Expected Return): `PortfolioEditor`에서 설정된 자산별 가중평균 수익률
     - $\sigma$ (Volatility): `manualCorrelation`을 반영한 포트폴리오 전체 변동성
     - $Z$: 표준정규분포 난수 (Box-Muller 변환, `math.ts`)
+- **월 환산 규칙**:
+    - 수익률: `monthlyRateFromAnnual(annual)`의 복리 환산 사용
+    - 변동성: `annualVolatility / sqrt(12)`
 - **다변량 상관관계**:
     - 사용자 입력 `manualCorrelation` ($\rho$)을 사용하여 전체 포트폴리오의 분산 계산
     - $\sigma_p = \sqrt{w^T \cdot \Sigma \cdot w}$
+- **리밸런싱 활성화 시**:
+    - 자산별 밸런스를 별도 추적
+    - `threshold` 및 `taxEfficient` 옵션을 실제 거래 로직에 반영
 
 ### 1-2. 몬테카를로 시뮬레이션
 - **경로 생성**: `mc_paths` (기본 1,000회) 독립 시뮬레이션
 - **성공 확률**: `end_age` 시점에 `totalAssets > 0`인 경로 비율
 - **수렴성**: 1,000회 이상 실행 시 통계적 유의미성 확보
+- **안전장치**: `mc_paths`는 엔진에서 최소 1로 clamp
+- **경로 통계**: `summary.depletion`에 경로별 `firstDepletionMonth/Age` 집계
 
 ### 1-3. Web Worker 통합
 - **파일**: `frontend/src/logic/simulation.worker.ts`
 - **목적**: 무거운 시뮬레이션을 백그라운드 스레드에서 실행하여 UI 블로킹 방지
-- **통신**: `postMessage`로 `SimulationInput` 전송, 결과로 `SimulationResult` 수신
+- **실행 레인**:
+    - `interactive`: preview simulation
+    - `compute`: full simulation, solver, sensitivity 등
+- **통신 프로토콜**: `{ requestId, kind, payload }`
+- **확장 kind**: `SOLVE_LABOR_SAVINGS_RATE` 포함
 
 ---
 
@@ -43,12 +55,11 @@
 | **Safe Withdrawal Rate** | 초기 자산 4% + 매년 물가상승률 증액 | 자산 고갈 위험 있음 |
 | **Target Spending (Gap Filler)** | 목표 생활비 - 연금 = 인출액 | 가장 현실적 |
 | **VPW** | `calculateVPWRate` (기대수명 기반) | 정확한 자산 소진 |
-| **Guardrails** | 인출률 상/하한선에 따라 ±10% 동적 조정 | 고갈 위험 획기적 감소 |
+| **Guardrails** | 인출률 상/하한선에 따라 동적 조정 | 시장 경로 적응 |
+| **Bucket** | 단기/중기/장기 버킷 기반 인출 | 생활비 안정성 개선 |
 
-### Bucket Strategy (참조용)
-- **Bucket 1** (1~3년): 현금성 자산, 즉시 충당
-- **Bucket 2** (4~10년): 채권/중위험 자산
-- **Bucket 3** (11년+): 주식/고위험 자산, 장기 성장
+VPW 보정 규칙:
+- `vpwMaxYoYChange`가 설정된 경우, 월 하한은 `lastWithdrawal * (1 - maxChangePerMonth)`로 제한
 
 ---
 
@@ -67,6 +78,10 @@
 - **Detailed Mode (KR 2023 과표)**:
     - 기본 공제: 연 150만원
     - 과세표준 구간: ~1,400만원(6%), ~5,000만원(15%), ~8,800만원(24%)
+- **Tax Credit (연금저축/IRP)**:
+    - `mode: "law_2026" | "manual"`
+    - `law_2026`는 시뮬레이션 과세소득 기준으로 16.5%/13.2% 공제율 자동 적용
+    - 한도: 연금저축 600만원, IRP 300만원, 합산 900만원
 
 ---
 
@@ -95,10 +110,13 @@
 ### Binary Search 알고리즘
 ```typescript
 // 목표 금액 → 필요 월 저축액
-solveForMonthlyContribution(input, targetSuccessRate, tolerance)
+solveForMonthlyContribution(input, targetSuccessRate)
+
+// labor_income 활성화 시 저축률 역산
+solveForLaborSavingsRate(input, targetSuccessRate)
 
 // 목표 성공률 → 적정 은퇴 나이
-solveForRetirementAge(input, targetSuccessRate, tolerance)
+solveForRetirementAge(input, targetSuccessRate)
 ```
 
 ---
@@ -130,6 +148,7 @@ graph LR
 |------|------|
 | `SimulationInput` | 전체 입력 데이터 (나이, 자산, 연금, 전략 등) |
 | `SimulationResult` | 시뮬레이션 결과 (summary, timelines, stats) |
+| `SimulationSummary` | `source`, `retirementPoint`, `depletion` 포함 요약 |
 | `PortfolioModel` | 자산 배분 (assetClasses[], manualCorrelation) |
 | `WithdrawalPolicy` | 인출 전략 설정 |
 | `RealEstateAsset` | 부동산 자산 (거주용/투자용) |
@@ -140,7 +159,7 @@ graph LR
 | `HealthInsurance` | 건강보험료 설정 |
 | `TaxCredit` | 세액공제 설정 (연금저축/IRP) |
 | `SimulationTrajectoryStats` | 경로별 통계 (percentiles) |
-| `WorkerMessage` | Web Worker 통신 메시지 타입 |
+| `WorkerRequestKind` | Worker 요청 종류 (`SIMULATION`, `SOLVE_LABOR_SAVINGS_RATE` 등) |
 | `RebalancingSettings` | 자동 리밸런싱 설정 (Phase 7) |
 | `HistoricalAssetType` | 역사적 자산 유형 매핑 (Phase 7) |
 | `BacktestResult` | 백테스팅 결과 (Phase 7) |
@@ -155,12 +174,14 @@ graph LR
 - **데이터 범위**: 1985~2024년 (40년)
 - **자산 유형**: S&P 500, MSCI World, 채권, KOSPI, 리츠, 현금
 - **시뮬레이션 방식**: 20개 롤링 윈도우 (각 1년씩 오프셋)
+- **매핑 우선순위**: `simulation_settings.historical_asset_mapping`이 이름기반 자동매핑보다 우선
+- **결과 구분 규칙**: 호환성을 위해 `result.mode`는 유지하고 `result.summary.source = "historical"`로 판별
 
 ```typescript
 // 역사적 모드 설정
 simulation_settings: {
     mode: "historical",
-    historical_start_year: 1985 // 1985~2020
+    historical_start_year: 1985 // 1985~2024
 }
 ```
 

@@ -310,6 +310,13 @@ export function requestSolveContribution(
     return sendRawWorkerRequest("compute", "SOLVE_CONTRIBUTION", { input, targetSuccessRate });
 }
 
+export function requestSolveLaborSavingsRate(
+    input: SimulationInput,
+    targetSuccessRate: number
+): Promise<number | null> {
+    return sendRawWorkerRequest("compute", "SOLVE_LABOR_SAVINGS_RATE", { input, targetSuccessRate });
+}
+
 export function requestSolveRetireAge(
     input: SimulationInput,
     targetSuccessRate: number

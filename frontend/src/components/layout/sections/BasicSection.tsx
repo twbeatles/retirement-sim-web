@@ -34,7 +34,10 @@ export function BasicSection({ input, setInput }: BasicSectionProps) {
                         onChange={(v) =>
                             setInput({
                                 ...input,
-                                simulation_settings: { ...input.simulation_settings, mc_paths: num(v) }
+                                simulation_settings: {
+                                    ...input.simulation_settings,
+                                    mc_paths: Math.max(1, Math.floor(num(v)))
+                                }
                             })
                         }
                         suffix="회"

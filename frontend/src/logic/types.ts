@@ -8,13 +8,23 @@ export type AssetClass = {
 
 export type PortfolioModel = {
     assetClasses: AssetClass[];
-    manualCorrelation?: number; // 0 to 1, default 1 if undefined (no benefit). Used to dampen weighted volatility.
+    manualCorrelation?: number; // -1 to 1. Used to dampen weighted volatility with a single rho approximation.
 };
 
 export type LumpSumEvent = {
     month_index: number;
     amount: number; // (+) Income, (-) Expense
     name?: string; // Optional description
+};
+
+export type ExpenseDefinition = {
+    id: string;
+    name: string;
+    amount: number; // Positive value in KRW
+    startAge: number;
+    isRecurring: boolean;
+    intervalYears?: number;
+    endAge?: number;
 };
 
 export type WithdrawalStrategy =
@@ -82,6 +92,7 @@ export type SimulationInput = {
     };
 
     events: LumpSumEvent[];
+    expense_definitions?: ExpenseDefinition[];
     withdrawal: WithdrawalPolicy;
 
     simulation_settings: {
@@ -262,13 +273,26 @@ export type SimulationResult =
 export type SimulationSummary = {
     retireAge: number;
     endAge: number;
+    source: "deterministic" | "montecarlo" | "historical";
 
     // Deterministic or Mean stats
     finalTotalAssets: number;
     finalTotalAssetsReal: number;
+    retirementPoint: {
+        age: number;
+        totalAssets: number;
+        totalAssetsReal: number;
+    };
 
     // Success Rate (Assets > 0 at end_age)
     successRate: number;
+
+    depletion?: {
+        firstDepletionMonthByPath: number[]; // -1 means never depleted
+        firstDepletionAgeByPath: number[];   // -1 means never depleted
+        neverDepletedRate: number;
+        medianDepletionAge: number | null;
+    };
 
     // Monte Carlo Stats (if applicable)
     mc?: {
@@ -319,9 +343,12 @@ export type HealthInsurance = {
 // 세액공제 설정
 export type TaxCredit = {
     enabled: boolean;
+    mode: "manual" | "law_2026";
+    lawYear: 2026;
+    incomeBasis: "simulated_taxable_income";
     pensionSavingsContribution: number;  // 연금저축 연간 납입액
     irpContribution: number;              // IRP 연간 납입액
-    creditRate: number;                   // 세액공제율 (0.12 or 0.15)
+    creditRate?: number;                  // manual 모드에서만 사용
 };
 
 // 퇴직금 설정

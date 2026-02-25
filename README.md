@@ -17,6 +17,7 @@
 - **GBM(기하 브라운 운동)**: 자산 성장 모델링
 - **상관관계 반영**: 포트폴리오 내 자산 간 상관계수 적용
 - **입력 반응형 계산 스케줄러**: 입력 중 빠른 추정(Preview) + 입력 멈춤 후 최종 계산(Full)
+- **결과 출처 표기**: deterministic/montecarlo/historical source를 요약에 명시
 
 ### 💰 다양한 자산 유형 지원
 - **금융 자산**: 주식, 채권, 현금, 대체투자
@@ -24,13 +25,14 @@
 - **연금**: 국민연금, 개인연금(IRP/연금저축), DC/DB 퇴직연금
 - **추가 소득**: 사업 소득, 근로 소득
 
-### 📈 인출 전략 (6가지)
+### 📈 인출 전략 (7가지)
 1. **고정 금액**: 매월 동일 금액 인출
 2. **고정 비율**: 잔액 대비 일정 비율 인출
 3. **4% Rule (SWR)**: 초기 자산 4% + 물가연동
 4. **Gap Filler**: 목표 생활비 - 연금 = 인출액
 5. **VPW**: 기대수명 기반 가변 인출률
 6. **Guardrails**: 시장 상황에 따른 동적 조정
+7. **Bucket**: 단기/중기/장기 버킷 기반 인출 안정화
 
 ### 📊 역사적 백테스팅 (NEW)
 - **40년 역사 데이터**: 1985~2024 실제 시장 수익률 사용
@@ -44,6 +46,7 @@
 
 ### 🎯 역산 계산기 (Goal Planner)
 - 목표 금액 → 필요 월 저축액 계산
+- 근로소득 모드(`labor_income`) 활성화 시 필요 **저축률(0~100%)** 역산
 - 목표 성공률 → 적정 은퇴 나이 계산
 
 ### 📱 반응형 UI & 다크모드
@@ -105,6 +108,7 @@ retirement-sim-web/
 │   │   │   ├── simulation.worker.ts  # Web Worker
 │   │   │   ├── workerTypes.ts    # Worker 통신 타입
 │   │   │   ├── solver.ts         # 역산 계산 로직
+│   │   │   ├── migration.ts      # 구스키마 -> 최신 스키마 변환
 │   │   │   ├── riskAnalysis.ts   # 리스크 분석
 │   │   │   ├── types.ts          # TypeScript 타입 정의
 │   │   │   ├── constants.ts      # 초기값/상수
@@ -186,6 +190,7 @@ npm run build
 - [GEMINI.md](GEMINI.md) - 시뮬레이션 엔진 비즈니스 로직 상세
 - [CLAUDE.md](CLAUDE.md) - 개발자 가이드 및 코드 규칙
 - [docs/modeling_notes.md](docs/modeling_notes.md) - 수학적 모델링 노트
+- [docs/api_examples.md](docs/api_examples.md) - 최신 입력 스키마/Worker 프로토콜 예시
 - [docs/roadmap.md](docs/roadmap.md) - 개발 로드맵
 
 ---

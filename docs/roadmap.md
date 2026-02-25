@@ -52,6 +52,21 @@
 - [x] Scenario comparison data merge optimization (map-based)
 - [x] Regression tests for worker queueing/fan-out and seed-fixed engine parity
 
+### Phase 9: Audit Remediation (2026-02-25)
+- [x] Legacy import migration (`portfolio.assets`, `retirement_monthly_spending_target`, missing mode)
+- [x] VPW monthly lower-bound fix for YoY limiter
+- [x] Labor-income dedicated solver path (`SOLVE_LABOR_SAVINGS_RATE`)
+- [x] `mc_paths` validation + engine clamp safety guard
+- [x] Depletion stats moved to full-path summary aggregation
+- [x] Withdrawal strategy parity (`guardrails`, `bucket`) in UI + engine
+- [x] Rebalancing threshold/tax-efficient behavior implementation
+- [x] Inflation preset consistency (`low/normal/high/custom/spike`)
+- [x] Retirement-point summary metric + result label alignment
+- [x] Same-month event accumulation + expense definition merge preservation
+- [x] Tax-credit `law_2026` integration and schema alignment
+- [x] Historical source tagging (`summary.source`) and asset mapping override UI
+- [x] Docs/API examples synchronized to actual worker/type contracts
+
 ---
 
 ## 🔜 Future Enhancements
@@ -62,7 +77,8 @@
 - [ ] Locale-aware number formatting
 
 ### Testing & Quality
-- [ ] Unit tests with Vitest
+- [x] Unit tests with Vitest
+- [x] Engine/solver regression tests for P0/P1 fixes
 - [ ] E2E tests with Playwright
 - [ ] Storybook component documentation
 
