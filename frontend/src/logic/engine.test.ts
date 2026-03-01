@@ -414,6 +414,73 @@ describe('Simulation Engine', () => {
         expect(timeline[0].general).toBeCloseTo(1150, 6);
     });
 
+    it('throws when end age is not greater than current age', () => {
+        const input = createBaseInput();
+        input.current_age = 65;
+        input.retire_age = 66;
+        input.end_age = 65;
+
+        expect(() => runSimulation(input)).toThrow();
+    });
+
+    it('keeps detailed health insurance premium at zero when dependent is true', () => {
+        const nonDependentInput = createBaseInput();
+        nonDependentInput.current_age = 65;
+        nonDependentInput.retire_age = 65;
+        nonDependentInput.end_age = 66;
+        nonDependentInput.general.current_balance = 1000000;
+        nonDependentInput.portfolio.assetClasses[0].expectedAnnualReturn = 0;
+        nonDependentInput.withdrawal.strategy = 'fixed_amount';
+        nonDependentInput.withdrawal.fixedMonthlyAmount = 0;
+        nonDependentInput.health_insurance = {
+            enabled: true,
+            mode: 'detailed',
+            monthlyPremium: 0,
+            inflationLinked: false,
+            propertyValue: 0,
+            carValue: 0,
+            isDependent: false
+        };
+
+        const dependentInput = structuredClone(nonDependentInput);
+        if (!dependentInput.health_insurance) {
+            throw new Error('health_insurance should exist for this test');
+        }
+        dependentInput.health_insurance.isDependent = true;
+
+        const nonDependentResult = runSimulation(nonDependentInput);
+        const dependentResult = runSimulation(dependentInput);
+
+        const nonDependentTimeline = 'timeline' in nonDependentResult ? nonDependentResult.timeline : [];
+        const dependentTimeline = 'timeline' in dependentResult ? dependentResult.timeline : [];
+        const month0Gap = dependentTimeline[0].general - nonDependentTimeline[0].general;
+
+        expect(month0Gap).toBeGreaterThan(10000);
+    });
+
+    it('accumulates medical shocks that occur in the same month', () => {
+        const input = createBaseInput();
+        input.current_age = 65;
+        input.retire_age = 65;
+        input.end_age = 66;
+        input.general.current_balance = 1000;
+        input.portfolio.assetClasses[0].expectedAnnualReturn = 0;
+        input.withdrawal.strategy = 'fixed_amount';
+        input.withdrawal.fixedMonthlyAmount = 0;
+        input.medical_shocks = {
+            enabled: true,
+            occurrences: [
+                { age: 65, amount: 100, description: 'shock-1' },
+                { age: 65, amount: 200, description: 'shock-2' }
+            ]
+        };
+
+        const result = runSimulation(input);
+        const timeline = 'timeline' in result ? result.timeline : [];
+
+        expect(timeline[0].general).toBeCloseTo(700, 6);
+    });
+
     it('clamps non-positive montecarlo path count to 1', () => {
         const input = createBaseInput();
         input.simulation_settings = {

@@ -231,3 +231,34 @@ Bug reports, feature suggestions, and PRs are welcome!
 - UI rendering:
   - heavy results blocks mount near viewport
   - chart animations disabled for lower first-render cost
+
+---
+
+## 2026-03-01 Stability Update
+
+All items from `IMPLEMENTATION_RISK_REVIEW_2026-03-01.md` (P0~P2) are now implemented:
+
+- Engine input safety guard:
+  - throw when `end_age <= current_age`
+  - throw when `retire_age > end_age`
+- Validation/runtime alignment:
+  - `current_age === retire_age` is valid (`info`)
+  - auto-simulation scheduler is blocked while validation has `error`
+- Health insurance (detailed mode):
+  - `isDependent === true` => premium fixed to `0`
+- Medical shocks:
+  - same-month events are accumulated (`existing + amount`)
+- Inflation sensitivity fix:
+  - `annual_inflation` sensitivity updates both `annual_inflation` and `inflation_scenario.baseRate`
+- Assets UI core field expansion:
+  - real estate: `type`, `growthRate`, `rentalYield`, `managementCost`
+  - additional pensions: `type`, `monthlyContribution`, `expectedReturn`, `payoutType`, `payoutYears`, `monthlyPayout`
+  - business income: `growthRate`, `endAge`
+- Historical metadata cleanup:
+  - duplicate scenario exports removed from `historicalData.ts`
+
+Verification snapshot (2026-03-01):
+
+- `npm run typecheck` passed
+- `npm run test -- --run` passed
+- `npm run verify:pr` passed

@@ -76,8 +76,12 @@ export default function App() {
     }, [prefetchProModules, viewMode]);
 
     const validationWarnings = useMemo<ValidationWarning[]>(() => validateSimulationInput(input), [input]);
+    const hasBlockingValidationError = useMemo(
+        () => validationWarnings.some((warning) => warning.severity === "error"),
+        [validationWarnings]
+    );
     const { runSimulation, isCalculating, result, error } = useSimulation();
-    useAutoSimulation({ input, viewMode, runSimulation });
+    useAutoSimulation({ input, viewMode, runSimulation, hasBlockingValidationError });
 
     const handlePrint = useCallback(() => {
         setShowPrintView(true);

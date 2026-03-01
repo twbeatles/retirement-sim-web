@@ -231,3 +231,34 @@ npm run preview # 빌드 결과 미리보기
 - [ ] PWA 오프라인 지원
 - [ ] 테스트 코드 추가 (Vitest)
 - [ ] Storybook 컴포넌트 문서화
+
+---
+
+## 8. Stability Remediation Note (2026-03-01)
+
+Applied changes from `IMPLEMENTATION_RISK_REVIEW_2026-03-01.md`:
+
+- Auto simulation gate
+  - `useAutoSimulation` now accepts `hasBlockingValidationError`
+  - no preview/full timers are scheduled while blocking errors exist
+- Age validation policy
+  - `current_age === retire_age` is valid (info)
+  - explicit blocking error for `end_age <= current_age`
+- Engine hard guards
+  - throw on invalid age relationships before typed-array allocation
+- Health insurance detailed mode
+  - `isDependent === true` forces premium to zero
+- Medical shock handling
+  - multiple shocks in the same month are accumulated
+- Inflation sensitivity analysis
+  - synchronize `annual_inflation` with `inflation_scenario.baseRate`
+- Asset section UI
+  - expose core editable fields for real estate / additional pensions / business income
+- Historical scenario metadata
+  - keep single source in `historicalScenarioMeta.ts`
+
+Test coverage additions:
+
+- `engine.test.ts`: invalid age throw, dependent premium behavior, same-month medical shock accumulation
+- `riskAnalysis.test.ts`: inflation sensitivity should vary outcomes
+- `useAutoSimulation.test.tsx`: blocking-error gating and resume behavior

@@ -4,8 +4,14 @@ export function validateSimulationInput(input: SimulationInput): ValidationWarni
     const warnings: ValidationWarning[] = [];
 
     // Age validations
-    if (input.current_age >= input.retire_age) {
-        warnings.push({ field: 'retire_age', message: '은퇴 나이는 현재 나이보다 커야 합니다.', severity: 'error' });
+    if (input.current_age > input.retire_age) {
+        warnings.push({ field: 'retire_age', message: '은퇴 나이는 현재 나이와 같거나 커야 합니다.', severity: 'error' });
+    }
+    if (input.current_age === input.retire_age) {
+        warnings.push({ field: 'retire_age', message: '현재 시점 은퇴로 계산됩니다.', severity: 'info' });
+    }
+    if (input.end_age <= input.current_age) {
+        warnings.push({ field: 'end_age', message: '종료 나이는 현재 나이보다 커야 합니다.', severity: 'error' });
     }
     if (input.retire_age >= input.end_age) {
         warnings.push({ field: 'end_age', message: '종료 나이는 은퇴 나이보다 커야 합니다.', severity: 'error' });
@@ -69,8 +75,23 @@ export function validateSimulationInput(input: SimulationInput): ValidationWarni
             if (re.currentValue < 0) {
                 warnings.push({ field: 'realEstate', message: `부동산 "${re.name}"의 가치가 음수입니다.`, severity: 'error' });
             }
+            if (re.growthRate < -0.2) {
+                warnings.push({ field: 'realEstate', message: `부동산 "${re.name}"의 성장률(${(re.growthRate * 100).toFixed(1)}%)이 지나치게 낮습니다.`, severity: 'warning' });
+            }
+            if (re.growthRate > 0.2) {
+                warnings.push({ field: 'realEstate', message: `부동산 "${re.name}"의 성장률(${(re.growthRate * 100).toFixed(1)}%)이 비정상적으로 높습니다.`, severity: 'warning' });
+            }
+            if (re.rentalYield < 0) {
+                warnings.push({ field: 'realEstate', message: `부동산 "${re.name}"의 임대 수익률은 0 이상이어야 합니다.`, severity: 'error' });
+            }
             if (re.rentalYield > 0.1) {
                 warnings.push({ field: 'realEstate', message: `부동산 "${re.name}"의 임대 수익률(${(re.rentalYield * 100).toFixed(1)}%)이 비정상적으로 높습니다.`, severity: 'warning' });
+            }
+            if (re.managementCost < 0) {
+                warnings.push({ field: 'realEstate', message: `부동산 "${re.name}"의 관리 비용률은 0 이상이어야 합니다.`, severity: 'error' });
+            }
+            if (re.managementCost > 0.1) {
+                warnings.push({ field: 'realEstate', message: `부동산 "${re.name}"의 관리 비용률(${(re.managementCost * 100).toFixed(1)}%)이 높습니다.`, severity: 'warning' });
             }
         });
     }
@@ -78,11 +99,30 @@ export function validateSimulationInput(input: SimulationInput): ValidationWarni
     // Additional Pensions validations
     if (input.additionalPensions && input.additionalPensions.length > 0) {
         input.additionalPensions.forEach((pension) => {
+            if (pension.currentValue < 0) {
+                warnings.push({ field: 'additionalPensions', message: `연금 "${pension.name}"의 현재 가치는 0 이상이어야 합니다.`, severity: 'error' });
+            }
+            if (pension.monthlyContribution < 0) {
+                warnings.push({ field: 'additionalPensions', message: `연금 "${pension.name}"의 월 납입액은 0 이상이어야 합니다.`, severity: 'error' });
+            }
             if (pension.startAge < input.retire_age) {
                 warnings.push({ field: 'additionalPensions', message: `연금 "${pension.name}"의 수령 시작 나이(${pension.startAge}세)가 은퇴 나이보다 빠릅니다.`, severity: 'info' });
             }
             if (pension.startAge > input.end_age) {
                 warnings.push({ field: 'additionalPensions', message: `연금 "${pension.name}"의 수령 시작 나이(${pension.startAge}세)가 시뮬레이션 종료 나이보다 늦습니다.`, severity: 'warning' });
+            }
+            if ((pension.type === 'personal' || pension.type === 'dc') && pension.expectedReturn !== undefined) {
+                if (pension.expectedReturn < -0.2 || pension.expectedReturn > 0.2) {
+                    warnings.push({ field: 'additionalPensions', message: `연금 "${pension.name}"의 기대수익률(${(pension.expectedReturn * 100).toFixed(1)}%) 범위를 확인해주세요.`, severity: 'warning' });
+                }
+            }
+            if (pension.payoutType === 'fixed_period') {
+                if (!pension.payoutYears || pension.payoutYears < 1) {
+                    warnings.push({ field: 'additionalPensions', message: `연금 "${pension.name}"의 확정기간은 1년 이상이어야 합니다.`, severity: 'error' });
+                }
+            }
+            if ((pension.type === 'db' || pension.type === 'national') && pension.monthlyPayout !== undefined && pension.monthlyPayout < 0) {
+                warnings.push({ field: 'additionalPensions', message: `연금 "${pension.name}"의 월 수령액은 0 이상이어야 합니다.`, severity: 'error' });
             }
         });
     }
@@ -95,6 +135,12 @@ export function validateSimulationInput(input: SimulationInput): ValidationWarni
             }
             if (biz.monthlyIncome < 0) {
                 warnings.push({ field: 'businessIncome', message: `사업소득 "${biz.name}"의 월 소득이 음수입니다.`, severity: 'error' });
+            }
+            if (biz.growthRate < -0.2) {
+                warnings.push({ field: 'businessIncome', message: `사업소득 "${biz.name}"의 성장률(${(biz.growthRate * 100).toFixed(1)}%)이 지나치게 낮습니다.`, severity: 'warning' });
+            }
+            if (biz.growthRate > 0.2) {
+                warnings.push({ field: 'businessIncome', message: `사업소득 "${biz.name}"의 성장률(${(biz.growthRate * 100).toFixed(1)}%)이 높습니다.`, severity: 'warning' });
             }
         });
     }

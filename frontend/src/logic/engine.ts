@@ -858,6 +858,9 @@ function simulateOnePath(
                 const hi = input.health_insurance;
 
                 if (hi.mode === 'detailed') {
+                    if (hi.isDependent) {
+                        healthInsurancePremium = 0;
+                    } else {
                     // 1. Calculate Income (Pension + Withdrawal)
                     // Note: Withdrawal is NOT always considered income for Health Insurance (e.g. consuming principal is not income).
                     // Taxable Income usually includes: National Pension, Private Pension (Taxable part), Interest/Dividend.
@@ -896,6 +899,7 @@ function simulateOnePath(
                     healthInsurancePremium = hi.inflationLinked
                         ? basePremium * cpi
                         : basePremium;
+                    }
 
                 } else {
                     // Simple Mode
@@ -1027,6 +1031,16 @@ export function runSimulation(
     input: SimulationInput,
     options?: SimulationRunOptions
 ): SimulationResult {
+    if (!Number.isFinite(input.current_age) || !Number.isFinite(input.retire_age) || !Number.isFinite(input.end_age)) {
+        throw new Error("나이 입력값은 유한한 숫자여야 합니다.");
+    }
+    if (input.end_age <= input.current_age) {
+        throw new Error("종료 나이는 현재 나이보다 커야 합니다.");
+    }
+    if (input.retire_age > input.end_age) {
+        throw new Error("은퇴 나이는 종료 나이보다 클 수 없습니다.");
+    }
+
     const detailLevel = options?.detailLevel ?? "full";
     const isPreview = detailLevel === "preview";
     const includeSampleTimelines = options?.includeSampleTimelines ?? !isPreview;
@@ -1088,7 +1102,8 @@ export function runSimulation(
         for (const shock of input.medical_shocks.occurrences) {
             const shockMonth = (shock.age - input.current_age) * 12;
             if (shockMonth >= 0 && shockMonth < totalMonths) {
-                medicalShockMonths.set(shockMonth, shock.amount);
+                const existing = medicalShockMonths.get(shockMonth) || 0;
+                medicalShockMonths.set(shockMonth, existing + shock.amount);
             }
         }
     }

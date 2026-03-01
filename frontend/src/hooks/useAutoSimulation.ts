@@ -11,6 +11,7 @@ type UseAutoSimulationParams = {
   input: SimulationInput;
   viewMode: ViewMode;
   runSimulation: (input: SimulationInput, options?: SimulationRunOptions) => Promise<unknown>;
+  hasBlockingValidationError: boolean;
 };
 
 const PREVIEW_DELAY_MS = 150;
@@ -40,7 +41,7 @@ function buildFullOptions(viewMode: ViewMode): SimulationRunOptions {
   };
 }
 
-export function useAutoSimulation({ input, viewMode, runSimulation }: UseAutoSimulationParams) {
+export function useAutoSimulation({ input, viewMode, runSimulation, hasBlockingValidationError }: UseAutoSimulationParams) {
   const requestSeqRef = useRef(0);
   const lastPreviewFingerprintRef = useRef<string | null>(null);
   const lastFullFingerprintRef = useRef<string | null>(null);
@@ -78,6 +79,10 @@ export function useAutoSimulation({ input, viewMode, runSimulation }: UseAutoSim
   }, []);
 
   useEffect(() => {
+    if (hasBlockingValidationError) {
+      return;
+    }
+
     const currentSeq = ++requestSeqRef.current;
 
     const previewTimer = window.setTimeout(() => {
@@ -128,6 +133,7 @@ export function useAutoSimulation({ input, viewMode, runSimulation }: UseAutoSim
     isVisible,
     previewFingerprint,
     previewOptions,
-    runSimulation
+    runSimulation,
+    hasBlockingValidationError
   ]);
 }

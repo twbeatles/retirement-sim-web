@@ -103,7 +103,7 @@ export function runSensitivityAnalysis(
             );
             break;
         case 'annual_inflation':
-            baseValue = baseInput.annual_inflation;
+            baseValue = baseInput.inflation_scenario?.baseRate ?? baseInput.annual_inflation;
             break;
         case 'withdrawal_rate':
             baseValue = baseInput.withdrawal.initialSafeRate || 0.04;
@@ -123,6 +123,13 @@ export function runSensitivityAnalysis(
                 break;
             case 'annual_inflation':
                 testInput.annual_inflation = baseValue + delta;
+                testInput.inflation_scenario = {
+                    type: testInput.inflation_scenario?.type ?? 'custom',
+                    baseRate: baseValue + delta,
+                    spikeStartAge: testInput.inflation_scenario?.spikeStartAge,
+                    spikeDurationYears: testInput.inflation_scenario?.spikeDurationYears,
+                    spikeRate: testInput.inflation_scenario?.spikeRate
+                };
                 break;
             case 'withdrawal_rate':
                 testInput.withdrawal.initialSafeRate = baseValue + delta;

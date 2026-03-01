@@ -123,3 +123,12 @@ Runs on frontend changes:
 5. `npm run build`
 6. Pull request: `npm run perf:gate:warn`
 7. Push to `main`: `npm run perf:gate:hard`
+
+## Latest verification snapshot (2026-03-01)
+
+From `npm run verify:pr`:
+
+- Entry JS: `~25.3 KiB`
+- Initial JS total (index + modulepreload): `~235.8 KiB`
+
+No gate failures were reported.

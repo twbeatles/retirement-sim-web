@@ -237,3 +237,34 @@ MIT License - 자세한 내용은 [LICENSE](LICENSE) 파일 참조.
 - UI rendering:
   - heavy results blocks mount near viewport
   - chart animations disabled for lower first-render cost
+
+---
+
+## 2026-03-01 Stability Update
+
+This release applies all items from `IMPLEMENTATION_RISK_REVIEW_2026-03-01.md` (P0~P2):
+
+- Input safety guard in engine:
+  - throw when `end_age <= current_age`
+  - throw when `retire_age > end_age`
+- Validation policy alignment:
+  - `current_age === retire_age` is allowed (`info`)
+  - blocking errors stop auto simulation scheduling
+- Health insurance detailed mode:
+  - `isDependent === true` forces premium to `0`
+- Medical shocks:
+  - same-month shocks are accumulated (`existing + amount`)
+- Inflation sensitivity:
+  - `annual_inflation` sensitivity now synchronizes `inflation_scenario.baseRate`
+- Assets UI core fields expanded:
+  - real estate: `type`, `growthRate`, `rentalYield`, `managementCost`
+  - additional pensions: `type`, `monthlyContribution`, `expectedReturn`, `payoutType`, `payoutYears`, `monthlyPayout`
+  - business income: `growthRate`, `endAge`
+- Historical scenario metadata source-of-truth:
+  - duplicate exports removed from `historicalData.ts`
+
+Verification snapshot (2026-03-01):
+
+- `npm run typecheck` passed
+- `npm run test -- --run` passed
+- `npm run verify:pr` passed

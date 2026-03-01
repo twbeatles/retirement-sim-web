@@ -169,3 +169,96 @@ if (warnings.some((w) => w.severity === "error")) {
 
 호환성 유지를 위해 결과 `mode`는 `"montecarlo"`를 유지합니다.  
 Historical 여부는 `result.summary.source === "historical"`로 판별합니다.
+
+---
+
+## 6. 2026-03-01 Schema/Behavior Notes
+
+### Age guard behavior
+
+`runSimulation` now throws early when:
+
+- `end_age <= current_age`
+- `retire_age > end_age`
+
+### Auto simulation scheduling guard
+
+UI auto-simulation (`useAutoSimulation`) should be gated by validation:
+
+- if any validation item has `severity === "error"`, skip scheduling preview/full timers
+- resume scheduling automatically when blocking errors are cleared
+
+### Health insurance detailed mode
+
+When `health_insurance.mode === "detailed"` and `isDependent === true`, premium is `0`.
+
+```json
+{
+  "health_insurance": {
+    "enabled": true,
+    "mode": "detailed",
+    "isDependent": true,
+    "propertyValue": 0,
+    "carValue": 0,
+    "monthlyPremium": 0,
+    "inflationLinked": false
+  }
+}
+```
+
+### Medical shocks accumulation
+
+If multiple medical shock occurrences map to the same month, the engine accumulates all amounts.
+
+```json
+{
+  "medical_shocks": {
+    "enabled": true,
+    "occurrences": [
+      { "age": 65, "amount": 1000000 },
+      { "age": 65, "amount": 2000000 }
+    ]
+  }
+}
+```
+
+### Expanded asset-input examples
+
+```json
+{
+  "realEstate": [
+    {
+      "id": "re1",
+      "name": "Investment Home",
+      "type": "investment",
+      "currentValue": 500000000,
+      "growthRate": 0.02,
+      "rentalYield": 0.03,
+      "managementCost": 0.005
+    }
+  ],
+  "additionalPensions": [
+    {
+      "id": "p1",
+      "name": "DC Pension",
+      "type": "dc",
+      "currentValue": 30000000,
+      "monthlyContribution": 300000,
+      "expectedReturn": 0.04,
+      "startAge": 60,
+      "payoutType": "fixed_period",
+      "payoutYears": 20
+    }
+  ],
+  "businessIncome": [
+    {
+      "id": "b1",
+      "name": "Consulting",
+      "monthlyIncome": 2000000,
+      "growthRate": 0.01,
+      "startAge": 50,
+      "endAge": 65
+    }
+  ]
+}
+```

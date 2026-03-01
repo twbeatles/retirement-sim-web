@@ -93,3 +93,14 @@
 - [ ] Roth conversion ladder modeling
 - [ ] PDF report export
 - [ ] Couples/household simulation
+
+### Phase 10: Implementation Risk Remediation (2026-03-01)
+- [x] Engine input guard for invalid age relationship (`end_age <= current_age`, `retire_age > end_age`)
+- [x] Auto-simulation blocking gate on validation errors
+- [x] Validation policy update (`current_age === retire_age` allowed as info)
+- [x] Health insurance dependent handling (`isDependent` => premium `0`)
+- [x] Same-month medical shock accumulation
+- [x] Inflation sensitivity sync with `inflation_scenario.baseRate`
+- [x] Asset section core fields expansion (real estate/additional pensions/business income)
+- [x] Historical scenario metadata single-source cleanup
+- [x] Regression tests added (`engine`, `riskAnalysis`, `useAutoSimulation`)
