@@ -164,7 +164,7 @@ export const ScenarioManager = React.memo(function ScenarioManager({ currentInpu
                                 } else {
                                     alert("필수 데이터가 누락되었습니다.");
                                 }
-                            } catch (err) {
+                            } catch (_err) {
                                 alert("파일을 읽는 중 오류가 발생했습니다.");
                             }
                         };

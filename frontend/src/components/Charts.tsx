@@ -9,8 +9,7 @@ import {
   ResponsiveContainer,
   Legend,
   AreaChart,
-  Area,
-  ComposedChart
+  Area
 } from "recharts";
 import type { TimelineRow, SimulationTrajectoryStats } from "../logic/types";
 

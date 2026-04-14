@@ -8,7 +8,7 @@
 
 ## 1. 시뮬레이션 엔진 로직 (Simulation Physics)
 
-**파일**: `frontend/src/logic/engine.ts`
+**파일**: `frontend/src/logic/engine.ts`, `frontend/src/logic/engine/context.ts`, `frontend/src/logic/engine/summary.ts`
 
 ### 1-1. 자산 성장 모델 (Geometric Brownian Motion)
 - **기본 공식**: $S_t = S_{t-1} \times (1 + \mu_{monthly} + \sigma_{monthly} \times Z)$
@@ -134,7 +134,7 @@ graph LR
 ```
 
 1. **Input**: `App.tsx`에서 `SimulationInput` 객체 생성
-2. **Process**: Web Worker → `engine.ts/runSimulation(input)`
+2. **Process**: Web Worker → `engine.ts/runSimulation(input)` → engine submodules
 3. **Output**: `SimulationResult` 반환 (summary, sampleTimelines)
 4. **Visualize**: `Charts.tsx`, `RiskDashboard.tsx`에서 렌더링
 
@@ -168,14 +168,14 @@ graph LR
 
 ## 8. 역사적 백테스팅 & 리밸런싱 (Phase 7)
 
-**파일**: `frontend/src/logic/historicalData.ts`, `frontend/src/logic/engine.ts`
+**파일**: `frontend/src/logic/historicalData.ts`, `frontend/src/logic/engine.ts`, `frontend/src/logic/engine/context.ts`
 
 ### 8-1. 역사적 백테스팅
 - **데이터 범위**: 1985~2024년 (40년)
 - **자산 유형**: S&P 500, MSCI World, 채권, KOSPI, 리츠, 현금
 - **시뮬레이션 방식**: 20개 롤링 윈도우 (각 1년씩 오프셋)
 - **매핑 우선순위**: `simulation_settings.historical_asset_mapping`이 이름기반 자동매핑보다 우선
-- **결과 구분 규칙**: 호환성을 위해 `result.mode`는 유지하고 `result.summary.source = "historical"`로 판별
+- **결과 구분 규칙**: `result.mode === "historical"`이며 `result.summary.source = "historical"`도 동일하게 유지
 
 ```typescript
 // 역사적 모드 설정

@@ -25,15 +25,26 @@ type SimulationHookReturn = {
     error: string | null;
 };
 
-type SimulationClientModule = typeof import("../logic/simulationClient");
+type SimulationClientModule = {
+    requestSimulation: (input: SimulationInput, options?: SimulationRunOptions) => Promise<SimulationResult>;
+    requestSimulationPlan: (plan: ReturnType<typeof legacyInputToPlanV2>, options?: SimulationRunOptions) => Promise<SimulationResult>;
+    requestSolveContribution: (input: SimulationInput, targetSuccessRate: number) => Promise<number | null>;
+    requestSolveLaborSavingsRate: (input: SimulationInput, targetSuccessRate: number) => Promise<number | null>;
+    requestSolveRetireAge: (input: SimulationInput, targetSuccessRate: number) => Promise<number | null>;
+    requestSensitivityAnalysis: (
+        input: SimulationInput,
+        parameter: "annual_return" | "annual_inflation" | "withdrawal_rate",
+        variations: number[]
+    ) => Promise<SensitivityResult>;
+};
 
 let simulationClientPromise: Promise<SimulationClientModule> | null = null;
 
 function loadSimulationClient(): Promise<SimulationClientModule> {
     if (!simulationClientPromise) {
-        simulationClientPromise = import("../logic/simulationClient");
+        simulationClientPromise = import("../logic/simulationClient") as Promise<SimulationClientModule>;
     }
-    return simulationClientPromise;
+    return simulationClientPromise!;
 }
 
 export function useSimulation(): SimulationHookReturn {

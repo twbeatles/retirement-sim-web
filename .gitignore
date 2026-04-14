@@ -51,3 +51,7 @@ backup/
 temp/
 frontend/test_output.txt
 frontend/tsc_errors.txt
+frontend/.vitest/
+frontend/vitest-report/
+frontend/playwright-report/
+frontend/test-results/

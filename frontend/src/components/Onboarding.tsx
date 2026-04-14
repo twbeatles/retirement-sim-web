@@ -1,6 +1,5 @@
 import React, { useState, useEffect } from "react";
-
-const ONBOARDING_KEY = "retirement_sim_onboarding_v1";
+import { ONBOARDING_KEY } from "./onboardingStorage";
 
 interface OnboardingStep {
     title: string;
@@ -139,9 +138,5 @@ export function Onboarding({ onComplete }: Props) {
             </div>
         </>
     );
-}
-
-export function resetOnboarding() {
-    localStorage.removeItem(ONBOARDING_KEY);
 }
 

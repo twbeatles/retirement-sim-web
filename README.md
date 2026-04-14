@@ -71,6 +71,7 @@
 - 사용자용 인쇄 리포트와 원시 CSV 내보내기를 분리했습니다.
 - `bucket` 전략, `tax-efficient rebalancing`, 국민연금 상세 산식, 생명표 기반 장수 모델은 아직 전면 교체 중입니다.
 - 현재 최종 계산 경로는 `plan v2 -> legacy input adapter -> engine` 구조를 일부 포함합니다.
+- 2026-04-14 리팩토링 기준으로 `AdvancedSettings`, `validation`, `planV2`, `engine`는 내부 책임 기준 폴더 분리가 진행되었습니다.
 
 ---
 
@@ -97,6 +98,7 @@ retirement-sim-web/
 │   │   │   ├── ui/               # 재사용 가능한 UI 요소
 │   │   │   │   ├── InputSlider.tsx
 │   │   │   │   └── MoneyInput.tsx
+│   │   │   ├── advanced-settings/ # 고급 설정 세부 섹션
 │   │   │   ├── AdvancedSettings.tsx
 │   │   │   ├── BacktestingPanel.tsx  # 역사적 백테스팅 UI
 │   │   │   ├── Charts.tsx        # 차트 컨테이너
@@ -124,7 +126,8 @@ retirement-sim-web/
 │   │   │   └── useSimulation.ts  # 시뮬레이션 상태 관리
 │   │   │
 │   │   ├── logic/                # 핵심 비즈니스 로직
-│   │   │   ├── engine.ts         # 시뮬레이션 엔진
+│   │   │   ├── engine/           # 엔진 보조 컨텍스트/요약/타입
+│   │   │   ├── engine.ts         # 시뮬레이션 엔진 진입점
 │   │   │   ├── simulation.worker.ts  # Web Worker
 │   │   │   ├── workerTypes.ts    # Worker 통신 타입
 │   │   │   ├── solver.ts         # 역산 계산 로직
@@ -133,12 +136,14 @@ retirement-sim-web/
 │   │   │   ├── types.ts          # TypeScript 타입 정의
 │   │   │   ├── constants.ts      # 초기값/상수
 │   │   │   ├── math.ts           # 수학 함수
-│   │   │   ├── validation.ts     # 입력값 검증
+│   │   │   ├── planV2/           # 계획 스키마 세부 타입/변환기
+│   │   │   ├── planV2.ts         # plan v2 배럴 export
+│   │   │   ├── validation/       # 검증 세부 모듈
+│   │   │   ├── validation.ts     # 입력값 검증 진입점
 │   │   │   ├── historicalData.ts # 역사적 시장 데이터
 │   │   │   ├── historicalScenarioMeta.ts # 역사적 시나리오 메타데이터
 │   │   │   ├── koreaTax.ts       # 세금 및 연금 수식
 │   │   │   ├── planSimulation.ts # plan v2 계산 진입점
-│   │   │   ├── planV2.ts         # 계획 중심 v2 스키마 / 어댑터
 │   │   │   ├── rules/
 │   │   │   │   └── kr.ts         # KR 규칙/메타데이터
 │   │   │   ├── uiConstants.ts
@@ -191,6 +196,9 @@ npm run dev
 
 # 프로덕션 빌드
 npm run build
+
+# 리팩토링 안전성 검증
+npm run verify:refactor
 
 # 린트 + 타입체크 + 테스트 + 빌드
 npm run verify:pr

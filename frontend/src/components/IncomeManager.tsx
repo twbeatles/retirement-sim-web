@@ -17,12 +17,15 @@ function generateId() {
 }
 
 export const IncomeManager = React.memo(function IncomeManager({ input, onChange }: IncomeManagerProps) {
-    const labor = input.labor_income || {
-        enabled: false,
-        currentNetMonthlyIncome: 3000000,
-        currentSavingsRate: 0.5,
-        events: []
-    };
+    const labor = React.useMemo(
+        () => input.labor_income || {
+            enabled: false,
+            currentNetMonthlyIncome: 3000000,
+            currentSavingsRate: 0.5,
+            events: []
+        },
+        [input.labor_income]
+    );
 
     const handleEnableToggle = (e: React.ChangeEvent<HTMLInputElement>) => {
         onChange({

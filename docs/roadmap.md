@@ -116,6 +116,7 @@
 - [x] Validation expanded to include `plan_v2` inputs
 - [x] Raw CSV export separated from the print-style report flow
 - [x] Lint tooling and CI lint step added
+- [x] Large-file responsibility split for `AdvancedSettings`, `validation`, `planV2`, and engine helper modules
 
 ### Next Critical Work
 - [ ] Replace `plan v2 -> legacy input -> engine` adapter path with ledger-native engine core

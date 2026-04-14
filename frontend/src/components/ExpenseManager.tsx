@@ -131,15 +131,19 @@ export const ExpenseManager: React.FC<ExpenseManagerProps> = React.memo(({ input
         updateItems(items.filter(i => i.id !== id));
     };
 
-    // Calculate total explicitly for display
     const totalAmount = items.reduce((sum, item) => sum + item.amount, 0);
 
     return (
         <div className="bg-white dark:bg-zinc-900 rounded-2xl p-4 lg:p-6 shadow-sm border border-slate-100 dark:border-zinc-800 transition-all">
             <div className="flex justify-between items-center mb-4 pb-3 border-b border-slate-100 dark:border-zinc-800">
-                <h3 className="text-base font-bold text-slate-900 dark:text-white flex items-center gap-2 m-0">
-                    <span className="text-xl leading-none">🎉</span> 목돈 지출 이벤트
-                </h3>
+                <div>
+                    <h3 className="text-base font-bold text-slate-900 dark:text-white flex items-center gap-2 m-0">
+                        <span className="text-xl leading-none">🎉</span> 목돈 지출 이벤트
+                    </h3>
+                    <p className="mt-1 text-xs font-medium text-slate-500 dark:text-slate-400">
+                        총 예정 지출: {(totalAmount / 10000).toLocaleString()}만원
+                    </p>
+                </div>
                 <button
                     className="px-3 py-1.5 bg-slate-100 hover:bg-slate-200 dark:bg-zinc-800 dark:hover:bg-zinc-700 text-slate-700 dark:text-slate-300 font-semibold rounded-lg border border-slate-200 dark:border-zinc-700 transition-colors text-xs shadow-sm cursor-pointer whitespace-nowrap"
                     onClick={additem}

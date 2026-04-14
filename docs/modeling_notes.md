@@ -2,7 +2,7 @@
 
 ## 1. Asset Growth Model
 
-이 문서는 엔진의 핵심 수학 모델을 설명합니다. 2026-04-14 기준 실제 앱은 `SimulationPlanV2` 입력을 우선 사용하지만, 내부 계산 엔진은 일부 `legacy input` 어댑터를 함께 거칩니다.
+이 문서는 엔진의 핵심 수학 모델을 설명합니다. 2026-04-14 기준 실제 앱은 `SimulationPlanV2` 입력을 우선 사용하지만, 내부 계산 엔진은 일부 `legacy input` 어댑터를 함께 거칩니다. 엔진 코드는 `engine.ts` 진입점과 `engine/context.ts`, `engine/summary.ts`, `engine/types.ts`, `engine/portfolio.ts` 보조 모듈로 분리되어 있습니다.
 
 ### Geometric Brownian Motion (GBM)
 

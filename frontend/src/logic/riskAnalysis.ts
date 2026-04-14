@@ -228,7 +228,7 @@ export function calculateHealthInsurancePremium(
 export function calculateReverseAnnuityPayment(
     houseValue: number,
     startAge: number,
-    type: 'lifetime' | 'fixed_term' = 'lifetime'
+    _type: 'lifetime' | 'fixed_term' = 'lifetime'
 ): number {
     // Simplified calculation based on HF 2024 guidelines
     // Actual calculation is complex and varies by location, age, etc.

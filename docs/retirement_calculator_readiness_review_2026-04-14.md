@@ -2,6 +2,12 @@
 
 작성일: 2026-04-14
 
+## 0. 리팩토링 추적 메모
+
+- 이 문서의 일부 파일 경로/라인 번호는 대형 리팩토링 이전 기준입니다.
+- 현재 코드베이스는 `frontend/src/components/advanced-settings/`, `frontend/src/logic/engine/`, `frontend/src/logic/validation/`, `frontend/src/logic/planV2/` 폴더로 책임이 분리되어 있습니다.
+- 기능적 진단 결론은 유지되지만, 세부 구현 위치는 위 폴더 기준으로 다시 추적하는 편이 정확합니다.
+
 ## 1. 결론
 
 현재 프로젝트는 `실제 은퇴계산기`라기보다 `은퇴 시뮬레이션 프로토타입 + 고급 시각화 도구`에 가깝습니다.

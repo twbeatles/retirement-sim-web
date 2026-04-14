@@ -71,6 +71,7 @@
 - User-facing print reports and raw CSV exports are intentionally separated.
 - `bucket`, `tax-efficient rebalancing`, detailed National Pension formulas, and life-table longevity are still mid-migration.
 - Final full simulations are plan-driven, but the engine still includes a `plan v2 -> legacy input -> engine` adapter layer internally.
+- As of the 2026-04-14 refactor, `AdvancedSettings`, `validation`, `planV2`, and `engine` are split into smaller responsibility-focused modules internally.
 
 ---
 
@@ -97,6 +98,7 @@ retirement-sim-web/
 │   │   │   ├── ui/               # Reusable UI Components
 │   │   │   │   ├── InputSlider.tsx
 │   │   │   │   └── MoneyInput.tsx
+│   │   │   ├── advanced-settings/ # Advanced settings sub-sections
 │   │   │   ├── AdvancedSettings.tsx
 │   │   │   ├── BacktestingPanel.tsx  # Historical Backtesting UI
 │   │   │   ├── Charts.tsx        # Chart Container
@@ -124,7 +126,8 @@ retirement-sim-web/
 │   │   │   └── useSimulation.ts  # Simulation State Management
 │   │   │
 │   │   ├── logic/                # Core Business Logic
-│   │   │   ├── engine.ts         # Simulation Engine
+│   │   │   ├── engine/           # Engine context / summary / types
+│   │   │   ├── engine.ts         # Simulation engine entrypoint
 │   │   │   ├── simulation.worker.ts  # Web Worker
 │   │   │   ├── workerTypes.ts    # Worker Communication Types
 │   │   │   ├── solver.ts         # Reverse Calculation
@@ -133,12 +136,14 @@ retirement-sim-web/
 │   │   │   ├── types.ts          # TypeScript Type Definitions
 │   │   │   ├── constants.ts      # Initial Values/Constants
 │   │   │   ├── math.ts           # Math Utilities
-│   │   │   ├── validation.ts     # Input Validation
+│   │   │   ├── planV2/           # Plan schema subtypes / converters
+│   │   │   ├── planV2.ts         # plan v2 barrel export
+│   │   │   ├── validation/       # Validation submodules
+│   │   │   ├── validation.ts     # Input validation entrypoint
 │   │   │   ├── historicalData.ts # Historical Data
 │   │   │   ├── historicalScenarioMeta.ts # Historical Scenario Metadata
 │   │   │   ├── koreaTax.ts       # Korea Tax & Pension Math
 │   │   │   ├── planSimulation.ts # plan v2 simulation entrypoint
-│   │   │   ├── planV2.ts         # plan-centered v2 schema / adapters
 │   │   │   ├── rules/
 │   │   │   │   └── kr.ts         # KR rules and metadata
 │   │   │   ├── uiConstants.ts
@@ -191,6 +196,9 @@ npm run dev
 
 # Production build
 npm run build
+
+# Refactor safety verification
+npm run verify:refactor
 
 # Lint + typecheck + test + build
 npm run verify:pr

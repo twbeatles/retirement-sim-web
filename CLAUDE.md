@@ -37,7 +37,8 @@ frontend/src/
 │   ├── ui/                   # 재사용 UI 컴포넌트
 │   │   ├── InputSlider.tsx       # 슬라이더 입력
 │   │   └── MoneyInput.tsx        # 금액 입력
-│   ├── AdvancedSettings.tsx   # 고급 설정 (세금, 부채 등)
+│   ├── advanced-settings/     # 고급 설정 세부 섹션
+│   ├── AdvancedSettings.tsx   # 고급 설정 오케스트레이션
 │   ├── BacktestingPanel.tsx   # 역사적 백테스팅 UI (Phase 7)
 │   ├── Charts.tsx             # 차트 컨테이너
 │   ├── ExpenseManager.tsx     # 지출(목돈) 관리
@@ -62,7 +63,8 @@ frontend/src/
 │   └── useSimulation.ts      # 시뮬레이션 상태 관리 훅
 │
 ├── logic/                # 핵심 비즈니스 로직
-│   ├── engine.ts             # 시뮬레이션 엔진 (핵심)
+│   ├── engine/               # 엔진 보조 모듈 (context/summary/types)
+│   ├── engine.ts             # 시뮬레이션 엔진 진입점
 │   ├── simulation.worker.ts  # Web Worker (비동기 처리)
 │   ├── workerTypes.ts        # Worker 통신 타입 정의
 │   ├── solver.ts             # 역산 계산 (Binary Search)
@@ -71,7 +73,10 @@ frontend/src/
 │   ├── types.ts              # TypeScript 타입 정의
 │   ├── constants.ts          # 초기값/상수
 │   ├── math.ts               # 수학 유틸리티 (Box-Muller 등)
-│   ├── validation.ts         # 입력값 검증
+│   ├── planV2/               # plan v2 스키마/변환 세부 모듈
+│   ├── planV2.ts             # plan v2 배럴 export
+│   ├── validation/           # 입력 검증 세부 모듈
+│   ├── validation.ts         # 입력값 검증 진입점
 │   ├── historicalData.ts     # 역사적 시장 데이터 1985~2024 (Phase 7)
 │   ├── historicalScenarioMeta.ts # 역사적 시나리오 메타데이터
 │   ├── koreaTax.ts           # 한국 세무 및 국민연금 계산식
@@ -107,6 +112,11 @@ frontend/src/
 - 무거운 계산은 Web Worker (`simulation.worker.ts`) 사용
 - `useMemo`/`useEffect`의 의존성 배열 정확히 명시
 - 불필요한 리렌더링 방지 (`React.memo` 적절히 사용)
+
+### 3-6. 구조 분리 원칙
+- 긴 파일은 진입점과 세부 구현을 분리하고, 진입점은 orchestration만 담당
+- `components/advanced-settings`, `logic/validation`, `logic/engine`, `logic/planV2`처럼 책임 기준 폴더를 우선 사용
+- 기존 공개 함수명(`runSimulation`, `validateSimulationInput`, `legacyInputToPlanV2`)은 유지하여 회귀 범위를 최소화
 
 ### 3-4. CSS 규칙
 - CSS Variables 우선 사용 (`--primary`, `--bg-card` 등)

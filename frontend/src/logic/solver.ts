@@ -242,7 +242,6 @@ export function optimizePensionStartAge(
         // Sum of geometric series? 
         // Let v = 1/(1+R). Sum m=S to E of v^m = v^S * (1 - v^(E-S+1)) / (1-v)
         if (discountRateMonthly !== 0) {
-            const v = 1 / (1 + discountRateMonthly);
             const count = Math.max(0, totalMonths - startMonthIndex);
             // Geometric series sum: a * (1 - r^n) / (1 - r)
             // Here 'a' is first term = MonthlyAmt * v^startMonth? No.

@@ -51,17 +51,6 @@ interface Props {
     onChange: (p: PortfolioModel) => void;
 }
 
-function getAssetColorClass(index: number) {
-    return `asset-color-${index % ASSET_COLORS.length}`;
-}
-
-function getRiskClass(volatility: number) {
-    if (volatility < 0.05) return "risk-lowest";
-    if (volatility < 0.1) return "risk-low";
-    if (volatility < 0.15) return "risk-medium";
-    return "risk-high";
-}
-
 function getRiskLabel(volatility: number) {
     if (volatility < 0.05) return "매우 낮음";
     if (volatility < 0.1) return "낮음";
@@ -113,7 +102,6 @@ export function PortfolioEditor({ portfolio, onChange }: Props) {
         }
     };
 
-    const riskClass = getRiskClass(metrics.vol);
     const riskLabel = getRiskLabel(metrics.vol);
 
     return (
