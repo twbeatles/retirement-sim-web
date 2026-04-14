@@ -15,6 +15,9 @@ dist/
 build/
 coverage/
 .npm/
+.eslintcache
+.vite/
+*.tsbuildinfo
 
 # Local & Config
 .env
@@ -46,3 +49,5 @@ backup/
 *.bak
 *.tmp
 temp/
+frontend/test_output.txt
+frontend/tsc_errors.txt

@@ -1,12 +1,13 @@
 /// <reference lib="webworker" />
 
 import { runSimulation } from "./engine";
+import { runSimulationPlanBatchV2, runSimulationPlanV2 } from "./planSimulation";
 import { optimizePensionStartAge, solveForLaborSavingsRate, solveForMonthlyContribution, solveForRetirementAge } from "./solver";
 import { runSensitivityAnalysis } from "./riskAnalysis";
 import {
-    AnyWorkerRequest,
-    WorkerRequestByKind,
-    WorkerResponse
+    type AnyWorkerRequest,
+    type WorkerRequestByKind,
+    type WorkerResponse
 } from "./workerTypes";
 
 // Worker context
@@ -24,11 +25,21 @@ ctx.onmessage = (event: MessageEvent<AnyWorkerRequest>) => {
                 responsePayload = runSimulation(payload.input, payload.options);
                 break;
             }
+            case "PLAN_SIMULATION": {
+                const payload = msg.payload as WorkerRequestByKind["PLAN_SIMULATION"];
+                responsePayload = runSimulationPlanV2(payload.plan, payload.options);
+                break;
+            }
             case "SIMULATION_BATCH": {
                 const payload = msg.payload as WorkerRequestByKind["SIMULATION_BATCH"];
                 responsePayload = payload.inputs.map((input) =>
                     runSimulation(input, payload.options)
                 );
+                break;
+            }
+            case "PLAN_SIMULATION_BATCH": {
+                const payload = msg.payload as WorkerRequestByKind["PLAN_SIMULATION_BATCH"];
+                responsePayload = runSimulationPlanBatchV2(payload.plans, payload.options);
                 break;
             }
             case "SOLVE_CONTRIBUTION": {

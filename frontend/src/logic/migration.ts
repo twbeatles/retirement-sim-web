@@ -1,5 +1,5 @@
 import { INITIAL_INPUT } from "./constants";
-import { AssetClass, SimulationInput } from "./types";
+import { type AssetClass, type SimulationInput } from "./types";
 
 type LegacySimulationInput = Partial<SimulationInput> & {
     retirement_monthly_spending_target?: number;
@@ -61,7 +61,10 @@ export function migrateSimulationInput(rawInput?: Partial<SimulationInput> | Rec
     return {
         ...base,
         ...source,
+        plan_v2: source.plan_v2 ?? base.plan_v2,
         annual_inflation: source.annual_inflation ?? source.inflation_scenario?.baseRate ?? base.annual_inflation,
+        rule_set: source.rule_set ?? base.rule_set,
+        housing_status: source.housing_status ?? base.housing_status,
         general: { ...base.general, ...source.general },
         private_pension: { ...base.private_pension, ...source.private_pension },
         national_pension: { ...base.national_pension, ...source.national_pension },

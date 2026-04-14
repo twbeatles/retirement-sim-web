@@ -1,5 +1,6 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import type { SimulationInput, SimulationResult } from "./types";
+import { legacyInputToPlanV2 } from "./planV2";
 
 type PostedRequest = {
     requestId: string;
@@ -101,9 +102,54 @@ function createResult(detailLevel: "preview" | "full", successRate: number): Sim
         summary: {
             retireAge: 65,
             endAge: 85,
+            source: "deterministic",
+            calculationMode: "deterministic",
+            ruleMetadata: {
+                jurisdiction: "KR",
+                version: "KR-2026.1",
+                taxYear: 2026,
+                healthInsuranceYear: 2024,
+                pensionYear: 2026,
+                historicalDataVersion: "KR-HIST-1985-2024-v1",
+                historicalDataRange: {
+                    startYear: 1985,
+                    endYear: 2024
+                }
+            },
+            assumptionWarnings: [],
             finalTotalAssets: 1000000,
             finalTotalAssetsReal: 1000000,
-            successRate
+            retirementPoint: {
+                age: 65,
+                totalAssets: 1000000,
+                totalAssetsReal: 1000000
+            },
+            terminalStats: {
+                totalAssets: { p10: 1000000, p50: 1000000, p90: 1000000, mean: 1000000 },
+                totalAssetsReal: { p10: 1000000, p50: 1000000, p90: 1000000, mean: 1000000 }
+            },
+            successRate,
+            depletionStats: {
+                firstDepletionMonthByPath: [-1],
+                firstDepletionAgeByPath: [-1],
+                neverDepletedRate: 1,
+                medianDepletionAge: null
+            },
+            depletion: {
+                firstDepletionMonthByPath: [-1],
+                firstDepletionAgeByPath: [-1],
+                neverDepletedRate: 1,
+                medianDepletionAge: null
+            },
+            survivalStats: {
+                finalSurvivalRate: 100,
+                lowestSurvivalRate: 100,
+                firstBelowHundredPercentAge: null
+            },
+            mc: {
+                totalAssets: { p10: 1000000, p50: 1000000, p90: 1000000, mean: 1000000 },
+                totalAssetsReal: { p10: 1000000, p50: 1000000, p90: 1000000, mean: 1000000 }
+            }
         }
     };
 }
@@ -151,6 +197,26 @@ describe("simulationClient queueing", () => {
         expect(previewResult.detailLevel).toBe("preview");
         expect(fullResult.detailLevel).toBe("full");
         expect(batchResult).toHaveLength(1);
+    });
+
+    it("sends plan-based simulations through the dedicated worker kinds", async () => {
+        const client = await import("./simulationClient");
+        const plan = legacyInputToPlanV2(createInput(7));
+
+        const singlePromise = client.requestSimulationPlan(plan, { detailLevel: "full" });
+        const batchPromise = client.requestSimulationPlanBatch([plan], { detailLevel: "full" });
+
+        expect(MockWorker.instances).toHaveLength(1);
+        const computeWorker = MockWorker.instances[0];
+        expect(computeWorker.posted).toHaveLength(2);
+        expect(computeWorker.posted.map((request) => request.kind)).toEqual(["PLAN_SIMULATION", "PLAN_SIMULATION_BATCH"]);
+
+        computeWorker.respondSuccess(0, createResult("full", 0.75));
+        computeWorker.respondSuccess(1, [createResult("full", 0.8)]);
+
+        const [singleResult, batchResults] = await Promise.all([singlePromise, batchPromise]);
+        expect(singleResult.summary.successRate).toBeCloseTo(0.75, 8);
+        expect(batchResults).toHaveLength(1);
     });
 
     it("applies latest-wins queue coalescing and promise fan-out for preview requests", async () => {

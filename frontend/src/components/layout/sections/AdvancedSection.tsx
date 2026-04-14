@@ -2,6 +2,7 @@ import React, { Suspense, lazy } from "react";
 import { WithdrawalSettings } from "../../WithdrawalSettings";
 import { AdvancedSettings } from "../../AdvancedSettings";
 import { FavoriteAssets } from "../../FavoriteAssets";
+import { PlanV2Editor } from "../../PlanV2Editor";
 import { Section, Field } from "../../common/UIComponents";
 import { num } from "../../../utils/format";
 import type { SimulationInput } from "../../../logic/types";
@@ -16,6 +17,8 @@ interface AdvancedSectionProps {
 export function AdvancedSection({ input, setInput }: AdvancedSectionProps) {
     return (
         <>
+            <PlanV2Editor input={input} onChange={setInput} />
+
             <Suspense fallback={<div className="text-center text-slate-500 dark:text-slate-400 py-8 animate-pulse font-medium">Loading...</div>}>
                 <BacktestingPanel input={input} onInputChange={setInput} />
             </Suspense>

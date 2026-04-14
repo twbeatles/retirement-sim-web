@@ -4,10 +4,10 @@
  */
 import React, { useMemo, useState } from "react";
 import {
-    DepletionAnalysis,
-    SensitivityResult,
-    SimulationInput,
-    SimulationResult
+    type DepletionAnalysis,
+    type SensitivityResult,
+    type SimulationInput,
+    type SimulationResult
 } from "../logic/types";
 import { analyzeDepletion } from "../logic/riskAnalysis";
 import { requestSensitivityAnalysis } from "../logic/simulationClient";

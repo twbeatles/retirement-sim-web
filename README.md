@@ -17,7 +17,15 @@
 - **GBM(기하 브라운 운동)**: 자산 성장 모델링
 - **상관관계 반영**: 포트폴리오 내 자산 간 상관계수 적용
 - **입력 반응형 계산 스케줄러**: 입력 중 빠른 추정(Preview) + 입력 멈춤 후 최종 계산(Full)
-- **결과 출처 표기**: deterministic/montecarlo/historical source를 요약에 명시
+- **결과 출처 표기**: `deterministic` / `montecarlo` / `historical`를 요약에 명시
+- **은퇴 시점/최종 시점 분리 요약**: `retirementPoint`, `terminalStats`, `depletionStats`, `survivalStats`
+- **원장 요약**: 은퇴 초반 12개월 기준 순유입/총지출/세금/건보료/필수생활비 충족률 표시
+
+### 🧭 계획 중심 입력 모델
+- **`SimulationPlanV2` 스키마**: `profile`, `accounts`, `incomeStreams`, `expensePlan`, `withdrawalPolicy`, `ruleSet`, `simulationSettings`
+- **Guided Intake**: 간편 모드에서도 생활비, 국민연금, 주거 상태, 핵심 자산 입력 유도
+- **Plan 편집 UI**: Pro 모드에서 계정/소득/지출 버킷을 직접 편집
+- **로컬 규칙 메타데이터**: KR 규칙 버전과 역사 데이터 범위를 결과/리포트에 표시
 
 ### 💰 다양한 자산 유형 지원
 - **금융 자산**: 주식, 채권, 현금, 대체투자
@@ -36,13 +44,13 @@
 
 ### 📊 역사적 백테스팅 (NEW)
 - **40년 역사 데이터**: 1985~2024 실제 시장 수익률 사용
-- **롤링 윈도우**: 20개 시나리오 자동 테스트
+- **롤링 윈도우**: 선택한 시작 연도에 따라 경로 수가 동적으로 계산됨
 - **프리셋 시나리오**: 닷컴 버블, 금융위기, 코로나 등
 
 ### ⚖️ 자동 리밸런싱 (NEW)
 - **주기 옵션**: 월/분기/반기/연간/임계값
 - **거래 비용 반영**: 실제 리밸런싱 비용 시뮬레이션
-- **세금 효율적 옵션**: 매수만으로 리밸런싱
+- **세금 효율적 옵션**: 신규 유입 우선의 매수 중심 리밸런싱 근사 모델
 
 ### 🎯 역산 계산기 (Goal Planner)
 - 목표 금액 → 필요 월 저축액 계산
@@ -53,6 +61,16 @@
 - 모바일 최적화된 사이드바
 - 시스템 연동 다크모드 지원
 - 터치 친화적 슬라이더
+
+---
+
+## 📌 현재 범위와 제약
+
+- 대한민국 단일인 가구 은퇴계산기를 기준으로 설계되어 있습니다.
+- 규칙과 역사 데이터는 로컬 버전 자산을 사용하며, 결과 화면에 적용 버전이 표시됩니다.
+- 사용자용 인쇄 리포트와 원시 CSV 내보내기를 분리했습니다.
+- `bucket` 전략, `tax-efficient rebalancing`, 국민연금 상세 산식, 생명표 기반 장수 모델은 아직 전면 교체 중입니다.
+- 현재 최종 계산 경로는 `plan v2 -> legacy input adapter -> engine` 구조를 일부 포함합니다.
 
 ---
 
@@ -88,6 +106,8 @@ retirement-sim-web/
 │   │   │   ├── IncomeManager.tsx # 소득 관리
 │   │   │   ├── Onboarding.tsx    # 온보딩 위자드
 │   │   │   ├── PensionOptimizer.tsx # 연금 최적화
+│   │   │   ├── PlanGuidedChecklist.tsx
+│   │   │   ├── PlanV2Editor.tsx
 │   │   │   ├── PortfolioEditor.tsx
 │   │   │   ├── RiskDashboard.tsx
 │   │   │   ├── ScenarioComparison.tsx # 시나리오 비교
@@ -117,8 +137,12 @@ retirement-sim-web/
 │   │   │   ├── historicalData.ts # 역사적 시장 데이터
 │   │   │   ├── historicalScenarioMeta.ts # 역사적 시나리오 메타데이터
 │   │   │   ├── koreaTax.ts       # 세금 및 연금 수식
+│   │   │   ├── planSimulation.ts # plan v2 계산 진입점
+│   │   │   ├── planV2.ts         # 계획 중심 v2 스키마 / 어댑터
+│   │   │   ├── rules/
+│   │   │   │   └── kr.ts         # KR 규칙/메타데이터
 │   │   │   ├── uiConstants.ts
-│   │   │   └── export.ts         # CSV 내보내기
+│   │   │   └── export.ts         # 원시 CSV 내보내기
 │   │   │
 │   │   ├── services/             # 서비스 레이어
 │   │   │   └── storage.ts        # IndexedDB 시나리오 저장
@@ -156,7 +180,7 @@ retirement-sim-web/
 
 ```bash
 # 저장소 클론
-git clone https://github.com/your-repo/retirement-sim-web.git
+git clone https://github.com/twbeatles/retirement-sim-web.git
 cd retirement-sim-web/frontend
 
 # 의존성 설치
@@ -167,6 +191,9 @@ npm run dev
 
 # 프로덕션 빌드
 npm run build
+
+# 린트 + 타입체크 + 테스트 + 빌드
+npm run verify:pr
 ```
 
 ---
@@ -192,6 +219,7 @@ npm run build
 - [docs/modeling_notes.md](docs/modeling_notes.md) - 수학적 모델링 노트
 - [docs/api_examples.md](docs/api_examples.md) - 최신 입력 스키마/Worker 프로토콜 예시
 - [docs/roadmap.md](docs/roadmap.md) - 개발 로드맵
+- [docs/retirement_calculator_readiness_review_2026-04-14.md](docs/retirement_calculator_readiness_review_2026-04-14.md) - 실사용 전환 점검 및 개선 현황
 
 ---
 
@@ -268,3 +296,22 @@ Verification snapshot (2026-03-01):
 - `npm run typecheck` passed
 - `npm run test -- --run` passed
 - `npm run verify:pr` passed
+
+---
+
+## 2026-04-14 Retirement Calculator Update
+
+- `SimulationPlanV2` 저장/편집/JSON export-import 도입
+- 결과 요약에 `retirementPoint`, `terminalStats`, `depletionStats`, `survivalStats`, `ruleMetadata`, `assumptionWarnings` 반영
+- 역사적 백테스트 결과 `mode: "historical"` 정식 분리
+- 은퇴 초반 원장 요약과 필수생활비 충족률 표시
+- 원시 CSV와 인쇄 리포트 역할 분리
+- 입력 검증 확장: legacy + `plan_v2` 필드 모두 검사
+- 로컬 저장소 스키마를 plan v2 기준으로 갱신
+
+Verification snapshot (2026-04-14):
+
+- `npm run lint` passed
+- `npm run typecheck` passed
+- `npm run test -- --run` passed
+- `npm run build` passed

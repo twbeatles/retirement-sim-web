@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { runSimulation } from "./engine";
 import { solveForLaborSavingsRate, solveForMonthlyContribution } from "./solver";
-import { SimulationInput } from "./types";
+import { type SimulationInput } from "./types";
 
 function createLaborInput(): SimulationInput {
     return {

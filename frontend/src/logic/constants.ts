@@ -1,10 +1,14 @@
-import { SimulationInput } from "./types";
+import { type SimulationInput } from "./types";
+import { HISTORICAL_DATA_START_YEAR } from "./historicalData";
+import { resolveSimulationRuleSet } from "./rules/kr";
 
 export const INITIAL_INPUT: SimulationInput = {
     current_age: 35,
     retire_age: 60,
     end_age: 95,
     annual_inflation: 0.02,
+    rule_set: resolveSimulationRuleSet(),
+    housing_status: "own_outright",
 
     // General assets (returns are calculated from portfolio)
     general: { current_balance: 50000000, monthly_contribution: 1500000 },
@@ -50,7 +54,7 @@ export const INITIAL_INPUT: SimulationInput = {
         mode: "montecarlo", // Default to MC for "wow" factor
         mc_paths: 200,
         seed: 42,
-        historical_start_year: 1985
+        historical_start_year: HISTORICAL_DATA_START_YEAR
     },
 
     // Phase 7: Auto-Rebalancing
@@ -113,7 +117,7 @@ export const INITIAL_INPUT: SimulationInput = {
     // Phase 3: Risk Features
     longevity_risk: {
         useDistribution: false,
-        averageLifeExpectancy: 85,
+        averageLifeExpectancy: 83.5,
         stdDevYears: 5
     },
     medical_shocks: {

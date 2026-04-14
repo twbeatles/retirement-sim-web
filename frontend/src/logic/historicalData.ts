@@ -14,6 +14,9 @@ export const HISTORICAL_YEARS = [
     2015, 2016, 2017, 2018, 2019, 2020, 2021, 2022, 2023, 2024
 ];
 
+export const HISTORICAL_DATA_START_YEAR = HISTORICAL_YEARS[0];
+export const HISTORICAL_DATA_END_YEAR = HISTORICAL_YEARS[HISTORICAL_YEARS.length - 1];
+
 // S&P 500 Total Return (including dividends)
 export const SP500_RETURNS = [
     0.3216, 0.1867, 0.0525, 0.1661, 0.3169, // 1985-1989
@@ -126,6 +129,35 @@ export const HISTORICAL_RETURNS_MAP: Record<HistoricalAssetType, number[]> = {
     cash: CASH_RETURNS,
     reit: REIT_RETURNS
 };
+
+export function getHistoricalYearRange() {
+    return {
+        startYear: HISTORICAL_DATA_START_YEAR,
+        endYear: HISTORICAL_DATA_END_YEAR
+    };
+}
+
+export function clampHistoricalStartYear(startYear?: number): number {
+    if (!Number.isFinite(startYear)) {
+        return HISTORICAL_DATA_START_YEAR;
+    }
+
+    return Math.max(
+        HISTORICAL_DATA_START_YEAR,
+        Math.min(HISTORICAL_DATA_END_YEAR, Math.floor(startYear as number))
+    );
+}
+
+export function getAvailableHistoricalScenarioCount(startYear?: number): number {
+    const clampedStartYear = clampHistoricalStartYear(startYear);
+    const startIndex = HISTORICAL_YEARS.indexOf(clampedStartYear);
+
+    if (startIndex < 0) {
+        return HISTORICAL_YEARS.length;
+    }
+
+    return Math.max(1, HISTORICAL_YEARS.length - startIndex);
+}
 
 /**
  * Get historical returns for a given asset type and year range

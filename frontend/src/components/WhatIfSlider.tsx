@@ -3,7 +3,7 @@
  * Real-time parameter adjustment with live success rate feedback
  */
 import React, { useState, useEffect, useRef } from 'react';
-import { SimulationInput, WhatIfParameter } from '../logic/types';
+import { type SimulationInput, type WhatIfParameter } from '../logic/types';
 import { requestSimulation } from '../logic/simulationClient';
 import {
     createPreviewSimulationOptions,

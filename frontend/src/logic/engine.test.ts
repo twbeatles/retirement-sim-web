@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'vitest';
 import { runSimulation } from './engine';
-import { SimulationInput } from './types';
+import { type SimulationInput } from './types';
 
 // Minimal Helper for creating input
 const createBaseInput = (): SimulationInput => ({
@@ -275,8 +275,48 @@ describe('Simulation Engine', () => {
         };
 
         const result = runSimulation(input);
-        expect(result.mode).toBe('montecarlo');
+        expect(result.mode).toBe('historical');
         expect(result.summary.source).toBe('historical');
+        if (result.mode === 'deterministic') return;
+        expect(result.survivalSeries?.month.length).toBeGreaterThan(0);
+    });
+
+    it('uses the available historical window count based on the selected start year', () => {
+        const input = createBaseInput();
+        input.current_age = 60;
+        input.retire_age = 60;
+        input.end_age = 62;
+        input.simulation_settings = {
+            mode: 'historical',
+            mc_paths: 20,
+            historical_start_year: 2000
+        };
+
+        const result = runSimulation(input);
+        expect(result.mode).toBe('historical');
+        if (result.mode === 'deterministic') return;
+        expect(result.pathCount).toBe(25);
+    });
+
+    it('exposes rule metadata and assumption warnings in summary', () => {
+        const input = createBaseInput();
+        input.current_age = 65;
+        input.retire_age = 65;
+        input.end_age = 67;
+        input.national_pension.expected_monthly_benefit_at_retirement = 1200000;
+        input.health_insurance = {
+            enabled: false,
+            mode: 'simple',
+            monthlyPremium: 0,
+            inflationLinked: false
+        };
+
+        const result = runSimulation(input);
+        expect(result.summary.ruleMetadata.version).toBe('KR-2026.1');
+        expect(result.summary.ruleMetadata.historicalDataRange.startYear).toBe(1985);
+        expect(result.summary.ruleMetadata.historicalDataRange.endYear).toBe(2024);
+        expect(result.summary.assumptionWarnings.some((warning) => warning.code === 'simple_tax_mode')).toBe(true);
+        expect(result.summary.assumptionWarnings.some((warning) => warning.code === 'manual_pension_input')).toBe(true);
     });
 
     it('prioritizes historical_asset_mapping by asset id', () => {

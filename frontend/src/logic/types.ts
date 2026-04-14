@@ -1,3 +1,5 @@
+import type { SimulationPlanV2 } from "./planV2";
+
 export type AssetClass = {
     id: string;
     name: string;
@@ -56,11 +58,31 @@ export type WithdrawalPolicy = {
     vpwMaxYoYChange?: number;      // Smoothing: Max Year-over-Year change (e.g. 0.1 for 10%)
 };
 
+export type HousingStatus =
+    | "own_outright"
+    | "rent"
+    | "jeonse"
+    | "mortgage";
+
+export type SimulationRuleSet = {
+    jurisdiction: "KR";
+    version: string;
+    taxYear: number;
+    healthInsuranceYear: number;
+    pensionYear: number;
+    historicalDataVersion: string;
+    historicalDataStartYear: number;
+    historicalDataEndYear: number;
+};
+
 export type SimulationInput = {
     current_age: number;
     retire_age: number;
     end_age: number;
     annual_inflation: number;
+    plan_v2?: SimulationPlanV2;
+    rule_set?: SimulationRuleSet;
+    housing_status?: HousingStatus;
 
     // New: Portfolio based approach
     portfolio: PortfolioModel;
@@ -227,7 +249,57 @@ export type TimelineRow = {
         withdrawalGross: number; // Before Tax
         withdrawalNet: number;   // After Tax
         taxPaid: number;
+        healthInsurancePremium?: number;
+        taxCreditApplied?: number;
+        assessableIncomeForHealthInsurance?: number;
         totalIncomeNet: number;  // Sum of all net inflows
+    };
+};
+
+export type LedgerTimelineRow = {
+    month: number;
+    age: number;
+    isRetired: boolean;
+    incomes: {
+        salary: number;
+        nationalPension: number;
+        privatePension: number;
+        additionalPension: number;
+        businessIncome: number;
+        rentalIncome: number;
+        severance: number;
+        reverseMortgage: number;
+        oneOffIncome: number;
+        withdrawalGross: number;
+        totalGross: number;
+        totalNet: number;
+    };
+    expenses: {
+        essential: number;
+        discretionary: number;
+        housing: number;
+        medicalBaseline: number;
+        medicalShock: number;
+        stageAdjustments: number;
+        oneOffExpense: number;
+        taxPaid: number;
+        healthInsurancePremium: number;
+        total: number;
+    };
+    tax: {
+        taxableIncomeMonthly: number;
+        healthInsuranceAssessableIncomeMonthly: number;
+        taxPaid: number;
+        taxCreditApplied: number;
+    };
+    balances: {
+        taxableInvestments: number;
+        privatePension: number;
+        realEstate: number;
+        additionalPensions: number;
+        debt: number;
+        totalAssets: number;
+        totalAssetsReal: number;
     };
 };
 
@@ -253,18 +325,59 @@ export type SurvivalSeries = {
     survivalRate: number[]; // 0..100
 };
 
+export type DistributionStats = {
+    p10: number;
+    p50: number;
+    p90: number;
+    mean: number;
+};
+
+export type RuleMetadata = {
+    jurisdiction: "KR";
+    version: string;
+    taxYear: number;
+    healthInsuranceYear: number;
+    pensionYear: number;
+    historicalDataVersion: string;
+    historicalDataRange: {
+        startYear: number;
+        endYear: number;
+    };
+};
+
+export type AssumptionWarning = {
+    code: string;
+    severity: "info" | "warning";
+    message: string;
+};
+
+export type SimulationDepletionSummary = {
+    firstDepletionMonthByPath: number[]; // -1 means never depleted
+    firstDepletionAgeByPath: number[];   // -1 means never depleted
+    neverDepletedRate: number;
+    medianDepletionAge: number | null;
+};
+
+export type SimulationSurvivalSummary = {
+    finalSurvivalRate: number;
+    lowestSurvivalRate: number;
+    firstBelowHundredPercentAge: number | null;
+};
+
 export type SimulationResult =
     | {
         mode: "deterministic";
         detailLevel: SimulationDetailLevel;
         timeline: TimelineRow[];
+        ledgerTimeline?: LedgerTimelineRow[];
         summary: SimulationSummary;
     }
     | {
-        mode: "montecarlo";
+        mode: "montecarlo" | "historical";
         detailLevel: SimulationDetailLevel;
         pathCount: number;
         sampleTimelines: TimelineRow[][]; // Subset of paths for visualization (e.g. first 5)
+        ledgerTimeline?: LedgerTimelineRow[];
         summary: SimulationSummary; // Statistical summary
         trajectoryStats?: SimulationTrajectoryStats; // Fan Chart Data
         survivalSeries?: SurvivalSeries; // Pre-computed series for survival chart
@@ -274,6 +387,9 @@ export type SimulationSummary = {
     retireAge: number;
     endAge: number;
     source: "deterministic" | "montecarlo" | "historical";
+    calculationMode: "deterministic" | "distribution";
+    ruleMetadata: RuleMetadata;
+    assumptionWarnings: AssumptionWarning[];
 
     // Deterministic or Mean stats
     finalTotalAssets: number;
@@ -283,22 +399,23 @@ export type SimulationSummary = {
         totalAssets: number;
         totalAssetsReal: number;
     };
+    terminalStats: {
+        totalAssets: DistributionStats;
+        totalAssetsReal: DistributionStats;
+    };
 
     // Success Rate (Assets > 0 at end_age)
     successRate: number;
 
-    depletion?: {
-        firstDepletionMonthByPath: number[]; // -1 means never depleted
-        firstDepletionAgeByPath: number[];   // -1 means never depleted
-        neverDepletedRate: number;
-        medianDepletionAge: number | null;
-    };
+    depletion?: SimulationDepletionSummary;
+    depletionStats: SimulationDepletionSummary;
+    survivalStats: SimulationSurvivalSummary;
 
     // Monte Carlo Stats (if applicable)
     mc?: {
-        totalAssetsReal: { p10: number; p50: number; p90: number; mean: number };
-        totalAssets: { p10: number; p50: number; p90: number; mean: number };
-    }
+        totalAssetsReal: DistributionStats;
+        totalAssets: DistributionStats;
+    };
 };
 
 export type SimulationTrajectoryStats = {

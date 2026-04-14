@@ -1,13 +1,16 @@
 import {
-    SimulationInput,
-    SimulationResult,
-    SensitivityResult,
-    SimulationRunOptions
+    type SimulationInput,
+    type SimulationResult,
+    type SensitivityResult,
+    type SimulationRunOptions
 } from "./types";
+import type { SimulationPlanV2 } from "./planV2";
 
 export type WorkerRequestKind =
     | "SIMULATION"
+    | "PLAN_SIMULATION"
     | "SIMULATION_BATCH"
+    | "PLAN_SIMULATION_BATCH"
     | "SOLVE_CONTRIBUTION"
     | "SOLVE_LABOR_SAVINGS_RATE"
     | "SOLVE_RETIRE_AGE"
@@ -30,8 +33,18 @@ export type SimulationRequestPayload = {
     options?: SimulationRunOptions;
 };
 
+export type PlanSimulationRequestPayload = {
+    plan: SimulationPlanV2;
+    options?: SimulationRunOptions;
+};
+
 export type SimulationBatchRequestPayload = {
     inputs: SimulationInput[];
+    options?: SimulationRunOptions;
+};
+
+export type PlanSimulationBatchRequestPayload = {
+    plans: SimulationPlanV2[];
     options?: SimulationRunOptions;
 };
 
@@ -70,7 +83,9 @@ export type PensionOptimizationRequestPayload = {
 
 export type WorkerRequestByKind = {
     SIMULATION: SimulationRequestPayload;
+    PLAN_SIMULATION: PlanSimulationRequestPayload;
     SIMULATION_BATCH: SimulationBatchRequestPayload;
+    PLAN_SIMULATION_BATCH: PlanSimulationBatchRequestPayload;
     SOLVE_CONTRIBUTION: SolveContributionRequestPayload;
     SOLVE_LABOR_SAVINGS_RATE: SolveLaborSavingsRateRequestPayload;
     SOLVE_RETIRE_AGE: SolveRetireAgeRequestPayload;
@@ -80,7 +95,9 @@ export type WorkerRequestByKind = {
 
 export type WorkerResponseByKind = {
     SIMULATION: SimulationResult;
+    PLAN_SIMULATION: SimulationResult;
     SIMULATION_BATCH: SimulationResult[];
+    PLAN_SIMULATION_BATCH: SimulationResult[];
     SOLVE_CONTRIBUTION: number | null;
     SOLVE_LABOR_SAVINGS_RATE: number | null;
     SOLVE_RETIRE_AGE: number | null;

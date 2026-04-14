@@ -1,5 +1,5 @@
 ﻿import React, { useState } from 'react';
-import { SimulationInput } from '../logic/types';
+import { type SimulationInput } from '../logic/types';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer, Line, ComposedChart } from 'recharts';
 import { formatMoney } from '../utils/format';
 import { requestPensionOptimization } from '../logic/simulationClient';

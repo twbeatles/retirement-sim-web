@@ -1,5 +1,5 @@
 import React from 'react';
-import { SimulationInput, SimulationResult } from '../logic/types';
+import { type SimulationInput, type SimulationResult } from '../logic/types';
 import { formatMoney } from '../utils/format';
 import { YearlyReportTable } from './YearlyReportTable';
 import { SurvivalChart, AssetBreakdownChart, CashflowStackChart } from './Charts';
@@ -14,6 +14,34 @@ export const ReportPrintView: React.FC<Props> = ({ input, result }) => {
 
     const timeline = result.mode === 'deterministic' ? result.timeline : result.sampleTimelines[0] || [];
     const summary = result.summary;
+    const sourceLabel = summary.source === "historical"
+        ? "역사적 백테스트"
+        : summary.source === "montecarlo"
+            ? "몬테카를로"
+            : "결정론";
+    const ledgerRows = result.ledgerTimeline ?? [];
+    const ledgerRetirementRows = ledgerRows.length > 0
+        ? (() => {
+            const retirementStartIndex = ledgerRows.findIndex((row) => row.isRetired);
+            const rows = retirementStartIndex >= 0
+                ? ledgerRows.slice(retirementStartIndex, retirementStartIndex + 12)
+                : ledgerRows.slice(0, 12);
+            return rows;
+        })()
+        : [];
+    const ledgerAverage = (selector: (row: typeof ledgerRetirementRows[number]) => number) =>
+        ledgerRetirementRows.length > 0
+            ? ledgerRetirementRows.reduce((sum, row) => sum + selector(row), 0) / ledgerRetirementRows.length
+            : 0;
+    const essentialBaselineAverage = ledgerAverage(
+        (row) => row.expenses.essential + row.expenses.housing + row.expenses.medicalBaseline
+    );
+    const coveredEssentialMonths = ledgerRetirementRows.filter(
+        (row) => row.incomes.totalNet >= (row.expenses.essential + row.expenses.housing + row.expenses.medicalBaseline)
+    ).length;
+    const essentialCoverageRate = ledgerRetirementRows.length > 0
+        ? coveredEssentialMonths / ledgerRetirementRows.length
+        : 0;
 
     return (
         <div className="hidden print:block print:bg-white print:text-black">
@@ -62,18 +90,81 @@ export const ReportPrintView: React.FC<Props> = ({ input, result }) => {
                         </div>
                     </div>
                     <div className="p-5 border border-slate-200 rounded-xl bg-slate-50">
-                        <div className="text-sm font-semibold text-slate-500 mb-2">은퇴 시점 자산 (중위값)</div>
+                        <div className="text-sm font-semibold text-slate-500 mb-2">
+                            {result.mode === "deterministic" ? "은퇴 시점 자산" : "은퇴 시점 자산 (중위값)"}
+                        </div>
                         <div className="text-2xl font-bold tracking-tight text-slate-800 mt-2">
-                            {formatMoney(summary.mc?.totalAssetsReal.p50 || 0)}
+                            {formatMoney(summary.retirementPoint.totalAssetsReal)}
                         </div>
                     </div>
                     <div className="p-5 border border-slate-200 rounded-xl bg-slate-50">
-                        <div className="text-sm font-semibold text-slate-500 mb-2">최종 잔존 자산 (중위값)</div>
+                        <div className="text-sm font-semibold text-slate-500 mb-2">
+                            {result.mode === "deterministic" ? "최종 잔존 자산" : "최종 잔존 자산 (중위값)"}
+                        </div>
                         <div className="text-2xl font-bold tracking-tight text-slate-800 mt-2">
-                            {formatMoney(summary.mc?.totalAssetsReal.mean || 0)}
+                            {formatMoney(result.mode === "deterministic" ? summary.finalTotalAssetsReal : summary.terminalStats.totalAssetsReal.p50)}
                         </div>
                     </div>
                 </div>
+
+                <div className="mb-8 border border-slate-200 rounded-xl bg-slate-50 p-5">
+                    <div className="grid grid-cols-3 gap-4 text-sm">
+                        <div>
+                            <div className="text-slate-500 font-semibold mb-1">규칙 버전</div>
+                            <div className="font-bold text-slate-800">{summary.ruleMetadata.version}</div>
+                        </div>
+                        <div>
+                            <div className="text-slate-500 font-semibold mb-1">데이터 소스</div>
+                            <div className="font-bold text-slate-800">{sourceLabel}</div>
+                        </div>
+                        <div>
+                            <div className="text-slate-500 font-semibold mb-1">역사 데이터 범위</div>
+                            <div className="font-bold text-slate-800">
+                                {summary.ruleMetadata.historicalDataRange.startYear}-{summary.ruleMetadata.historicalDataRange.endYear}
+                            </div>
+                        </div>
+                    </div>
+                    {summary.assumptionWarnings.length > 0 && (
+                        <div className="mt-4 border-t border-slate-200 pt-4">
+                            <div className="text-slate-500 font-semibold mb-2">가정 및 경고</div>
+                            <ul className="m-0 pl-5 text-sm text-slate-700 space-y-1">
+                                {summary.assumptionWarnings.map((warning) => (
+                                    <li key={warning.code}>{warning.message}</li>
+                                ))}
+                            </ul>
+                        </div>
+                    )}
+                </div>
+
+                {ledgerRetirementRows.length > 0 && (
+                    <div className="mb-8 border border-slate-200 rounded-xl bg-slate-50 p-5 print:break-inside-avoid">
+                        <h3 className="text-lg font-bold mb-4 text-slate-800">월별 원장 요약</h3>
+                        <div className="grid grid-cols-4 gap-4 text-sm">
+                            <div>
+                                <div className="text-slate-500 font-semibold mb-1">월 순유입 평균</div>
+                                <div className="font-bold text-slate-800">{formatMoney(ledgerAverage((row) => row.incomes.totalNet))}</div>
+                            </div>
+                            <div>
+                                <div className="text-slate-500 font-semibold mb-1">월 총지출 평균</div>
+                                <div className="font-bold text-slate-800">{formatMoney(ledgerAverage((row) => row.expenses.total))}</div>
+                            </div>
+                            <div>
+                                <div className="text-slate-500 font-semibold mb-1">월 세금 평균</div>
+                                <div className="font-bold text-slate-800">{formatMoney(ledgerAverage((row) => row.tax.taxPaid))}</div>
+                            </div>
+                            <div>
+                                <div className="text-slate-500 font-semibold mb-1">월 건보료 평균</div>
+                                <div className="font-bold text-slate-800">{formatMoney(ledgerAverage((row) => row.expenses.healthInsurancePremium))}</div>
+                            </div>
+                        </div>
+                        <div className="mt-4 text-sm">
+                            <div className="text-slate-500 font-semibold mb-1">필수생활비 충족률</div>
+                            <div className="font-bold text-slate-800">
+                                {(essentialCoverageRate * 100).toFixed(0)}% / 기준 {formatMoney(essentialBaselineAverage)}
+                            </div>
+                        </div>
+                    </div>
+                )}
 
                 <div className="mb-10 print:break-inside-avoid">
                     <h3 className="text-lg font-bold mb-4 text-slate-800">자산 생존 확률 분석</h3>
@@ -81,7 +172,7 @@ export const ReportPrintView: React.FC<Props> = ({ input, result }) => {
                         <SurvivalChart result={result} />
                     </div>
                     <p className="text-sm font-medium text-slate-500 mt-3">
-                        * 1,000회 몬테카를로 시뮬레이션 결과에 기반한 연령별 자산 생존 확률입니다.
+                        * {sourceLabel} 결과에 기반한 연령별 자산 생존 확률입니다.
                     </p>
                 </div>
 

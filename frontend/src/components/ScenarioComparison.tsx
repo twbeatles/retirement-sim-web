@@ -5,18 +5,10 @@
 import React, { useCallback, useEffect, useMemo, useState } from "react";
 import { LineChart, Line, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid, Legend } from "recharts";
 import type { SimulationResult } from "../logic/types";
-import { requestSimulationBatch } from "../logic/simulationClient";
+import { requestSimulationPlanBatch } from "../logic/simulationClient";
 import { scenarioStorage, type SavedScenario } from "../services/storage";
 
 const COLORS = ["#8884d8", "#82ca9d", "#ffc658", "#ff7300", "#00C49F", "#FFBB28"];
-const COLOR_CLASS_MAP: Record<string, string> = {
-    "#8884d8": "comparison-color-0",
-    "#82ca9d": "comparison-color-1",
-    "#ffc658": "comparison-color-2",
-    "#ff7300": "comparison-color-3",
-    "#00C49F": "comparison-color-4",
-    "#FFBB28": "comparison-color-5"
-};
 
 type ComparisonData = {
     id: string;
@@ -62,14 +54,14 @@ export function ScenarioComparison({ currentResult }: Props) {
     };
 
     const getTrajectoryP50 = (result: SimulationResult): { month: number; value: number }[] => {
-        if (result.mode === "montecarlo" && result.trajectoryStats) {
+        if (result.mode !== "deterministic" && result.trajectoryStats) {
             return result.trajectoryStats.month.map((month, index) => ({
                 month,
                 value: result.trajectoryStats!.p50[index]
             }));
         }
 
-        if (result.mode === "montecarlo" && result.sampleTimelines.length > 0) {
+        if (result.mode !== "deterministic" && result.sampleTimelines.length > 0) {
             return result.sampleTimelines[0].map((row) => ({
                 month: row.month,
                 value: row.totalAssetsReal
@@ -109,15 +101,15 @@ export function ScenarioComparison({ currentResult }: Props) {
                 .filter((scenario): scenario is SavedScenario => !!scenario);
 
             if (selectedScenarios.length > 0) {
-                const batchInputs = selectedScenarios.map((scenario) => ({
-                    ...scenario.input,
-                    simulation_settings: {
-                        ...scenario.input.simulation_settings,
-                        mc_paths: Math.min(scenario.input.simulation_settings.mc_paths, 100)
+                const batchPlans = selectedScenarios.map((scenario) => ({
+                    ...scenario.plan,
+                    simulationSettings: {
+                        ...scenario.plan.simulationSettings,
+                        monteCarloPaths: Math.min(scenario.plan.simulationSettings.monteCarloPaths, 100)
                     }
                 }));
 
-                const batchResults = await requestSimulationBatch(batchInputs, {
+                const batchResults = await requestSimulationPlanBatch(batchPlans, {
                     detailLevel: "full",
                     includeSampleTimelines: false,
                     includeTrajectoryStats: true,
@@ -239,7 +231,11 @@ export function ScenarioComparison({ currentResult }: Props) {
                                                     {(item.result.summary.successRate * 100).toFixed(1)}%
                                                 </td>
                                                 <td className="p-3 font-medium text-slate-600 dark:text-slate-400 text-right">
-                                                    {Math.round(item.result.summary.finalTotalAssetsReal / 10000).toLocaleString()}만원
+                                                    {Math.round(
+                                                        (item.result.mode === "deterministic"
+                                                            ? item.result.summary.finalTotalAssetsReal
+                                                            : item.result.summary.terminalStats.totalAssetsReal.p50) / 10000
+                                                    ).toLocaleString()}만원
                                                 </td>
                                             </tr>
                                         ))}

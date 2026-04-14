@@ -3,7 +3,7 @@
  * Save and quickly add frequently used asset classes
  */
 import React, { useState, useEffect } from 'react';
-import { AssetClass, FavoriteAsset, PortfolioModel } from '../logic/types';
+import { type AssetClass, type FavoriteAsset, type PortfolioModel } from '../logic/types';
 
 const FAVORITES_KEY = 'retirement_sim_favorite_assets_v1';
 

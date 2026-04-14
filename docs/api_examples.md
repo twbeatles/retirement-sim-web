@@ -44,12 +44,15 @@ console.log(result.summary.depletion?.neverDepletedRate);
 ```ts
 import {
     requestSimulation,
+    requestSimulationPlan,
     requestSolveContribution,
     requestSolveLaborSavingsRate,
     requestSolveRetireAge
 } from "../frontend/src/logic/simulationClient";
+import { legacyInputToPlanV2 } from "../frontend/src/logic/planV2";
 
 const sim = await requestSimulation(input, { detailLevel: "preview" });
+const full = await requestSimulationPlan(legacyInputToPlanV2(input), { detailLevel: "full" });
 const monthly = await requestSolveContribution(input, 0.9);
 const savingsRate = await requestSolveLaborSavingsRate(input, 0.9);
 const retireAge = await requestSolveRetireAge(input, 0.85);
@@ -58,7 +61,9 @@ const retireAge = await requestSolveRetireAge(input, 0.85);
 Worker `kind` 목록 (`frontend/src/logic/workerTypes.ts`):
 
 - `SIMULATION`
+- `PLAN_SIMULATION`
 - `SIMULATION_BATCH`
+- `PLAN_SIMULATION_BATCH`
 - `SOLVE_CONTRIBUTION`
 - `SOLVE_LABOR_SAVINGS_RATE`
 - `SOLVE_RETIRE_AGE`
@@ -165,14 +170,108 @@ if (warnings.some((w) => w.severity === "error")) {
 
 ---
 
-## 5. Historical 모드 반환 규칙
+## 5. `SimulationPlanV2` 예시 (축약)
 
-호환성 유지를 위해 결과 `mode`는 `"montecarlo"`를 유지합니다.  
-Historical 여부는 `result.summary.source === "historical"`로 판별합니다.
+```json
+{
+  "planVersion": "v2",
+  "profile": {
+    "country": "KR",
+    "householdType": "single",
+    "currentAge": 45,
+    "retirementAge": 60,
+    "endAge": 95,
+    "housingStatus": "own_outright"
+  },
+  "accounts": [
+    {
+      "id": "general_taxable",
+      "type": "taxable_investment",
+      "name": "일반 금융자산",
+      "currency": "KRW",
+      "balance": 300000000,
+      "monthlyContribution": 1500000
+    },
+    {
+      "id": "private_pension_savings",
+      "type": "pension_savings",
+      "name": "연금저축",
+      "currency": "KRW",
+      "balance": 60000000
+    }
+  ],
+  "incomeStreams": [
+    {
+      "id": "national_pension",
+      "type": "national_pension",
+      "name": "국민연금",
+      "monthlyAmount": 1800000,
+      "startAge": 65,
+      "inflationLinked": true,
+      "taxable": true,
+      "healthInsuranceIncluded": true
+    }
+  ],
+  "expensePlan": {
+    "essentialMonthly": 2200000,
+    "discretionaryMonthly": 1000000,
+    "housingMonthly": 0,
+    "medicalBaselineMonthly": 300000,
+    "oneOffEvents": [],
+    "stageAdjustments": []
+  },
+  "withdrawalPolicy": {
+    "retirementSpendingTarget": 3500000
+  },
+  "ruleSet": {
+    "jurisdiction": "KR",
+    "version": "KR-2026.1"
+  }
+}
+```
 
 ---
 
-## 6. 2026-03-01 Schema/Behavior Notes
+## 6. Historical 모드 반환 규칙
+
+Historical 결과는 이제 아래 두 값을 함께 사용합니다.
+
+- `result.mode === "historical"`
+- `result.summary.source === "historical"`
+
+---
+
+## 7. 2026-04-14 Schema/Behavior Notes
+
+### Result summary fields
+
+결과 요약은 아래 핵심 필드를 기본 제공합니다.
+
+- `summary.retirementPoint`
+- `summary.terminalStats`
+- `summary.depletionStats`
+- `summary.survivalStats`
+- `summary.ruleMetadata`
+- `summary.assumptionWarnings`
+
+### Ledger timeline
+
+`requestSimulationPlan(...)` 또는 full plan simulation 결과에는 `ledgerTimeline`이 포함될 수 있습니다.
+
+```ts
+const full = await requestSimulationPlan(plan, { detailLevel: "full" });
+if (full.ledgerTimeline?.length) {
+  console.log(full.ledgerTimeline[0].expenses.total);
+}
+```
+
+### Raw CSV export
+
+CSV 다운로드는 사용자용 설명 보고서가 아니라 원시 데이터 export입니다.
+
+---
+
+## 8. 2026-03-01 Schema/Behavior Notes
 
 ### Age guard behavior
 

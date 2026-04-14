@@ -6,6 +6,9 @@ import type {
     SimulationRunOptions
 } from "./types";
 import type {
+    SimulationPlanV2
+} from "./planV2";
+import type {
     PensionOptimizationResult,
     SimulationRequestPriority,
     WorkerLane,
@@ -296,11 +299,25 @@ export function requestSimulation(
     return requestSimulationCoalesced({ input, options });
 }
 
+export function requestSimulationPlan(
+    plan: SimulationPlanV2,
+    options?: SimulationRunOptions
+): Promise<SimulationResult> {
+    return sendRawWorkerRequest("compute", "PLAN_SIMULATION", { plan, options });
+}
+
 export function requestSimulationBatch(
     inputs: SimulationInput[],
     options?: SimulationRunOptions
 ): Promise<SimulationResult[]> {
     return sendRawWorkerRequest("compute", "SIMULATION_BATCH", { inputs, options });
+}
+
+export function requestSimulationPlanBatch(
+    plans: SimulationPlanV2[],
+    options?: SimulationRunOptions
+): Promise<SimulationResult[]> {
+    return sendRawWorkerRequest("compute", "PLAN_SIMULATION_BATCH", { plans, options });
 }
 
 export function requestSolveContribution(

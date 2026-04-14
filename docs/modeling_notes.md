@@ -2,6 +2,8 @@
 
 ## 1. Asset Growth Model
 
+이 문서는 엔진의 핵심 수학 모델을 설명합니다. 2026-04-14 기준 실제 앱은 `SimulationPlanV2` 입력을 우선 사용하지만, 내부 계산 엔진은 일부 `legacy input` 어댑터를 함께 거칩니다.
+
 ### Geometric Brownian Motion (GBM)
 
 The simulation uses GBM for modeling asset price dynamics:
@@ -92,6 +94,11 @@ Tax-efficient mode:
 buy-only rebalance (no forced sells), turnover-based trading cost
 ```
 
+현재 구현 메모:
+
+- `bucket` 전략은 실버킷 잔고 원장 대신 근사 현금흐름 방식입니다.
+- `taxEfficient` 리밸런싱은 신규 유입/현금 우선의 근사 모델입니다.
+
 ---
 
 ## 4. National Pension Adjustments (Korea)
@@ -125,6 +132,22 @@ P10 = 10th percentile (pessimistic)
 P90 = 90th percentile (optimistic)
 ```
 
+### Historical Backtest Result Semantics
+
+Historical runs are now returned as:
+
+```
+result.mode === "historical"
+result.summary.source === "historical"
+```
+
+The result summary separates:
+
+- retirement-point assets via `summary.retirementPoint`
+- terminal distribution via `summary.terminalStats`
+- depletion timing via `summary.depletionStats`
+- path survival via `summary.survivalStats`
+
 ---
 
 ## 6. Risk Metrics
@@ -144,3 +167,26 @@ SoRR Impact = Success_Rate(normal) - Success_Rate(early_crash)
 ΔP = P(base + δ) - P(base)
 Where δ ∈ {-2.0%, -1.0%, 0%, +1.0%, +2.0%} for return/inflation
 ```
+
+---
+
+## 7. Plan V2 / Ledger Layer
+
+`SimulationPlanV2` stores planning data in seven top-level groups:
+
+- `profile`
+- `accounts`
+- `incomeStreams`
+- `expensePlan`
+- `withdrawalPolicy`
+- `ruleSet`
+- `simulationSettings`
+
+Full plan simulations can emit a `ledgerTimeline` that decomposes:
+
+- income categories
+- expense buckets
+- tax and health-insurance inputs
+- account-level balances
+
+This ledger layer is currently a reporting-oriented reconstruction on top of the engine timeline, not yet a fully ledger-native simulation core.

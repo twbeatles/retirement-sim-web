@@ -3,15 +3,17 @@
  * Provides advanced risk analysis functions for retirement simulation
  */
 
-import { SimulationInput, SimulationResult, DepletionAnalysis, SensitivityResult, SoRRAnalysis } from './types';
+import { type SimulationInput, type SimulationResult, type DepletionAnalysis, type SensitivityResult, type SoRRAnalysis } from './types';
 import { runSimulation } from './engine';
 import { percentile } from './math';
+import { calculateRegionalHealthInsurance } from './koreaTax';
+import { calculateAnnualPensionTaxCredit } from './rules/kr';
 
 /**
  * Analyze when assets are depleted across Monte Carlo paths
  */
 export function analyzeDepletion(result: SimulationResult): DepletionAnalysis | null {
-    if (result.mode !== 'montecarlo') {
+    if (result.mode === 'deterministic') {
         return null;
     }
 
@@ -216,25 +218,7 @@ export function calculateHealthInsurancePremium(
     monthlyIncome: number,
     assets: number
 ): number {
-    // Korean health insurance calculation for self-employed/regional
-    // Rate: ~7.09% of income + asset-based premium
-    // Simplified formula
-
-    const incomeBaseRate = 0.0709;
-    const incomePremium = monthlyIncome * incomeBaseRate;
-
-    // Asset-based premium (simplified)
-    const assetBaseRate = 0.0001; // Very approximate
-    const assetPremium = (assets / 12) * assetBaseRate;
-
-    // Long-term care insurance: ~12.81% of health insurance
-    const longTermCareRate = 0.1281;
-
-    const healthPremium = incomePremium + assetPremium;
-    const totalPremium = healthPremium * (1 + longTermCareRate);
-
-    // Min/Max bounds (approximate 2024)
-    return Math.max(15000, Math.min(totalPremium, 4000000));
+    return calculateRegionalHealthInsurance(monthlyIncome * 12, assets, 0);
 }
 
 /**
@@ -274,25 +258,16 @@ export function calculateTaxCredit(
     irpContribution: number,
     totalIncome: number
 ): { creditAmount: number; effectiveCreditRate: number } {
-    // Korean 2026 reference table (incl. local tax)
-    // Income <= 55M KRW: 16.5%
-    // Income > 55M KRW: 13.2%
-    const creditRate = totalIncome <= 55000000 ? 0.165 : 0.132;
-
-    // Contribution limits
-    const pensionLimit = 6000000; // 600만원
-    const irpLimit = 3000000; // 300만원
-    const totalLimit = 9000000; // 900만원 (연금저축 + IRP 합계)
-
-    const eligiblePension = Math.min(pensionSavingsContribution, pensionLimit);
-    const eligibleIRP = Math.min(irpContribution, irpLimit);
-    const totalEligible = Math.min(eligiblePension + eligibleIRP, totalLimit);
-
-    const creditAmount = totalEligible * creditRate;
+    const creditAmount = calculateAnnualPensionTaxCredit(
+        pensionSavingsContribution,
+        irpContribution,
+        totalIncome
+    );
+    const effectiveCreditRate = totalIncome <= 55000000 ? 0.165 : 0.132;
 
     return {
         creditAmount,
-        effectiveCreditRate: creditRate
+        effectiveCreditRate
     };
 }
 

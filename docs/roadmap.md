@@ -104,3 +104,22 @@
 - [x] Asset section core fields expansion (real estate/additional pensions/business income)
 - [x] Historical scenario metadata single-source cleanup
 - [x] Regression tests added (`engine`, `riskAnalysis`, `useAutoSimulation`)
+
+### Phase 11: Retirement Calculator Overhaul (2026-04-14)
+- [x] KR rule metadata surfaced in summaries/reports
+- [x] `SimulationPlanV2` schema introduced for storage/import/export
+- [x] Plan-driven simulation worker path (`PLAN_SIMULATION`, `PLAN_SIMULATION_BATCH`)
+- [x] Guided checklist and plan editor added to UI
+- [x] Retirement-point vs terminal-asset labeling corrected
+- [x] Historical results now return `mode: "historical"`
+- [x] Ledger summary and essential-spending coverage shown in results/report
+- [x] Validation expanded to include `plan_v2` inputs
+- [x] Raw CSV export separated from the print-style report flow
+- [x] Lint tooling and CI lint step added
+
+### Next Critical Work
+- [ ] Replace `plan v2 -> legacy input -> engine` adapter path with ledger-native engine core
+- [ ] Implement real short/mid/long bucket balances and refill rules
+- [ ] Add detailed National Pension model beyond manual estimated benefit
+- [ ] Move longevity modeling from normal distribution to life-table based assumptions
+- [ ] Add golden scenarios and end-to-end regression coverage

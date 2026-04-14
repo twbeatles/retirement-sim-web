@@ -1,14 +1,20 @@
 import React, { useState, useEffect } from "react";
-import { SimulationInput } from "../logic/types";
+import { type SimulationInput } from "../logic/types";
+import { legacyInputToPlanV2, planV2ToLegacyInput, type SimulationPlanV2 } from "../logic/planV2";
 import { validateSimulationInput } from "../logic/validation";
-import { migrateSimulationInput } from "../logic/migration";
 
-import { scenarioStorage, SavedScenario } from "../services/storage";
+import { scenarioStorage, type SavedScenario } from "../services/storage";
 
 interface Props {
     currentInput: SimulationInput;
     onLoad: (input: SimulationInput) => void;
 }
+
+type ScenarioFileEnvelope = {
+    schemaVersion: 2;
+    exportedAt: number;
+    plan: SimulationPlanV2;
+};
 
 // Hardcoded Quick Presets (Templates)
 const QUICK_PRESETS = [
@@ -137,10 +143,13 @@ export const ScenarioManager = React.memo(function ScenarioManager({ currentInpu
                         reader.onload = (ev) => {
                             try {
                                 const json = JSON.parse(ev.target?.result as string);
+                                if (json?.schemaVersion !== 2 || json?.plan?.planVersion !== "v2") {
+                                    alert("지원하지 않는 설정 파일입니다. v2 파일만 불러올 수 있습니다.");
+                                    return;
+                                }
 
-                                // Validate using comprehensive validator
-                                const migrated = migrateSimulationInput(json as Record<string, unknown>);
-                                const warnings = validateSimulationInput(migrated);
+                                const imported = planV2ToLegacyInput(json.plan as SimulationPlanV2);
+                                const warnings = validateSimulationInput(imported);
                                 const errors = warnings.filter(w => w.severity === 'error');
 
                                 if (errors.length > 0) {
@@ -148,8 +157,8 @@ export const ScenarioManager = React.memo(function ScenarioManager({ currentInpu
                                     return;
                                 }
 
-                                if (migrated.current_age && migrated.portfolio) {
-                                    load(migrated, warnings.length > 0
+                                if (imported.current_age && imported.portfolio) {
+                                    load(imported, warnings.length > 0
                                         ? `경고 사항이 있습니다:\n${warnings.map(w => w.message).join('\n')}\n\n그래도 불러오시겠습니까?`
                                         : "파일에서 설정을 불러오시겠습니까?");
                                 } else {
@@ -165,12 +174,17 @@ export const ScenarioManager = React.memo(function ScenarioManager({ currentInpu
                 </label>
                 <button
                     onClick={() => {
-                        const json = JSON.stringify(currentInput, null, 2);
+                        const payload: ScenarioFileEnvelope = {
+                            schemaVersion: 2,
+                            exportedAt: Date.now(),
+                            plan: legacyInputToPlanV2(currentInput)
+                        };
+                        const json = JSON.stringify(payload, null, 2);
                         const blob = new Blob([json], { type: "application/json" });
                         const url = URL.createObjectURL(blob);
                         const a = document.createElement("a");
                         a.href = url;
-                        a.download = `retirement_sim_${new Date().toISOString().slice(0, 10)}.json`;
+                        a.download = `retirement_plan_v2_${new Date().toISOString().slice(0, 10)}.json`;
                         a.click();
                         URL.revokeObjectURL(url);
                     }}

@@ -17,6 +17,14 @@
 - **GBM (Geometric Brownian Motion)**: Asset growth modeling
 - **Correlation Modeling**: Portfolio-wide correlation coefficient support
 - **Result Source Tagging**: Explicit `deterministic` / `montecarlo` / `historical` source in summary
+- **Retirement vs Terminal Metrics**: `retirementPoint`, `terminalStats`, `depletionStats`, `survivalStats`
+- **Ledger Summary**: early-retirement monthly net inflow, expense, tax, health insurance, and essential-spending coverage
+
+### 🧭 Plan-Centered Input Model
+- **`SimulationPlanV2` schema**: `profile`, `accounts`, `incomeStreams`, `expensePlan`, `withdrawalPolicy`, `ruleSet`, `simulationSettings`
+- **Guided intake**: simple mode now asks for spending, pension, housing, and core assets
+- **Plan editor**: direct editing for accounts, income streams, and expense buckets in pro mode
+- **Rule metadata**: KR ruleset version and historical snapshot range are shown in results/reporting
 
 ### 💰 Diverse Asset Types
 - **Financial Assets**: Stocks, Bonds, Cash, Alternatives
@@ -35,14 +43,14 @@
 
 ### 📊 Historical Backtesting (NEW)
 - **40 Years of Data**: Actual market returns from 1985-2024
-- **Rolling Windows**: 20 automatic scenario tests
+- **Rolling Windows**: scenario count is derived dynamically from the selected start year
 - **Preset Scenarios**: Dot-com crash, 2008 crisis, COVID, etc.
 - **Per-Asset Historical Mapping**: `historical_asset_mapping` override support
 
 ### ⚖️ Auto-Rebalancing (NEW)
 - **Frequency Options**: Monthly/Quarterly/Semi-annual/Annual/Threshold
 - **Trading Cost Simulation**: Realistic rebalancing costs
-- **Tax-Efficient Option**: Buy-only rebalancing
+- **Tax-Efficient Option**: contribution-first buy-biased approximation
 
 ### 🎯 Goal Planner (Reverse Calculator)
 - Target Amount → Required Monthly Savings
@@ -53,6 +61,16 @@
 - Mobile-optimized collapsible sidebar
 - System-integrated dark mode
 - Touch-friendly sliders
+
+---
+
+## 📌 Current Scope And Limitations
+
+- The current target is a Korea-specific single-household retirement calculator.
+- Rules and historical datasets are local/versioned assets and are surfaced in the result metadata.
+- User-facing print reports and raw CSV exports are intentionally separated.
+- `bucket`, `tax-efficient rebalancing`, detailed National Pension formulas, and life-table longevity are still mid-migration.
+- Final full simulations are plan-driven, but the engine still includes a `plan v2 -> legacy input -> engine` adapter layer internally.
 
 ---
 
@@ -88,6 +106,8 @@ retirement-sim-web/
 │   │   │   ├── IncomeManager.tsx # Income Management
 │   │   │   ├── Onboarding.tsx    # Onboarding Wizard
 │   │   │   ├── PensionOptimizer.tsx # Pension Optimization
+│   │   │   ├── PlanGuidedChecklist.tsx
+│   │   │   ├── PlanV2Editor.tsx
 │   │   │   ├── PortfolioEditor.tsx
 │   │   │   ├── RiskDashboard.tsx
 │   │   │   ├── ScenarioComparison.tsx # Scenario Comparison
@@ -117,8 +137,12 @@ retirement-sim-web/
 │   │   │   ├── historicalData.ts # Historical Data
 │   │   │   ├── historicalScenarioMeta.ts # Historical Scenario Metadata
 │   │   │   ├── koreaTax.ts       # Korea Tax & Pension Math
+│   │   │   ├── planSimulation.ts # plan v2 simulation entrypoint
+│   │   │   ├── planV2.ts         # plan-centered v2 schema / adapters
+│   │   │   ├── rules/
+│   │   │   │   └── kr.ts         # KR rules and metadata
 │   │   │   ├── uiConstants.ts
-│   │   │   └── export.ts         # CSV Export
+│   │   │   └── export.ts         # Raw CSV export
 │   │   │
 │   │   ├── services/             # Service Layer
 │   │   │   └── storage.ts        # IndexedDB Scenario Storage
@@ -156,7 +180,7 @@ retirement-sim-web/
 
 ```bash
 # Clone repository
-git clone https://github.com/your-repo/retirement-sim-web.git
+git clone https://github.com/twbeatles/retirement-sim-web.git
 cd retirement-sim-web/frontend
 
 # Install dependencies
@@ -167,6 +191,9 @@ npm run dev
 
 # Production build
 npm run build
+
+# Lint + typecheck + test + build
+npm run verify:pr
 ```
 
 ---
@@ -192,6 +219,7 @@ npm run build
 - [docs/modeling_notes.md](docs/modeling_notes.md) - Mathematical Modeling Notes
 - [docs/api_examples.md](docs/api_examples.md) - Current input schema and worker protocol examples
 - [docs/roadmap.md](docs/roadmap.md) - Development Roadmap
+- [docs/retirement_calculator_readiness_review_2026-04-14.md](docs/retirement_calculator_readiness_review_2026-04-14.md) - Practical-readiness review and implementation status
 
 ---
 
@@ -262,3 +290,22 @@ Verification snapshot (2026-03-01):
 - `npm run typecheck` passed
 - `npm run test -- --run` passed
 - `npm run verify:pr` passed
+
+---
+
+## 2026-04-14 Retirement Calculator Update
+
+- Added `SimulationPlanV2` storage, editing, and JSON export/import
+- Added `retirementPoint`, `terminalStats`, `depletionStats`, `survivalStats`, `ruleMetadata`, and `assumptionWarnings`
+- Historical backtests now return `mode: "historical"` explicitly
+- Added ledger summary and essential-spending coverage to results/reporting
+- Separated raw CSV export from the print-style report flow
+- Expanded validation to cover both legacy and `plan_v2` inputs
+- Updated local storage to persist plan-centered scenarios
+
+Verification snapshot (2026-04-14):
+
+- `npm run lint` passed
+- `npm run typecheck` passed
+- `npm run test -- --run` passed
+- `npm run build` passed

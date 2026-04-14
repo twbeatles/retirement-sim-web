@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { SimulationInput, LumpSumEvent } from '../logic/types';
+import { type SimulationInput, type LumpSumEvent } from '../logic/types';
 
 interface ExpenseManagerProps {
     input: SimulationInput;

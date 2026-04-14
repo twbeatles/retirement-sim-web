@@ -1,5 +1,5 @@
 import React from "react";
-import { TimelineRow } from "../logic/types";
+import { type TimelineRow } from "../logic/types";
 
 function fmt(n: number) {
     if (!isFinite(n)) return "-";

@@ -1,5 +1,5 @@
 import React from "react";
-import { WithdrawalPolicy, WithdrawalStrategy } from "../logic/types";
+import { type WithdrawalPolicy, type WithdrawalStrategy } from "../logic/types";
 
 interface Props {
     withdrawal: WithdrawalPolicy;

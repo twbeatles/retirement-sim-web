@@ -3,11 +3,10 @@
  * Uses Binary Search to find simulation inputs that satisfy a target condition.
  */
 
-import { SimulationInput } from "./types";
+import { type SimulationInput } from "./types";
 import { runSimulation } from "./engine";
 
 const MAX_ITERATIONS = 20;
-const TOLERANCE = 0.01; // 1% difference in success rate or reasonable monetary epsilon
 
 // Clone input helper
 function cloneInput(input: SimulationInput): SimulationInput {
@@ -244,7 +243,6 @@ export function optimizePensionStartAge(
         // Let v = 1/(1+R). Sum m=S to E of v^m = v^S * (1 - v^(E-S+1)) / (1-v)
         if (discountRateMonthly !== 0) {
             const v = 1 / (1 + discountRateMonthly);
-            const term1 = Math.pow(v, startMonthIndex);
             const count = Math.max(0, totalMonths - startMonthIndex);
             // Geometric series sum: a * (1 - r^n) / (1 - r)
             // Here 'a' is first term = MonthlyAmt * v^startMonth? No.

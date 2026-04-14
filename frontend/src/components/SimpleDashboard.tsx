@@ -1,5 +1,6 @@
 import React, { useState } from "react";
-import type { SimulationInput, SimulationResult } from "../logic/types";
+import type { HousingStatus, SimulationInput, SimulationResult } from "../logic/types";
+import { PlanGuidedChecklist } from "./PlanGuidedChecklist";
 import { InputSlider } from "./ui/InputSlider";
 
 interface SimpleDashboardProps {
@@ -21,12 +22,12 @@ const PRESETS = [
     { id: "self", label: "자영업자", icon: "🏪", savings: 1500000, asset: 80000000 }
 ];
 
-function getScoreClass(rate: number) {
-    if (rate >= 0.9) return "score-excellent";
-    if (rate >= 0.7) return "score-good";
-    if (rate >= 0.5) return "score-caution";
-    return "score-danger";
-}
+const HOUSING_OPTIONS: Array<{ id: HousingStatus; label: string }> = [
+    { id: "own_outright", label: "무주담 주택" },
+    { id: "mortgage", label: "주담대 보유" },
+    { id: "jeonse", label: "전세" },
+    { id: "rent", label: "월세" }
+];
 
 function getGaugeColor(rate: number) {
     if (rate >= 0.9) return "var(--success)";
@@ -46,10 +47,10 @@ export const SimpleDashboard = React.memo(function SimpleDashboard({ input, resu
     const [currentStep, setCurrentStep] = useState(0);
 
     const successRate = result?.summary.successRate ?? 0;
-    const endAsset = result?.summary.mc?.totalAssetsReal.p50 ?? 0;
+    const retirementAsset = result?.summary.retirementPoint?.totalAssetsReal ?? result?.summary.terminalStats?.totalAssetsReal.p50 ?? 0;
+    const finalAsset = result?.summary.terminalStats?.totalAssetsReal.p50 ?? result?.summary.finalTotalAssetsReal ?? 0;
     const currentAsset = input.general.current_balance + input.private_pension.current_balance;
     const yearsToRetire = Math.max(0, input.retire_age - input.current_age);
-    const scoreClass = getScoreClass(successRate);
     const clampedSuccessRate = Math.max(0, Math.min(1, successRate));
     const gaugeColor = getGaugeColor(clampedSuccessRate);
     const gaugeRadius = 70;
@@ -133,6 +134,21 @@ export const SimpleDashboard = React.memo(function SimpleDashboard({ input, resu
                                 unit="세"
                                 hint="💡 한국인 평균 기대수명은 약 83세입니다"
                             />
+                            <div className="flex flex-col gap-3">
+                                <div className="text-sm font-semibold text-slate-700 dark:text-slate-300">주거 상태</div>
+                                <div className="grid grid-cols-2 gap-3">
+                                    {HOUSING_OPTIONS.map((option) => (
+                                        <button
+                                            key={option.id}
+                                            type="button"
+                                            className={`px-4 py-3 rounded-2xl border text-sm font-bold transition-all cursor-pointer ${input.housing_status === option.id ? "bg-blue-600 text-white border-blue-600 shadow-lg shadow-blue-500/20" : "bg-white dark:bg-zinc-800 text-slate-700 dark:text-slate-300 border-slate-200 dark:border-zinc-700 hover:border-blue-400"}`}
+                                            onClick={() => onInputChange({ ...input, housing_status: option.id })}
+                                        >
+                                            {option.label}
+                                        </button>
+                                    ))}
+                                </div>
+                            </div>
                         </div>
                     </div>
                 )}
@@ -207,6 +223,41 @@ export const SimpleDashboard = React.memo(function SimpleDashboard({ input, resu
                                 formatValue={(value) => value.toLocaleString()}
                                 hint="💡 은퇴 전까지 매월 저축하거나 투자할 금액"
                             />
+                            <InputSlider
+                                label="은퇴 후 월 필수생활비"
+                                value={Math.round((input.withdrawal.targetMonthlySpending ?? 0) / 10000)}
+                                onChange={(value) =>
+                                    onInputChange({
+                                        ...input,
+                                        withdrawal: { ...input.withdrawal, targetMonthlySpending: value * 10000 }
+                                    })
+                                }
+                                min={50}
+                                max={3000}
+                                step={10}
+                                unit="만원"
+                                formatValue={(value) => value.toLocaleString()}
+                                hint="💡 최소 생활유지에 필요한 월 기준 금액"
+                            />
+                            <InputSlider
+                                label="예상 국민연금 월수령액"
+                                value={Math.round(input.national_pension.expected_monthly_benefit_at_retirement / 10000)}
+                                onChange={(value) =>
+                                    onInputChange({
+                                        ...input,
+                                        national_pension: {
+                                            ...input.national_pension,
+                                            expected_monthly_benefit_at_retirement: value * 10000
+                                        }
+                                    })
+                                }
+                                min={0}
+                                max={500}
+                                step={5}
+                                unit="만원"
+                                formatValue={(value) => value.toLocaleString()}
+                                hint="💡 예상치 입력 기반으로 계산됩니다"
+                            />
 
                             <div className="bg-gradient-to-br from-slate-50/80 to-slate-100/50 dark:from-zinc-800/80 dark:to-zinc-900/50 backdrop-blur-md rounded-3xl p-6 md:p-8 border border-slate-200/50 dark:border-zinc-700/50 flex flex-col sm:flex-row gap-6 justify-between items-center mt-4 relative overflow-hidden">
                                 <div className="absolute top-0 right-0 w-32 h-32 bg-blue-500/5 rounded-full blur-2xl -translate-y-1/2 translate-x-1/2" />
@@ -227,6 +278,8 @@ export const SimpleDashboard = React.memo(function SimpleDashboard({ input, resu
                                     </span>
                                 </div>
                             </div>
+
+                            <PlanGuidedChecklist input={input} compact />
                         </div>
                     </div>
                 )}
@@ -263,7 +316,7 @@ export const SimpleDashboard = React.memo(function SimpleDashboard({ input, resu
                                     </svg>
                                     <div className="absolute bottom-2 left-0 right-0 text-center">
                                         <div className="text-5xl font-black tabular-nums tracking-tighter" style={{ color: gaugeColor }}>
-                                            {Math.round(successRate * 100)}<span className="text-2xl ml-1 opacity-80">점</span>
+                                            {(successRate * 100).toFixed(1)}<span className="text-2xl ml-1 opacity-80">%</span>
                                         </div>
                                     </div>
                                 </div>
@@ -279,12 +332,12 @@ export const SimpleDashboard = React.memo(function SimpleDashboard({ input, resu
                                     <span className="text-xl font-bold whitespace-nowrap shrink-0" style={{ color: gaugeColor }}>{(successRate * 100).toFixed(1)}%</span>
                                 </div>
                                 <div className="bg-white/60 dark:bg-zinc-800/60 backdrop-blur-md border border-slate-200/60 dark:border-zinc-700/60 rounded-3xl p-5 md:p-6 shadow-md shadow-slate-200/40 dark:shadow-none flex items-center justify-between hover:bg-white/90 dark:hover:bg-zinc-800/90 transition-colors gap-2">
-                                    <span className="text-sm font-semibold text-slate-500 dark:text-slate-400 whitespace-nowrap shrink-0">예상 은퇴 자산 (중위값)</span>
-                                    <span className="text-xl font-bold text-slate-900 dark:text-white whitespace-nowrap shrink-0">{Math.round(endAsset / 100000000).toLocaleString()}억원</span>
+                                    <span className="text-sm font-semibold text-slate-500 dark:text-slate-400 whitespace-nowrap shrink-0">은퇴 시점 자산 (중위값)</span>
+                                    <span className="text-xl font-bold text-slate-900 dark:text-white whitespace-nowrap shrink-0">{Math.round(retirementAsset / 100000000).toLocaleString()}억원</span>
                                 </div>
                                 <div className="bg-white/60 dark:bg-zinc-800/60 backdrop-blur-md border border-slate-200/60 dark:border-zinc-700/60 rounded-3xl p-5 md:p-6 shadow-md shadow-slate-200/40 dark:shadow-none flex items-center justify-between hover:bg-white/90 dark:hover:bg-zinc-800/90 transition-colors gap-2">
-                                    <span className="text-sm font-semibold text-slate-500 dark:text-slate-400 whitespace-nowrap shrink-0">은퇴까지 남은 기간</span>
-                                    <span className="text-xl font-bold text-slate-900 dark:text-white whitespace-nowrap shrink-0">{yearsToRetire}년</span>
+                                    <span className="text-sm font-semibold text-slate-500 dark:text-slate-400 whitespace-nowrap shrink-0">최종 잔존 자산 (중위값)</span>
+                                    <span className="text-xl font-bold text-slate-900 dark:text-white whitespace-nowrap shrink-0">{Math.round(finalAsset / 100000000).toLocaleString()}억원</span>
                                 </div>
                             </div>
                         </div>
@@ -304,6 +357,10 @@ export const SimpleDashboard = React.memo(function SimpleDashboard({ input, resu
                                     <span>전문가 모드에서 포트폴리오를 조정하면 더 높은 수익을 기대할 수 있어요</span>
                                 </li>
                             </ul>
+                        </div>
+
+                        <div className="max-w-4xl mx-auto w-full">
+                            <PlanGuidedChecklist input={input} />
                         </div>
                     </div>
                 )}

@@ -1,10 +1,11 @@
 import { useRef, useState, useCallback } from "react";
 import {
-    SensitivityResult,
-    SimulationInput,
-    SimulationResult,
-    SimulationRunOptions
+    type SensitivityResult,
+    type SimulationInput,
+    type SimulationResult,
+    type SimulationRunOptions
 } from "../logic/types";
+import { legacyInputToPlanV2 } from "../logic/planV2";
 import { createPreviewSimulationOptions } from "../logic/simulationRequestPolicy";
 
 type SimulationHookReturn = {
@@ -47,8 +48,11 @@ export function useSimulation(): SimulationHookReturn {
         setIsCalculating(true);
 
         try {
-            const { requestSimulation } = await loadSimulationClient();
-            const response = await requestSimulation(input, options);
+            const detailLevel = options?.detailLevel ?? "full";
+            const client = await loadSimulationClient();
+            const response = detailLevel === "preview"
+                ? await client.requestSimulation(input, options)
+                : await client.requestSimulationPlan(legacyInputToPlanV2(input), options);
             if (seq === latestSimulationSeq.current) {
                 setResult(response);
                 setError(null);

@@ -67,26 +67,70 @@ export const ResultsSection = React.memo(function ResultsSection({
     const retirementRealAssets = summary
         ? result?.mode === "deterministic"
             ? (summary.retirementPoint?.totalAssetsReal ?? summary.finalTotalAssetsReal)
-            : (summary.retirementPoint?.totalAssetsReal ?? summary.mc?.totalAssetsReal.p50 ?? summary.finalTotalAssetsReal)
+            : (summary.retirementPoint?.totalAssetsReal ?? summary.terminalStats.totalAssetsReal.p50 ?? summary.finalTotalAssetsReal)
         : 0;
-    const meanRealAssets = summary
+    const finalRealAssets = summary
         ? result?.mode === "deterministic"
             ? summary.finalTotalAssetsReal
-            : (summary.mc?.totalAssetsReal.mean ?? summary.finalTotalAssetsReal)
+            : (summary.terminalStats.totalAssetsReal.p50 ?? summary.finalTotalAssetsReal)
         : 0;
     const sourceLabel = summary?.source === "historical"
-        ? "Historical"
+        ? "역사적 백테스트"
         : summary?.source === "montecarlo"
-            ? "Monte Carlo"
-            : "Deterministic";
+            ? "몬테카를로"
+            : "결정론";
+    const modeLabel = summary?.calculationMode === "distribution" ? "분포 분석" : "단일 경로";
+    const ledgerSummary = useMemo(() => {
+        const ledgerTimeline = result?.ledgerTimeline ?? [];
+        if (!ledgerTimeline || ledgerTimeline.length === 0) {
+            return null;
+        }
+
+        const retirementStartIndex = ledgerTimeline.findIndex((row) => row.isRetired);
+        const sourceRows = retirementStartIndex >= 0
+            ? ledgerTimeline.slice(retirementStartIndex, retirementStartIndex + 12)
+            : ledgerTimeline.slice(0, 12);
+
+        if (sourceRows.length === 0) {
+            return null;
+        }
+
+        const average = (values: number[]) => values.reduce((sum, value) => sum + value, 0) / values.length;
+        const essentialBaseline = average(
+            sourceRows.map((row) => row.expenses.essential + row.expenses.housing + row.expenses.medicalBaseline)
+        );
+        const coveredMonths = sourceRows.filter(
+            (row) => row.incomes.totalNet >= (row.expenses.essential + row.expenses.housing + row.expenses.medicalBaseline)
+        ).length;
+        const averageCoverageRatio = essentialBaseline > 0
+            ? average(sourceRows.map((row) => row.incomes.totalNet / Math.max(1, row.expenses.essential + row.expenses.housing + row.expenses.medicalBaseline)))
+            : 1;
+
+        return {
+            rows: sourceRows,
+            avgNetIncome: average(sourceRows.map((row) => row.incomes.totalNet)),
+            avgTotalExpense: average(sourceRows.map((row) => row.expenses.total)),
+            avgTax: average(sourceRows.map((row) => row.tax.taxPaid)),
+            avgHealthInsurance: average(sourceRows.map((row) => row.expenses.healthInsurancePremium)),
+            essentialBaseline,
+            coveredMonthRate: coveredMonths / sourceRows.length,
+            averageCoverageRatio
+        };
+    }, [result]);
 
     return (
         <>
             {summary && (
                 <div className="mb-6 lg:mb-8">
-                    <div className="mb-3">
+                    <div className="mb-3 flex flex-wrap gap-2">
                         <span className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full text-xs font-bold tracking-wide uppercase bg-slate-100/80 dark:bg-zinc-800/80 text-slate-600 dark:text-slate-300 border border-slate-200/60 dark:border-zinc-700/60">
                             결과 소스: {sourceLabel}
+                        </span>
+                        <span className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full text-xs font-bold tracking-wide uppercase bg-slate-100/80 dark:bg-zinc-800/80 text-slate-600 dark:text-slate-300 border border-slate-200/60 dark:border-zinc-700/60">
+                            계산 형식: {modeLabel}
+                        </span>
+                        <span className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full text-xs font-bold tracking-wide uppercase bg-slate-100/80 dark:bg-zinc-800/80 text-slate-600 dark:text-slate-300 border border-slate-200/60 dark:border-zinc-700/60">
+                            규칙 버전: {summary.ruleMetadata.version}
                         </span>
                     </div>
                     <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
@@ -110,11 +154,87 @@ export const ResultsSection = React.memo(function ResultsSection({
                         </div>
                         <div className="bg-white/60 dark:bg-zinc-800/60 backdrop-blur-md rounded-[1.5rem] p-5 sm:p-6 border border-slate-200/50 dark:border-zinc-700/50 shadow-sm flex flex-col items-center justify-center text-center hover:-translate-y-1 transition-all duration-300">
                             <div className="text-xs sm:text-sm font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider mb-2">
-                                {result?.mode === "deterministic" ? "최종 자산 잔존" : "최종 자산 잔존 (평균값)"}
+                                {result?.mode === "deterministic" ? "최종 자산 잔존" : "최종 자산 잔존 (중위값)"}
                             </div>
-                            <div className="text-2xl sm:text-3xl font-black text-slate-800 dark:text-white tabular-nums tracking-tight my-2">{formatMoney(meanRealAssets)}</div>
+                            <div className="text-2xl sm:text-3xl font-black text-slate-800 dark:text-white tabular-nums tracking-tight my-2">{formatMoney(finalRealAssets)}</div>
                             <div className="text-xs font-semibold text-slate-400 dark:text-slate-500">{input.end_age}세 시점 예상 잔고</div>
                         </div>
+                    </div>
+                    {summary.assumptionWarnings.length > 0 && (
+                        <div className="mt-4 rounded-2xl border border-amber-200/70 dark:border-amber-900/30 bg-amber-50/70 dark:bg-amber-900/10 p-4">
+                            <div className="text-xs font-bold uppercase tracking-wide text-amber-700 dark:text-amber-400 mb-2">가정 및 경고</div>
+                            <div className="flex flex-col gap-2">
+                                {summary.assumptionWarnings.map((warning) => (
+                                    <div key={warning.code} className="text-sm text-amber-800 dark:text-amber-200">
+                                        {warning.message}
+                                    </div>
+                                ))}
+                            </div>
+                        </div>
+                    )}
+                </div>
+            )}
+
+            {ledgerSummary && !isPreviewResult && (
+                <div className="mb-8 bg-white/70 dark:bg-zinc-900/70 backdrop-blur-2xl rounded-[2rem] p-6 lg:p-8 shadow-xl shadow-slate-200/40 dark:shadow-zinc-900/40 border border-slate-200/60 dark:border-zinc-800/60 relative overflow-hidden">
+                    <h3 className="text-xl sm:text-2xl font-extrabold text-slate-900 dark:text-white mb-2 flex items-center gap-2">🧾 월별 원장 요약</h3>
+                    <p className="text-xs sm:text-sm font-semibold text-slate-500 dark:text-slate-400 mb-6">
+                        은퇴 초반 12개월 기준으로 소득, 지출, 세금, 건강보험료를 분리해 보여줍니다.
+                    </p>
+
+                    <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-5 gap-4 mb-6">
+                        <div className="bg-white/60 dark:bg-zinc-800/60 rounded-2xl p-4 border border-slate-200/50 dark:border-zinc-700/50">
+                            <div className="text-xs font-bold uppercase tracking-wide text-slate-500 dark:text-slate-400 mb-2">월 순유입 평균</div>
+                            <div className="text-2xl font-black text-slate-900 dark:text-white">{formatMoney(ledgerSummary.avgNetIncome)}</div>
+                        </div>
+                        <div className="bg-white/60 dark:bg-zinc-800/60 rounded-2xl p-4 border border-slate-200/50 dark:border-zinc-700/50">
+                            <div className="text-xs font-bold uppercase tracking-wide text-slate-500 dark:text-slate-400 mb-2">월 총지출 평균</div>
+                            <div className="text-2xl font-black text-slate-900 dark:text-white">{formatMoney(ledgerSummary.avgTotalExpense)}</div>
+                        </div>
+                        <div className="bg-white/60 dark:bg-zinc-800/60 rounded-2xl p-4 border border-slate-200/50 dark:border-zinc-700/50">
+                            <div className="text-xs font-bold uppercase tracking-wide text-slate-500 dark:text-slate-400 mb-2">월 세금 평균</div>
+                            <div className="text-2xl font-black text-slate-900 dark:text-white">{formatMoney(ledgerSummary.avgTax)}</div>
+                        </div>
+                        <div className="bg-white/60 dark:bg-zinc-800/60 rounded-2xl p-4 border border-slate-200/50 dark:border-zinc-700/50">
+                            <div className="text-xs font-bold uppercase tracking-wide text-slate-500 dark:text-slate-400 mb-2">월 건보료 평균</div>
+                            <div className="text-2xl font-black text-slate-900 dark:text-white">{formatMoney(ledgerSummary.avgHealthInsurance)}</div>
+                        </div>
+                        <div className="bg-white/60 dark:bg-zinc-800/60 rounded-2xl p-4 border border-slate-200/50 dark:border-zinc-700/50">
+                            <div className="text-xs font-bold uppercase tracking-wide text-slate-500 dark:text-slate-400 mb-2">필수생활비 충족</div>
+                            <div className={`text-2xl font-black ${ledgerSummary.coveredMonthRate >= 1 ? "text-emerald-600 dark:text-emerald-400" : "text-amber-600 dark:text-amber-400"}`}>
+                                {(ledgerSummary.coveredMonthRate * 100).toFixed(0)}%
+                            </div>
+                            <div className="mt-1 text-xs font-semibold text-slate-400 dark:text-slate-500">
+                                기준 {formatMoney(ledgerSummary.essentialBaseline)} / 평균 {Math.round(ledgerSummary.averageCoverageRatio * 100)}%
+                            </div>
+                        </div>
+                    </div>
+
+                    <div className="overflow-x-auto rounded-2xl border border-slate-200/60 dark:border-zinc-700/50 bg-white/40 dark:bg-black/20">
+                        <table className="w-full text-sm">
+                            <thead className="bg-slate-50/80 dark:bg-zinc-800/80 text-slate-600 dark:text-slate-300">
+                                <tr>
+                                    <th className="px-4 py-3 text-left font-bold">월</th>
+                                    <th className="px-4 py-3 text-right font-bold">순유입</th>
+                                    <th className="px-4 py-3 text-right font-bold">총지출</th>
+                                    <th className="px-4 py-3 text-right font-bold">세금</th>
+                                    <th className="px-4 py-3 text-right font-bold">건보료</th>
+                                    <th className="px-4 py-3 text-right font-bold">실질 총자산</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {ledgerSummary.rows.map((row) => (
+                                    <tr key={row.month} className="border-t border-slate-200/50 dark:border-zinc-800/60 text-slate-700 dark:text-slate-200">
+                                        <td className="px-4 py-3">{row.month + 1}개월차</td>
+                                        <td className="px-4 py-3 text-right">{formatMoney(row.incomes.totalNet)}</td>
+                                        <td className="px-4 py-3 text-right">{formatMoney(row.expenses.total)}</td>
+                                        <td className="px-4 py-3 text-right">{formatMoney(row.tax.taxPaid)}</td>
+                                        <td className="px-4 py-3 text-right">{formatMoney(row.expenses.healthInsurancePremium)}</td>
+                                        <td className="px-4 py-3 text-right">{formatMoney(row.balances.totalAssetsReal)}</td>
+                                    </tr>
+                                ))}
+                            </tbody>
+                        </table>
                     </div>
                 </div>
             )}
@@ -125,7 +245,7 @@ export const ResultsSection = React.memo(function ResultsSection({
                         🖨️ {compact ? "PDF" : "리포트 인쇄 (PDF)"}
                     </button>
                     <button className={`px-4 sm:px-5 py-2.5 bg-white/70 dark:bg-zinc-800/70 backdrop-blur-md rounded-xl font-bold text-sm text-slate-700 dark:text-slate-200 border border-slate-200/60 dark:border-zinc-700/60 shadow-sm hover:shadow-md hover:-translate-y-0.5 transition-all cursor-pointer ${compact ? "text-xs px-3 py-1.5" : ""}`} onClick={() => exportSimulationResult(result)}>
-                        💾 {compact ? "CSV 저장" : "결과 다운로드 (CSV)"}
+                        💾 {compact ? "CSV 저장" : "원시 데이터 다운로드 (CSV)"}
                     </button>
                 </div>
             )}
@@ -167,7 +287,7 @@ export const ResultsSection = React.memo(function ResultsSection({
                             </div>
                         </Suspense>
                     </DeferredRender>
-                ) : result?.mode === "montecarlo" && result.trajectoryStats ? (
+                ) : result && result.trajectoryStats ? (
                     <DeferredRender
                         enabled={Boolean(result.trajectoryStats)}
                         placeholder={<div className="text-center text-slate-400 py-4">차트 로딩 중...</div>}

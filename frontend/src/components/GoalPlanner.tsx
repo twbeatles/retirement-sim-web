@@ -1,5 +1,5 @@
 ﻿import React, { useState } from 'react';
-import { SimulationInput } from '../logic/types';
+import { type SimulationInput } from '../logic/types';
 import { useSimulation } from '../hooks/useSimulation';
 
 type GoalPlannerProps = {

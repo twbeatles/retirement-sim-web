@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { monthlyRateFromAnnual, annuityPayment, calculateVPWRate, mean, percentile } from './math';
+import { monthlyRateFromAnnual, annuityPayment, mean, percentile } from './math';
 
 describe('Math Utils', () => {
     describe('monthlyRateFromAnnual', () => {

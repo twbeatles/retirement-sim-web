@@ -16,6 +16,7 @@ Performance regression checks should compare against this baseline unless a newe
 Run from `frontend/`:
 
 ```bash
+npm run lint
 npm run check:duplicates
 npm run typecheck
 npm run check:imports
@@ -34,6 +35,7 @@ Baseline refresh procedure:
 
 ```bash
 npm ci
+npm run lint
 npm run check:duplicates
 npm run typecheck
 npm run check:imports
@@ -68,6 +70,9 @@ npm run verify:ci
   - Checks `frontend/src`, `frontend/public`, frontend root config files, and repository root files.
 - `typecheck`
   - Runs TypeScript no-emit validation.
+- `lint`
+  - Runs ESLint against `src`, `scripts`, and `vite.config.ts`.
+  - Keeps hook rules, equality checks, and common TS hygiene checks visible in CI.
 - `check:imports`
   - Blocks direct `logic/engine` usage inside `src/components`.
   - Blocks direct `new Worker(...)` usage inside `src/components`.
@@ -117,18 +122,21 @@ GitHub Actions workflow: `.github/workflows/frontend-performance-guard.yml`
 Runs on frontend changes:
 
 1. `npm ci`
-2. `npm run check:duplicates`
-3. `npm run typecheck`
-4. `npm run check:imports`
-5. `npm run build`
-6. Pull request: `npm run perf:gate:warn`
-7. Push to `main`: `npm run perf:gate:hard`
+2. `npm run lint`
+3. `npm run check:duplicates`
+4. `npm run typecheck`
+5. `npm run check:imports`
+6. `npm run test -- --run`
+7. `npm run build`
+8. Pull request: `npm run perf:gate:warn`
+9. Push to `main`: `npm run perf:gate:hard`
 
-## Latest verification snapshot (2026-03-01)
+## Latest verification snapshot (2026-04-14)
 
 From `npm run verify:pr`:
 
-- Entry JS: `~25.3 KiB`
-- Initial JS total (index + modulepreload): `~235.8 KiB`
+- includes `lint`, `typecheck`, `check:duplicates`, `check:imports`, `test`, `build`
+- Entry JS: `~49.9 KiB`
+- Initial JS total (index + modulepreload): `~260.3 KiB`
 
 No gate failures were reported.

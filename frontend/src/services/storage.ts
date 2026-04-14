@@ -1,20 +1,29 @@
-import { SimulationInput } from "../logic/types";
-import { migrateSimulationInput } from "../logic/migration";
+import type { SimulationInput } from "../logic/types";
+import { legacyInputToPlanV2, planV2ToLegacyInput, type SimulationPlanV2 } from "../logic/planV2";
 
-export interface ScenarioData {
+interface StoredScenarioData {
     name: string;
     createdAt: number;
     updatedAt: number;
-    input: SimulationInput;
+    schemaVersion: 2;
+    plan: SimulationPlanV2;
 }
 
-export interface SavedScenario extends ScenarioData {
+export interface SavedScenario extends StoredScenarioData {
     id: number;
+    input: SimulationInput;
 }
 
 const DB_NAME = "RetirementSimDB";
 const STORE_NAME = "scenarios";
-const DB_VERSION = 1;
+const DB_VERSION = 3;
+
+function hydrateScenario(record: StoredScenarioData & { id: number }): SavedScenario {
+    return {
+        ...record,
+        input: planV2ToLegacyInput(record.plan)
+    };
+}
 
 class ScenarioStorage {
     private db: IDBDatabase | null = null;
@@ -31,10 +40,11 @@ class ScenarioStorage {
 
             request.onupgradeneeded = (event) => {
                 const db = (event.target as IDBOpenDBRequest).result;
-                if (!db.objectStoreNames.contains(STORE_NAME)) {
-                    const store = db.createObjectStore(STORE_NAME, { keyPath: "id", autoIncrement: true });
-                    store.createIndex("updatedAt", "updatedAt", { unique: false });
+                if (db.objectStoreNames.contains(STORE_NAME)) {
+                    db.deleteObjectStore(STORE_NAME);
                 }
+                const store = db.createObjectStore(STORE_NAME, { keyPath: "id", autoIncrement: true });
+                store.createIndex("updatedAt", "updatedAt", { unique: false });
             };
         });
     }
@@ -49,11 +59,12 @@ class ScenarioStorage {
         if (!this.db) await this.init();
         return new Promise((resolve, reject) => {
             const store = this.getStore("readwrite");
-            const data: ScenarioData = {
+            const data: StoredScenarioData = {
                 name,
-                input,
+                plan: legacyInputToPlanV2(input),
                 createdAt: Date.now(),
-                updatedAt: Date.now()
+                updatedAt: Date.now(),
+                schemaVersion: 2
             };
             const request = store.add(data);
             request.onsuccess = () => resolve(request.result as number);
@@ -65,19 +76,18 @@ class ScenarioStorage {
         if (!this.db) await this.init();
         return new Promise((resolve, reject) => {
             const store = this.getStore("readwrite");
-            // First get existing
             const getReq = store.get(id);
             getReq.onsuccess = () => {
-                const existing = getReq.result as SavedScenario;
+                const existing = getReq.result as (StoredScenarioData & { id: number }) | undefined;
                 if (!existing) {
                     reject(new Error("Scenario not found"));
                     return;
                 }
 
-                const updated: SavedScenario = {
+                const updated = {
                     ...existing,
                     name,
-                    input,
+                    plan: legacyInputToPlanV2(input),
                     updatedAt: Date.now()
                 };
 
@@ -95,17 +105,11 @@ class ScenarioStorage {
             const store = this.getStore("readonly");
             const request = store.getAll();
             request.onsuccess = () => {
-                const results = request.result as SavedScenario[];
-                // Sort by updatedAt desc
-                results.sort((a, b) => b.updatedAt - a.updatedAt);
-
-                // Migration: Merge with defaults to handle missing fields from older versions
-                const migratedResults = results.map((scenario) => ({
-                    ...scenario,
-                    input: migrateSimulationInput(scenario.input)
-                }));
-
-                resolve(migratedResults);
+                const records = (request.result as Array<StoredScenarioData & { id: number }>)
+                    .filter((scenario) => scenario.schemaVersion === 2 && scenario.plan?.planVersion === "v2")
+                    .sort((a, b) => b.updatedAt - a.updatedAt)
+                    .map(hydrateScenario);
+                resolve(records);
             };
             request.onerror = () => reject(request.error);
         });

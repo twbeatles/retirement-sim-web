@@ -8,7 +8,7 @@
  * - Reverse annuity
  */
 import React, { useState } from 'react';
-import { SimulationInput, InflationScenario, HealthInsurance, TaxCredit, SeveranceSettings, ReverseAnnuity, GuardrailsSettings, BucketSettings, LongevityRisk, RebalancingSettings } from '../logic/types';
+import { type SimulationInput, type InflationScenario, type HealthInsurance, type TaxCredit, type SeveranceSettings, type ReverseAnnuity, type GuardrailsSettings, type BucketSettings, type LongevityRisk, type RebalancingSettings } from '../logic/types';
 
 interface Props {
     input: SimulationInput;
@@ -722,7 +722,7 @@ export const AdvancedSettings = React.memo(function AdvancedSettings({ input, on
                                 <input
                                     type="number"
                                     className="flex-1 w-full px-3 py-2 bg-transparent border-none text-right font-medium text-slate-900 dark:text-white placeholder:text-slate-400 focus:outline-none"
-                                    value={input.longevity_risk.averageLifeExpectancy || 85}
+                                    value={input.longevity_risk.averageLifeExpectancy || 83.5}
                                     onChange={e => updateLongevity({ averageLifeExpectancy: Number(e.target.value) })}
                                 />
                                 <span className="pr-3 text-slate-500 dark:text-slate-400 text-sm font-semibold select-none">세</span>
@@ -743,7 +743,7 @@ export const AdvancedSettings = React.memo(function AdvancedSettings({ input, on
                     </div>
                 )}
                 <div className="text-xs font-medium text-slate-500 dark:text-slate-400 mt-2">
-                    * 활성화 시 시뮬레이션마다 다른 종료 연령 적용 (몬테카를로 모드)
+                    * 활성화 시 시뮬레이션마다 다른 종료 연령 적용 (몬테카를로 모드). 기본 기대수명 값은 통계청 2023년 생명표의 전체 기대수명 83.5세를 기준으로 설정됩니다.
                 </div>
             </CollapsibleSection>
         </div>

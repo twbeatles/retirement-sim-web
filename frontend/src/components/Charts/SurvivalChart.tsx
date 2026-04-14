@@ -13,11 +13,11 @@ import {
 import type { SimulationResult } from '../../logic/types';
 
 export const SurvivalChart = React.memo(function SurvivalChart({ result }: { result: SimulationResult }) {
-    if (result.mode === 'deterministic') {
-        return <div>Monte Carlo result is required for survival analysis.</div>;
-    }
-
     const survivalData = React.useMemo(() => {
+        if (result.mode === "deterministic") {
+            return [];
+        }
+
         if (result.survivalSeries && result.survivalSeries.month.length > 0) {
             const step = result.survivalSeries.month.length > 200 ? 12 : 6;
             const data = [] as Array<{ month: number; age: number; survivalRate: number }>;
@@ -60,6 +60,10 @@ export const SurvivalChart = React.memo(function SurvivalChart({ result }: { res
 
         return data;
     }, [result]);
+
+    if (result.mode === 'deterministic') {
+        return <div>분포 기반 결과가 있어야 생존 확률을 계산할 수 있습니다.</div>;
+    }
 
     if (survivalData.length === 0) {
         return <div>No survival data available.</div>;

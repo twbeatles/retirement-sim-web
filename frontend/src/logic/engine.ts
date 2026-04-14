@@ -6,14 +6,16 @@
  */
 
 import {
-    SimulationInput,
-    SimulationResult,
-    SimulationRunOptions,
-    TimelineRow,
-    SimulationSummary,
-    HistoricalAssetType,
+    type SimulationInput,
+    type SimulationResult,
+    type SimulationRunOptions,
+    type TimelineRow,
+    type SimulationSummary,
 } from "./types";
 import {
+    clampHistoricalStartYear,
+    getAvailableHistoricalScenarioCount,
+    getHistoricalYearRange,
     getHistoricalReturns,
     getHistoricalInflation,
     mapAssetClassToHistorical,
@@ -30,6 +32,13 @@ import {
     setSeed,
 } from "./math";
 import { calculateRegionalHealthInsurance } from "./koreaTax";
+import {
+    calculateAnnualPensionTaxCredit,
+    calculateNationalPensionAdjustmentFactor,
+    calculateProgressiveIncomeTax,
+    createDistributionStatsFromValue,
+    createRuleMetadata,
+} from "./rules/kr";
 
 // Helper to calculate portfolio metrics
 function calculatePortfolioMetrics(input: SimulationInput) {
@@ -179,41 +188,191 @@ type PathSimulationResult = {
     monthsSimulated: number;
 };
 
-const TAX_CREDIT_LAW_2026 = {
-    lowIncomeThreshold: 55000000,
-    lowRate: 0.165,
-    highRate: 0.132,
-    pensionLimit: 6000000,
-    irpLimit: 3000000,
-    totalLimit: 9000000
-} as const;
-
 function calculateAnnualTaxCredit(input: SimulationInput, annualTaxableIncome: number): number {
     const taxCredit = input.tax_credit;
     if (!taxCredit?.enabled) {
         return 0;
     }
 
-    const eligiblePension = Math.min(
-        Math.max(0, taxCredit.pensionSavingsContribution),
-        TAX_CREDIT_LAW_2026.pensionLimit
+    return calculateAnnualPensionTaxCredit(
+        taxCredit.pensionSavingsContribution,
+        taxCredit.irpContribution,
+        annualTaxableIncome,
+        taxCredit.creditRate,
+        taxCredit.mode === "manual",
+        input.rule_set
     );
-    const eligibleIRP = Math.min(
-        Math.max(0, taxCredit.irpContribution),
-        TAX_CREDIT_LAW_2026.irpLimit
-    );
-    const totalEligible = Math.min(
-        eligiblePension + eligibleIRP,
-        TAX_CREDIT_LAW_2026.totalLimit
-    );
+}
 
-    const effectiveRate = taxCredit.mode === "manual"
-        ? (taxCredit.creditRate ?? TAX_CREDIT_LAW_2026.highRate)
-        : annualTaxableIncome <= TAX_CREDIT_LAW_2026.lowIncomeThreshold
-            ? TAX_CREDIT_LAW_2026.lowRate
-            : TAX_CREDIT_LAW_2026.highRate;
+function buildAssumptionWarnings(input: SimulationInput): SimulationSummary["assumptionWarnings"] {
+    const historicalRange = getHistoricalYearRange();
+    const warnings: SimulationSummary["assumptionWarnings"] = [
+        {
+            code: "local_rule_set",
+            severity: "info",
+            message: "계산에는 로컬 규칙 세트와 로컬 역사 데이터가 사용됩니다."
+        }
+    ];
 
-    return totalEligible * Math.max(0, effectiveRate);
+    if (!input.health_insurance?.enabled) {
+        warnings.push({
+            code: "health_insurance_disabled",
+            severity: "warning",
+            message: "건강보험료가 비활성화되어 실제 순현금흐름보다 낙관적일 수 있습니다."
+        });
+    }
+
+    if ((input.withdrawal.taxStrategy ?? "simple") !== "detailed") {
+        warnings.push({
+            code: "simple_tax_mode",
+            severity: "warning",
+            message: "세금이 단일 세율로 계산되어 실제 세후 현금흐름과 차이가 날 수 있습니다."
+        });
+    }
+
+    if (input.national_pension.expected_monthly_benefit_at_retirement > 0) {
+        warnings.push({
+            code: "manual_pension_input",
+            severity: "info",
+            message: "국민연금은 사용자 입력 추정치 기반으로 계산됩니다."
+        });
+    }
+
+    if (input.withdrawal.strategy === "bucket") {
+        warnings.push({
+            code: "bucket_strategy_approximate",
+            severity: "warning",
+            message: "버킷 전략은 현재 계좌별 실버킷 잔고 대신 근사 로직으로 계산됩니다."
+        });
+    }
+
+    if (input.rebalancing?.enabled && input.rebalancing.taxEfficient) {
+        warnings.push({
+            code: "tax_efficient_rebalancing_approximate",
+            severity: "info",
+            message: "세금효율 리밸런싱은 신규 유입 우선 근사 모델을 사용합니다."
+        });
+    }
+
+    if (input.longevity_risk?.useDistribution) {
+        warnings.push({
+            code: "manual_longevity_model",
+            severity: "warning",
+            message: "장수 리스크는 사용자 입력 기대수명 분포를 사용합니다. 공식 생명표 대체값이 아닙니다."
+        });
+    }
+
+    if (input.simulation_settings.mode === "historical") {
+        const requestedStartYear = input.simulation_settings.historical_start_year ?? historicalRange.startYear;
+        warnings.push({
+            code: "historical_snapshot_range",
+            severity: "info",
+            message: `역사적 백테스트는 로컬 스냅샷 ${historicalRange.startYear}-${historicalRange.endYear} 구간을 사용합니다.`
+        });
+
+        if (requestedStartYear !== clampHistoricalStartYear(requestedStartYear)) {
+            warnings.push({
+                code: "historical_start_year_clamped",
+                severity: "warning",
+                message: "선택한 역사적 시작 연도가 데이터 범위를 벗어나 로컬 데이터 시작/종료 연도로 보정됩니다."
+            });
+        }
+    }
+
+    return warnings;
+}
+
+function buildSurvivalStats(
+    survivalSeries?: { age: number[]; survivalRate: number[] }
+): SimulationSummary["survivalStats"] {
+    if (!survivalSeries || survivalSeries.age.length === 0 || survivalSeries.survivalRate.length === 0) {
+        return {
+            finalSurvivalRate: 100,
+            lowestSurvivalRate: 100,
+            firstBelowHundredPercentAge: null
+        };
+    }
+
+    let lowestSurvivalRate = 100;
+    let firstBelowHundredPercentAge: number | null = null;
+
+    for (let i = 0; i < survivalSeries.survivalRate.length; i++) {
+        const rate = survivalSeries.survivalRate[i];
+        if (rate < lowestSurvivalRate) {
+            lowestSurvivalRate = rate;
+        }
+        if (firstBelowHundredPercentAge === null && rate < 100) {
+            firstBelowHundredPercentAge = survivalSeries.age[i];
+        }
+    }
+
+    return {
+        finalSurvivalRate: survivalSeries.survivalRate[survivalSeries.survivalRate.length - 1],
+        lowestSurvivalRate,
+        firstBelowHundredPercentAge
+    };
+}
+
+function buildSurvivalSeriesFromDepletionMonths(
+    totalMonths: number,
+    currentAge: number,
+    firstDepletionMonthByPath: Int32Array,
+    totalPaths: number
+) {
+    const month: number[] = [];
+    const age: number[] = [];
+    const survivalRate: number[] = [];
+
+    for (let currentMonth = 0; currentMonth < totalMonths; currentMonth++) {
+        let aliveCount = 0;
+        for (let path = 0; path < firstDepletionMonthByPath.length; path++) {
+            const depletionMonth = firstDepletionMonthByPath[path];
+            if (depletionMonth < 0 || depletionMonth > currentMonth) {
+                aliveCount++;
+            }
+        }
+
+        month.push(currentMonth);
+        age.push(Math.floor(currentAge + currentMonth / 12));
+        survivalRate.push((aliveCount / Math.max(1, totalPaths)) * 100);
+    }
+
+    return { month, age, survivalRate };
+}
+
+function buildSummaryBase(
+    input: SimulationInput,
+    source: SimulationSummary["source"],
+    calculationMode: SimulationSummary["calculationMode"],
+    finalTotalAssets: number,
+    finalTotalAssetsReal: number,
+    retirementTotalAssets: number,
+    retirementTotalAssetsReal: number,
+    successRate: number,
+    terminalStats: SimulationSummary["terminalStats"],
+    depletionStats: SimulationSummary["depletionStats"],
+    survivalStats: SimulationSummary["survivalStats"]
+): Omit<SimulationSummary, "mc"> {
+    return {
+        retireAge: input.retire_age,
+        endAge: input.end_age,
+        source,
+        calculationMode,
+        ruleMetadata: createRuleMetadata(input.rule_set),
+        assumptionWarnings: buildAssumptionWarnings(input),
+        finalTotalAssets,
+        finalTotalAssetsReal,
+        retirementPoint: {
+            age: input.retire_age,
+            totalAssets: retirementTotalAssets,
+            totalAssetsReal: retirementTotalAssetsReal
+        },
+        terminalStats,
+        successRate,
+        depletion: depletionStats,
+        depletionStats,
+        survivalStats
+    };
 }
 
 function simulateOnePath(
@@ -393,15 +552,11 @@ function simulateOnePath(
 
         const targetValues = normalizedAllocations.map((weight) => balGeneral * weight);
         const beforeBalances = Float64Array.from(assetBalances);
-        let turnoverAmount = 0;
 
         if (allowSell) {
             for (let i = 0; i < assetBalances.length; i++) {
-                const diff = targetValues[i] - assetBalances[i];
-                turnoverAmount += Math.abs(diff);
                 assetBalances[i] = targetValues[i];
             }
-            turnoverAmount *= 0.5;
         } else {
             let availableBuyBudget = 0;
             const deficits = new Float64Array(assetBalances.length);
@@ -414,7 +569,6 @@ function simulateOnePath(
             }
             // Buy-only mode: consume only existing unallocated cashflow budget.
             // Since this model does not track separate cash buckets, no forced sells are executed.
-            turnoverAmount = 0;
             void availableBuyBudget;
         }
 
@@ -684,6 +838,8 @@ function simulateOnePath(
         let withdrawalGross = 0;
         let reverseAnnuityIncome = 0;
         let severancePayout = 0;
+        let healthInsurancePremium = 0;
+        let healthInsuranceAssessableIncome = 0;
 
         if (isRetired) {
             // National Pension
@@ -694,14 +850,7 @@ function simulateOnePath(
             // Could be hoisted? Yes, baseNat is constant.
             // But we need 'm' for inflation linking.
 
-            let ageDiff = natStartAge - 65;
-            if (ageDiff < -5) ageDiff = -5;
-            if (ageDiff > 5) ageDiff = 5;
-
-            let adjustmentFactor = 1.0;
-            if (ageDiff < 0) adjustmentFactor = 1.0 - (Math.abs(ageDiff) * 0.06);
-            else adjustmentFactor = 1.0 + (ageDiff * 0.072);
-
+            const adjustmentFactor = calculateNationalPensionAdjustmentFactor(natStartAge, input.rule_set);
             const baseNat = input.national_pension.expected_monthly_benefit_at_retirement * adjustmentFactor;
 
             if (age >= natStartAge && baseNat > 0) {
@@ -837,9 +986,6 @@ function simulateOnePath(
                 withdrawalGross = Math.max(0, targetWithdrawal);
             } else if (strategy === "bucket" && input.bucket) {
                 // NEW: Bucket Strategy
-                const bk = input.bucket;
-                const monthsAfterRetire = m - monthsToRetire;
-
                 // Calculate spending from short-term bucket
                 const target = input.withdrawal.targetMonthlySpending || 0;
                 withdrawalGross = Math.max(0, target - totalGuaranteedIncome);
@@ -853,7 +999,6 @@ function simulateOnePath(
 
             // NEW: Health Insurance Deduction (건강보험료)
             // NEW: Health Insurance Deduction (건강보험료)
-            let healthInsurancePremium = 0;
             if (input.health_insurance?.enabled) {
                 const hi = input.health_insurance;
 
@@ -875,6 +1020,7 @@ function simulateOnePath(
                     // - Financial Income (Interest/Div): > 10M separate? 
 
                     const consideredIncomeAnnual = (natPension + privPension + additionalPensionPayout) * 12;
+                    healthInsuranceAssessableIncome = consideredIncomeAnnual / 12;
 
                     // Property Value: Real Estate + (Maybe simulated House value)
                     // If input.realEstate exists, sum it up? 
@@ -889,7 +1035,8 @@ function simulateOnePath(
                     const basePremium = calculateRegionalHealthInsurance(
                         consideredIncomeAnnual,
                         totalProperty,
-                        hi.carValue || 0
+                        hi.carValue || 0,
+                        input.rule_set
                     );
 
                     // Inflation link? 
@@ -930,23 +1077,7 @@ function simulateOnePath(
             const totalMonthly = natPension + privPension + additionalPensionPayout + reverseAnnuityIncome + severancePayout + withdrawalGross;
             const annualIncome = totalMonthly * 12; // Simplified annualized
 
-            // KR 2023 brackets
-            let annualTax = 0;
-            const deduction = 1500000;
-            const taxable = Math.max(0, annualIncome - deduction);
-
-            if (taxable <= 14000000) {
-                annualTax = taxable * 0.06;
-            } else if (taxable <= 50000000) {
-                annualTax = (taxable * 0.15) - 1260000;
-            } else if (taxable <= 88000000) {
-                annualTax = (taxable * 0.24) - 5760000;
-            } else if (taxable <= 150000000) {
-                annualTax = (taxable * 0.35) - 15440000;
-            } else {
-                annualTax = (taxable * 0.38) - 19940000;
-            }
-
+            const annualTax = calculateProgressiveIncomeTax(annualIncome, input.rule_set);
             taxPaid = Math.max(0, annualTax / 12);
         }
 
@@ -997,6 +1128,9 @@ function simulateOnePath(
                     withdrawalGross,
                     withdrawalNet,
                     taxPaid,
+                    healthInsurancePremium,
+                    taxCreditApplied: monthlyTaxCredit,
+                    assessableIncomeForHealthInsurance: healthInsuranceAssessableIncome,
                     totalIncomeNet
                 }
             };
@@ -1238,7 +1372,9 @@ export function runSimulation(
     // Phase 7: Historical Mode - Prepare historical returns
     const isHistorical = input.simulation_settings.mode === "historical";
     if (isHistorical) {
-        const startYear = input.simulation_settings.historical_start_year || 1985;
+        const startYear = clampHistoricalStartYear(
+            input.simulation_settings.historical_start_year ?? createRuleMetadata(input.rule_set).historicalDataRange.startYear
+        );
         const yearsNeeded = Math.ceil(totalMonths / 12) + 10; // Extra years for rolling windows
 
         // Calculate weighted portfolio historical returns
@@ -1307,7 +1443,9 @@ export function runSimulation(
     // Phase 7: Historical Mode - Rolling window backtesting
     if (isHistorical) {
         // Run multiple rolling window scenarios
-        const numScenarios = 20; // 20 rolling windows (1985-2005 start years)
+        const numScenarios = getAvailableHistoricalScenarioCount(
+            input.simulation_settings.historical_start_year ?? createRuleMetadata(input.rule_set).historicalDataRange.startYear
+        );
         const MAX_SAMPLE_PATHS = includeSampleTimelines ? Math.min(maxSampleTimelines, numScenarios) : 0;
         const sampleTimelines: TimelineRow[][] = [];
         const finalAssets = new Float64Array(numScenarios);
@@ -1318,7 +1456,8 @@ export function runSimulation(
         const firstDepletionAgeByPath = new Float64Array(numScenarios).fill(-1);
 
         for (let p = 0; p < numScenarios; p++) {
-            const simulation = simulateOnePath(input, ctx, false, p, { captureTimeline: true });
+            const shouldCaptureTimeline = MAX_SAMPLE_PATHS > 0 && p < MAX_SAMPLE_PATHS;
+            const simulation = simulateOnePath(input, ctx, false, p, { captureTimeline: shouldCaptureTimeline });
             finalAssets[p] = simulation.finalTotalAssets;
             finalAssetsReal[p] = simulation.finalTotalAssetsReal;
             retirementAssets[p] = simulation.retirementTotalAssets;
@@ -1328,7 +1467,7 @@ export function runSimulation(
                 ? (input.current_age + (simulation.firstDepletionMonth / 12))
                 : -1;
 
-            if (MAX_SAMPLE_PATHS > 0 && p < MAX_SAMPLE_PATHS) {
+            if (shouldCaptureTimeline) {
                 sampleTimelines.push(simulation.timeline);
             }
         }
@@ -1352,64 +1491,102 @@ export function runSimulation(
         const neverDepletedCount = Array.from(firstDepletionMonthByPath).filter((month) => month < 0).length;
         const depletedAges = Array.from(firstDepletionAgeByPath).filter((age) => age >= 0).sort((a, b) => a - b);
 
+        const totalAssetsStats = {
+            p10: percentileSorted(sortedNom, 10),
+            p50: percentileSorted(sortedNom, 50),
+            p90: percentileSorted(sortedNom, 90),
+            mean: meanNom
+        };
+        const totalAssetsRealStats = {
+            p10: percentileSorted(sortedReal, 10),
+            p50: percentileSorted(sortedReal, 50),
+            p90: percentileSorted(sortedReal, 90),
+            mean: meanReal
+        };
+        const depletionStats = {
+            firstDepletionMonthByPath: Array.from(firstDepletionMonthByPath),
+            firstDepletionAgeByPath: Array.from(firstDepletionAgeByPath),
+            neverDepletedRate: neverDepletedCount / numScenarios,
+            medianDepletionAge: depletedAges.length > 0 ? percentileSorted(depletedAges, 50) : null
+        };
+        const survivalSeries = buildSurvivalSeriesFromDepletionMonths(
+            totalMonths,
+            input.current_age,
+            firstDepletionMonthByPath,
+            numScenarios
+        );
         const summary: SimulationSummary = {
-            retireAge: input.retire_age,
-            endAge: input.end_age,
-            source: "historical",
-            finalTotalAssets: meanNom,
-            finalTotalAssetsReal: meanReal,
-            retirementPoint: {
-                age: input.retire_age,
-                totalAssets: percentileSorted(sortedRetNom, 50),
-                totalAssetsReal: percentileSorted(sortedRetReal, 50)
-            },
-            successRate: successes / numScenarios,
-            depletion: {
-                firstDepletionMonthByPath: Array.from(firstDepletionMonthByPath),
-                firstDepletionAgeByPath: Array.from(firstDepletionAgeByPath),
-                neverDepletedRate: neverDepletedCount / numScenarios,
-                medianDepletionAge: depletedAges.length > 0 ? percentileSorted(depletedAges, 50) : null
-            },
-            mc: {
-                totalAssetsReal: {
-                    p10: percentileSorted(sortedReal, 10),
-                    p50: percentileSorted(sortedReal, 50),
-                    p90: percentileSorted(sortedReal, 90),
-                    mean: meanReal
+            ...buildSummaryBase(
+                input,
+                "historical",
+                "distribution",
+                meanNom,
+                meanReal,
+                percentileSorted(sortedRetNom, 50),
+                percentileSorted(sortedRetReal, 50),
+                successes / numScenarios,
+                {
+                    totalAssets: totalAssetsStats,
+                    totalAssetsReal: totalAssetsRealStats
                 },
-                totalAssets: {
-                    p10: percentileSorted(sortedNom, 10),
-                    p50: percentileSorted(sortedNom, 50),
-                    p90: percentileSorted(sortedNom, 90),
-                    mean: meanNom
+                depletionStats,
+                {
+                    finalSurvivalRate: (neverDepletedCount / numScenarios) * 100,
+                    lowestSurvivalRate: (neverDepletedCount / numScenarios) * 100,
+                    firstBelowHundredPercentAge: depletedAges.length > 0 ? depletedAges[0] : null
                 }
+            ),
+            mc: {
+                totalAssetsReal: totalAssetsRealStats,
+                totalAssets: totalAssetsStats
             }
         };
 
         return {
-            mode: "montecarlo", // Return as montecarlo for UI compatibility
+            mode: "historical",
             detailLevel,
             pathCount: numScenarios,
             sampleTimelines,
-            summary
+            summary,
+            survivalSeries
         };
     }
 
     if (!stochastic) {
         // Deterministic Run
         const deterministic = simulateOnePath(input, ctx, false, undefined, { captureTimeline: true });
+        const terminalStats = {
+            totalAssets: createDistributionStatsFromValue(deterministic.finalTotalAssets),
+            totalAssetsReal: createDistributionStatsFromValue(deterministic.finalTotalAssetsReal)
+        };
+        const depletionStats = {
+            firstDepletionMonthByPath: [deterministic.firstDepletionMonth],
+            firstDepletionAgeByPath: [deterministic.firstDepletionMonth >= 0 ? input.current_age + (deterministic.firstDepletionMonth / 12) : -1],
+            neverDepletedRate: deterministic.finalTotalAssets > 0 ? 1 : 0,
+            medianDepletionAge: deterministic.firstDepletionMonth >= 0 ? input.current_age + (deterministic.firstDepletionMonth / 12) : null
+        };
         const summary: SimulationSummary = {
-            retireAge: input.retire_age,
-            endAge: input.end_age,
-            source: "deterministic",
-            finalTotalAssets: deterministic.finalTotalAssets,
-            finalTotalAssetsReal: deterministic.finalTotalAssetsReal,
-            retirementPoint: {
-                age: deterministic.retirementAge,
-                totalAssets: deterministic.retirementTotalAssets,
-                totalAssetsReal: deterministic.retirementTotalAssetsReal
-            },
-            successRate: deterministic.finalTotalAssets > 0 ? 1.0 : 0.0
+            ...buildSummaryBase(
+                input,
+                "deterministic",
+                "deterministic",
+                deterministic.finalTotalAssets,
+                deterministic.finalTotalAssetsReal,
+                deterministic.retirementTotalAssets,
+                deterministic.retirementTotalAssetsReal,
+                deterministic.finalTotalAssets > 0 ? 1.0 : 0.0,
+                terminalStats,
+                depletionStats,
+                {
+                    finalSurvivalRate: deterministic.finalTotalAssets > 0 ? 100 : 0,
+                    lowestSurvivalRate: deterministic.finalTotalAssets > 0 ? 100 : 0,
+                    firstBelowHundredPercentAge: deterministic.firstDepletionMonth >= 0 ? input.current_age + (deterministic.firstDepletionMonth / 12) : null
+                }
+            ),
+            mc: {
+                totalAssets: terminalStats.totalAssets,
+                totalAssetsReal: terminalStats.totalAssetsReal
+            }
         };
 
         return {
@@ -1452,7 +1629,7 @@ export function runSimulation(
             // Longevity Risk: Randomize end age per path if enabled
             let pathEndAge = input.end_age;
             if (input.longevity_risk?.useDistribution) {
-                const meanAge = input.longevity_risk.averageLifeExpectancy || 85;
+                const meanAge = input.longevity_risk.averageLifeExpectancy || 83.5;
                 const stdDev = input.longevity_risk.stdDevYears || 5;
                 pathEndAge = Math.round(meanAge + stdDev * randomNormal());
                 // Clamp to reasonable bounds
@@ -1554,37 +1731,44 @@ export function runSimulation(
         const neverDepletedCount = Array.from(firstDepletionMonthByPath).filter((month) => month < 0).length;
         const depletedAges = Array.from(firstDepletionAgeByPath).filter((age) => age >= 0).sort((a, b) => a - b);
 
+        const totalAssetsStats = {
+            p10: percentileSorted(sortedNom, 10),
+            p50: percentileSorted(sortedNom, 50),
+            p90: percentileSorted(sortedNom, 90),
+            mean: meanNom
+        };
+        const totalAssetsRealStats = {
+            p10: percentileSorted(sortedReal, 10),
+            p50: percentileSorted(sortedReal, 50),
+            p90: percentileSorted(sortedReal, 90),
+            mean: meanReal
+        };
+        const depletionStats = {
+            firstDepletionMonthByPath: Array.from(firstDepletionMonthByPath),
+            firstDepletionAgeByPath: Array.from(firstDepletionAgeByPath),
+            neverDepletedRate: neverDepletedCount / paths,
+            medianDepletionAge: depletedAges.length > 0 ? percentileSorted(depletedAges, 50) : null
+        };
         const summary: SimulationSummary = {
-            retireAge: input.retire_age,
-            endAge: input.end_age,
-            source: "montecarlo",
-            finalTotalAssets: meanNom,
-            finalTotalAssetsReal: meanReal,
-            retirementPoint: {
-                age: input.retire_age,
-                totalAssets: percentileSorted(sortedRetNom, 50),
-                totalAssetsReal: percentileSorted(sortedRetReal, 50)
-            },
-            successRate: successCount / paths,
-            depletion: {
-                firstDepletionMonthByPath: Array.from(firstDepletionMonthByPath),
-                firstDepletionAgeByPath: Array.from(firstDepletionAgeByPath),
-                neverDepletedRate: neverDepletedCount / paths,
-                medianDepletionAge: depletedAges.length > 0 ? percentileSorted(depletedAges, 50) : null
-            },
-            mc: {
-                totalAssets: {
-                    p10: percentileSorted(sortedNom, 10),
-                    p50: percentileSorted(sortedNom, 50),
-                    p90: percentileSorted(sortedNom, 90),
-                    mean: meanNom
+            ...buildSummaryBase(
+                input,
+                "montecarlo",
+                "distribution",
+                meanNom,
+                meanReal,
+                percentileSorted(sortedRetNom, 50),
+                percentileSorted(sortedRetReal, 50),
+                successCount / paths,
+                {
+                    totalAssets: totalAssetsStats,
+                    totalAssetsReal: totalAssetsRealStats
                 },
-                totalAssetsReal: {
-                    p10: percentileSorted(sortedReal, 10),
-                    p50: percentileSorted(sortedReal, 50),
-                    p90: percentileSorted(sortedReal, 90),
-                    mean: meanReal
-                }
+                depletionStats,
+                buildSurvivalStats(survivalSeries)
+            ),
+            mc: {
+                totalAssets: totalAssetsStats,
+                totalAssetsReal: totalAssetsRealStats
             }
         };
 
