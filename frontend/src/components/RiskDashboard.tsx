@@ -9,6 +9,7 @@ import {
     type SimulationInput,
     type SimulationResult
 } from "../logic/types";
+import { legacyInputToPlan } from "../logic/plan";
 import { analyzeDepletion } from "../logic/riskAnalysis";
 import { requestSensitivityAnalysis } from "../logic/simulationClient";
 import {
@@ -48,8 +49,8 @@ export const RiskDashboard = React.memo(function RiskDashboard({ input, result, 
         try {
             const variations = [-0.02, -0.01, 0, 0.01, 0.02];
             const [returnResult, inflationResult] = await Promise.all([
-                requestSensitivityAnalysis(input, "annual_return", variations),
-                requestSensitivityAnalysis(input, "annual_inflation", variations)
+                requestSensitivityAnalysis(legacyInputToPlan(input), "annual_return", variations),
+                requestSensitivityAnalysis(legacyInputToPlan(input), "annual_inflation", variations)
             ]);
             setSensitivityResults([returnResult, inflationResult]);
         } catch (error) {

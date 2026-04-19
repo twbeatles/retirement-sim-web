@@ -1,4 +1,5 @@
 import React from 'react';
+import { getRepresentativeLedgerTimeline, getRepresentativeTimeline, getSampleDisplayPaths } from '../logic/resultDisplay';
 import { type SimulationInput, type SimulationResult } from '../logic/types';
 import { formatMoney } from '../utils/format';
 import { YearlyReportTable } from './YearlyReportTable';
@@ -12,14 +13,15 @@ interface Props {
 export const ReportPrintView: React.FC<Props> = ({ input, result }) => {
     if (!result) return null;
 
-    const timeline = result.mode === 'deterministic' ? result.timeline : result.sampleTimelines[0] || [];
+    const timeline = getRepresentativeTimeline(result);
+    const samplePaths = getSampleDisplayPaths(result);
     const summary = result.summary;
     const sourceLabel = summary.source === "historical"
         ? "역사적 백테스트"
         : summary.source === "montecarlo"
             ? "몬테카를로"
             : "결정론";
-    const ledgerRows = result.ledgerTimeline ?? [];
+    const ledgerRows = getRepresentativeLedgerTimeline(result);
     const ledgerRetirementRows = ledgerRows.length > 0
         ? (() => {
             const retirementStartIndex = ledgerRows.findIndex((row) => row.isRetired);
@@ -182,6 +184,24 @@ export const ReportPrintView: React.FC<Props> = ({ input, result }) => {
                         <AssetBreakdownChart data={timeline} />
                     </div>
                 </div>
+                {samplePaths.length > 0 && (
+                    <div className="mb-8 border border-slate-200 rounded-xl bg-slate-50 p-5 print:break-inside-avoid">
+                        <h3 className="text-lg font-bold mb-4 text-slate-800">샘플 경로</h3>
+                        <div className="grid grid-cols-3 gap-4 text-sm">
+                            {samplePaths.map((sample) => {
+                                const lastRow = sample.timeline[sample.timeline.length - 1];
+                                return (
+                                    <div key={`${sample.label}-${sample.pathIndex ?? "na"}`}>
+                                        <div className="text-slate-500 font-semibold mb-1">{sample.label}</div>
+                                        <div className="font-bold text-slate-800">
+                                            {lastRow ? formatMoney(lastRow.totalAssetsReal) : "-"}
+                                        </div>
+                                    </div>
+                                );
+                            })}
+                        </div>
+                    </div>
+                )}
             </div>
 
             {/* Detailed Analysis */}

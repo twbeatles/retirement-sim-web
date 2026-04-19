@@ -1,164 +1,38 @@
 # CLAUDE.md
 
-> **Developer Guide**: 이 문서는 은퇴 시뮬레이터의 **코드 구조**, **개발 규칙**, **컴포넌트 가이드**를 정의합니다.
+Developer guide for the current codebase contract.
 
-[🇺🇸 English](README_EN.md) | [📊 비즈니스 로직](GEMINI.md)
+## Architecture
 
----
-
-## 1. 프로젝트 개요
-
-| 항목 | 내용 |
-|------|------|
-| **목표** | 한국형 은퇴 자산 시뮬레이션 도구 |
-| **핵심 가치** | 정확성(Monte Carlo), 사용성(간편/전문가 모드), 성능(Web Worker) |
-| **기술 스택** | React 18, TypeScript 5, Vite, Recharts |
-
----
-
-## 2. 디렉토리 구조
-
-```
+```text
 frontend/src/
-├── components/           # React UI 컴포넌트
-│   ├── Charts/           # 시각화 차트 (하위 분리)
-│   │   ├── AssetBreakdownChart.tsx    # 자산 구성 추이
-│   │   ├── CashflowStackChart.tsx     # 현금흐름 스택
-│   │   ├── FanChart.tsx               # 자산 범위(팬 차트) 분포
-│   │   └── SurvivalChart.tsx          # 생존 확률 곡선
-│   ├── common/           # 공통 처리 UI 요소
-│   │   └── UIComponents.tsx
-│   ├── layout/           # 반응형 레이아웃 계층
-│   │   ├── DesktopLayout.tsx
-│   │   ├── MobileLayout.tsx
-│   │   ├── Layout.tsx
-│   │   ├── sections/
-│   │   └── types.ts
-│   ├── ui/                   # 재사용 UI 컴포넌트
-│   │   ├── InputSlider.tsx       # 슬라이더 입력
-│   │   └── MoneyInput.tsx        # 금액 입력
-│   ├── advanced-settings/     # 고급 설정 세부 섹션
-│   ├── AdvancedSettings.tsx   # 고급 설정 오케스트레이션
-│   ├── BacktestingPanel.tsx   # 역사적 백테스팅 UI (Phase 7)
-│   ├── Charts.tsx             # 차트 컨테이너
-│   ├── ExpenseManager.tsx     # 지출(목돈) 관리
-│   ├── FavoriteAssets.tsx     # 즐겨찾기 자산
-│   ├── GoalPlanner.tsx        # 역산 계산기 UI
-│   ├── IncomeManager.tsx      # 소득 관리
-│   ├── Onboarding.tsx         # 온보딩 위자드
-│   ├── PensionOptimizer.tsx   # 연금 최적화
-│   ├── PortfolioEditor.tsx    # 포트폴리오 편집기
-│   ├── RiskDashboard.tsx      # 리스크 분석 대시보드
-│   ├── ScenarioComparison.tsx # 시나리오 비교
-│   ├── ScenarioManager.tsx    # 시나리오 저장/불러오기
-│   ├── SimpleDashboard.tsx    # 간편 모드 대시보드
-│   ├── Tooltip.tsx            # 설명 툴팁 컴포넌트
-│   ├── WhatIfSlider.tsx       # What-If 분석 슬라이더
-│   ├── WithdrawalSettings.tsx # 인출 전략 설정
-│   └── YearlyReportTable.tsx  # 연도별 리포트 테이블
-│
-├── hooks/                # 커스텀 React 훅
-│   ├── useAutoSimulation.ts  # 자동 실행 디바운스 처리
-│   ├── useMediaQuery.ts      # 화면크기 확인을 통한 레이아웃 분기
-│   └── useSimulation.ts      # 시뮬레이션 상태 관리 훅
-│
-├── logic/                # 핵심 비즈니스 로직
-│   ├── engine/               # 엔진 보조 모듈 (context/summary/types)
-│   ├── engine.ts             # 시뮬레이션 엔진 진입점
-│   ├── simulation.worker.ts  # Web Worker (비동기 처리)
-│   ├── workerTypes.ts        # Worker 통신 타입 정의
-│   ├── solver.ts             # 역산 계산 (Binary Search)
-│   ├── migration.ts          # 구버전 입력 스키마 마이그레이션
-│   ├── riskAnalysis.ts       # 리스크 분석 함수
-│   ├── types.ts              # TypeScript 타입 정의
-│   ├── constants.ts          # 초기값/상수
-│   ├── math.ts               # 수학 유틸리티 (Box-Muller 등)
-│   ├── planV2/               # plan v2 스키마/변환 세부 모듈
-│   ├── planV2.ts             # plan v2 배럴 export
-│   ├── validation/           # 입력 검증 세부 모듈
-│   ├── validation.ts         # 입력값 검증 진입점
-│   ├── historicalData.ts     # 역사적 시장 데이터 1985~2024 (Phase 7)
-│   ├── historicalScenarioMeta.ts # 역사적 시나리오 메타데이터
-│   ├── koreaTax.ts           # 한국 세무 및 국민연금 계산식
-│   ├── uiConstants.ts        # UI 기본 표시 상수
-│   └── export.ts             # CSV 내보내기
-│
-├── services/             # 서비스 레이어
-│   └── storage.ts            # IndexedDB 시나리오 저장
-│
-├── utils/                # 유틸리티 함수
-│   └── format.ts             # 통화/숫자 포맷팅
-│
-├── App.tsx               # 메인 앱 컴포넌트
-├── index.css             # 글로벌 스타일 (CSS Variables, 다크모드)
-└── main.tsx              # 엔트리포인트
+  components/            # React UI
+  hooks/                 # UI orchestration hooks
+  logic/
+    engine/              # simulation helpers and summary assembly
+    plan/                # SimulationPlanV3 schema/converters
+    planV2/              # import-only compatibility helpers
+    rules/               # rulebook resolution
+    validation/          # canonical validation helpers
+    simulation.worker.ts # worker entrypoint
+    simulationClient.ts  # worker client queueing/coalescing
+    resultDisplay.ts     # representative/sample path helpers
+    export.ts            # CSV/report shaping
+  services/
+    storage.ts           # IndexedDB scenario storage
 ```
 
----
+## Source Of Truth
 
-## 3. 핵심 규칙
+- Canonical runtime/storage/export type: `SimulationPlanV3`
+- Canonical result display contract: `result.display.representative` and `result.display.samples[]`
+- `SimulationPlanV2` is import migration input only
+- `SimulationInput` is still used by parts of the UI, but runtime boundaries normalize into `SimulationPlanV3`
 
-### 3-1. UI/Logic 분리
-- `components/`는 **순수 UI 렌더링**만 담당
-- `logic/`는 **계산/데이터 처리**만 담당 (React 의존성 없음)
-- 상태 관리는 `App.tsx`에서 집중 관리 (lifting state up)
+## Worker API
 
-### 3-2. 타입 안전성
-- 모든 인터페이스는 `logic/types.ts`에 정의
-- `any` 타입 사용 금지
-- Optional 필드는 `?` 또는 `undefined` 명시
+Only these kinds are part of the active contract:
 
-### 3-3. 성능 최적화
-- 무거운 계산은 Web Worker (`simulation.worker.ts`) 사용
-- `useMemo`/`useEffect`의 의존성 배열 정확히 명시
-- 불필요한 리렌더링 방지 (`React.memo` 적절히 사용)
-
-### 3-6. 구조 분리 원칙
-- 긴 파일은 진입점과 세부 구현을 분리하고, 진입점은 orchestration만 담당
-- `components/advanced-settings`, `logic/validation`, `logic/engine`, `logic/planV2`처럼 책임 기준 폴더를 우선 사용
-- 기존 공개 함수명(`runSimulation`, `validateSimulationInput`, `legacyInputToPlanV2`)은 유지하여 회귀 범위를 최소화
-
-### 3-4. CSS 규칙
-- CSS Variables 우선 사용 (`--primary`, `--bg-card` 등)
-- 다크모드: `[data-theme='dark']` 셀렉터로 오버라이드
-- 반응형: `@media (max-width: 768px)` 모바일 대응
-
-### 3-5. 스키마 호환성
-- Import/저장 데이터는 `logic/migration.ts`를 통해 최신 `SimulationInput`으로 승격 후 사용
-- Historical 결과는 `result.mode`를 유지하고 `result.summary.source`로 실제 출처를 구분
-
----
-
-## 4. 주요 컴포넌트 가이드
-
-### 4-1. App.tsx (메인)
-```typescript
-// 핵심 상태
-const [input, setInput] = useState<SimulationInput>(INITIAL_INPUT);
-const [result, setResult] = useState<SimulationResult | null>(null);
-const [theme, setTheme] = useState<'light' | 'dark'>('light');
-
-// Web Worker 통합
-const workerRef = useRef<Worker | null>(null);
-useEffect(() => {
-  workerRef.current = new Worker(
-    new URL('./logic/simulation.worker.ts', import.meta.url),
-    { type: 'module' }
-  );
-  // ...
-}, []);
-```
-
-### 4-2. engine.ts (시뮬레이션 엔진)
-```typescript
-// 핵심 함수
-runSimulation(input: SimulationInput): SimulationResult
-simulateOnePath(ctx: SimulationContext): { timeline, finalTotalAssets, firstDepletionMonth }
-calculatePortfolioMetrics(portfolio): { ret, vol, totalAlloc }
-```
-
-### 4-4. Worker 프로토콜
-`workerTypes.ts`의 `WorkerRequestKind` 기준:
 - `SIMULATION`
 - `SIMULATION_BATCH`
 - `SOLVE_CONTRIBUTION`
@@ -167,108 +41,37 @@ calculatePortfolioMetrics(portfolio): { ret, vol, totalAlloc }
 - `SENSITIVITY_ANALYSIS`
 - `PENSION_OPTIMIZATION`
 
-### 4-3. storage.ts (IndexedDB)
-```typescript
-// ScenarioStorage 클래스
-saveScenario(name, input): Promise<number>
-getAllScenarios(): Promise<SavedScenario[]>
-deleteScenario(id): Promise<void>
-```
+Do not introduce new public `PLAN_SIMULATION*` kinds.
 
----
+## Validation Rules
 
-## 5. 스타일 가이드 (CSS)
+- Validate the resolved rulebook, not just metadata fields.
+- Validate canonical plan buckets and income streams through `validateSimulationPlan(...)`.
+- Unsupported rulebooks must fail validation instead of silently falling back.
 
-### 5-1. 컬러 변수
-```css
-:root {
-  --primary: #2563eb;
-  --bg-main: #f8fafc;
-  --bg-card: #ffffff;
-  --text-main: #0f172a;
-  --text-sub: #64748b;
-  --border: #e2e8f0;
-}
+## Result Consumption Rules
 
-[data-theme='dark'] {
-  --bg-main: #0f172a;
-  --bg-card: #1e293b;
-  --text-main: #f1f5f9;
-  /* ... */
-}
-```
+- Prefer `resultDisplay.ts` helpers over reading raw path arrays directly.
+- Default reports, charts, CSV, and comparisons to the representative path.
+- Show labeled sample paths as explicitly separate data.
 
-### 5-2. 주요 클래스
-| 클래스 | 용도 |
-|--------|------|
-| `.card` | 카드 컨테이너 |
-| `.btn`, `.btn-primary` | 버튼 스타일 |
-| `.input`, `.select` | 폼 요소 |
-| `.summary-card` | 요약 카드 |
-| `.grid-2-cols` | 2열 그리드 |
-| `.flex-row`, `.flex-col` | 플렉스 레이아웃 |
+## Storage Rules
 
----
+- IndexedDB stores `schemaVersion: 3` plus `SimulationPlanV3`.
+- Older local stores are reset on version cut.
+- The UI must surface a reset/re-import notice when that happens.
 
-## 6. 개발 워크플로우
+## Testing And Verification
 
-### 6-1. 로컬 개발
 ```bash
 cd frontend
-npm install
-npm run dev     # http://localhost:5173
+npm run typecheck
+npm run test -- --run
+npm run build
+npm run verify:ci
 ```
 
-### 6-2. 빌드 & 테스트
-```bash
-npm run build   # dist/ 폴더에 프로덕션 빌드
-npm run preview # 빌드 결과 미리보기
-```
+## Compatibility Notes
 
-### 6-3. 파일 수정 시 체크리스트
-- [ ] `types.ts`에 새 타입 정의했는가?
-- [ ] `constants.ts`에 초기값 추가했는가?
-- [ ] `INITIAL_INPUT` 업데이트했는가?
-- [ ] Import/Storage 경로에 `migration.ts` 적용했는가?
-- [ ] 빌드 에러 없는가? (`npm run build`)
-
----
-
-## 7. 향후 개선 사항 (TODO)
-
-- [ ] 다국어 지원 (i18n)
-- [ ] 통화 선택 (KRW/USD)
-- [ ] PWA 오프라인 지원
-- [ ] 테스트 코드 추가 (Vitest)
-- [ ] Storybook 컴포넌트 문서화
-
----
-
-## 8. Stability Remediation Note (2026-03-01)
-
-Applied changes from `IMPLEMENTATION_RISK_REVIEW_2026-03-01.md`:
-
-- Auto simulation gate
-  - `useAutoSimulation` now accepts `hasBlockingValidationError`
-  - no preview/full timers are scheduled while blocking errors exist
-- Age validation policy
-  - `current_age === retire_age` is valid (info)
-  - explicit blocking error for `end_age <= current_age`
-- Engine hard guards
-  - throw on invalid age relationships before typed-array allocation
-- Health insurance detailed mode
-  - `isDependent === true` forces premium to zero
-- Medical shock handling
-  - multiple shocks in the same month are accumulated
-- Inflation sensitivity analysis
-  - synchronize `annual_inflation` with `inflation_scenario.baseRate`
-- Asset section UI
-  - expose core editable fields for real estate / additional pensions / business income
-- Historical scenario metadata
-  - keep single source in `historicalScenarioMeta.ts`
-
-Test coverage additions:
-
-- `engine.test.ts`: invalid age throw, dependent premium behavior, same-month medical shock accumulation
-- `riskAnalysis.test.ts`: inflation sensitivity should vary outcomes
-- `useAutoSimulation.test.tsx`: blocking-error gating and resume behavior
+- `planV2/` and `migration.ts` remain because imported JSON may still arrive in older shapes.
+- Legacy-named files may remain in place, but new behavior should target canonical v3 contracts.

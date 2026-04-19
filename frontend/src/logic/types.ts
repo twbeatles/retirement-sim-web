@@ -253,7 +253,28 @@ export type TimelineRow = {
         taxCreditApplied?: number;
         assessableIncomeForHealthInsurance?: number;
         totalIncomeNet: number;  // Sum of all net inflows
+        sources?: TimelineCashflowSources;
     };
+};
+
+export type TimelineCashflowSources = {
+    salary: number;
+    businessIncome: number;
+    rentalIncome: number;
+    nationalPension: number;
+    privatePension: number;
+    additionalPension: number;
+    severance: number;
+    reverseMortgage: number;
+    interestDividend: number;
+    realizedCapitalGain: number;
+    withdrawalPrincipal: number;
+    oneOffIncome: number;
+    oneOffExpense: number;
+    medicalShock: number;
+    housingCost: number;
+    debtService: number;
+    tradingCost: number;
 };
 
 export type LedgerTimelineRow = {
@@ -364,12 +385,25 @@ export type SimulationSurvivalSummary = {
     firstBelowHundredPercentAge: number | null;
 };
 
+export type SimulationDisplayPath = {
+    label: string;
+    pathIndex: number | null;
+    timeline: TimelineRow[];
+    ledgerTimeline?: LedgerTimelineRow[];
+};
+
+export type SimulationDisplay = {
+    representative?: SimulationDisplayPath;
+    samples: SimulationDisplayPath[];
+};
+
 export type SimulationResult =
     | {
         mode: "deterministic";
         detailLevel: SimulationDetailLevel;
         timeline: TimelineRow[];
         ledgerTimeline?: LedgerTimelineRow[];
+        display: SimulationDisplay;
         summary: SimulationSummary;
     }
     | {
@@ -378,6 +412,7 @@ export type SimulationResult =
         pathCount: number;
         sampleTimelines: TimelineRow[][]; // Subset of paths for visualization (e.g. first 5)
         ledgerTimeline?: LedgerTimelineRow[];
+        display: SimulationDisplay;
         summary: SimulationSummary; // Statistical summary
         trajectoryStats?: SimulationTrajectoryStats; // Fan Chart Data
         survivalSeries?: SurvivalSeries; // Pre-computed series for survival chart

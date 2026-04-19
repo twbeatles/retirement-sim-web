@@ -3,6 +3,7 @@ import { type SimulationInput } from '../logic/types';
 import { Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer, Line, ComposedChart } from 'recharts';
 import { formatMoney } from '../utils/format';
 import { requestPensionOptimization } from '../logic/simulationClient';
+import { legacyInputToPlan } from '../logic/plan';
 
 interface Props {
     input: SimulationInput;
@@ -15,7 +16,7 @@ export const PensionOptimizer: React.FC<Props> = ({ input }) => {
     const runOptimization = async () => {
         setIsCalculating(true);
         try {
-            const res = await requestPensionOptimization(input);
+            const res = await requestPensionOptimization(legacyInputToPlan(input));
             setResults(res);
         } catch (error) {
             console.error('Pension optimization failed:', error);

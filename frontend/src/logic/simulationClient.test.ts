@@ -1,6 +1,6 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import type { SimulationInput, SimulationResult } from "./types";
-import { legacyInputToPlanV2 } from "./planV2";
+import { legacyInputToPlan } from "./plan";
 
 type PostedRequest = {
     requestId: string;
@@ -99,6 +99,14 @@ function createResult(detailLevel: "preview" | "full", successRate: number): Sim
         mode: "deterministic",
         detailLevel,
         timeline: [],
+        display: {
+            representative: {
+                label: "Representative path",
+                pathIndex: null,
+                timeline: [],
+            },
+            samples: [],
+        },
         summary: {
             retireAge: 65,
             endAge: 85,
@@ -170,15 +178,15 @@ describe("simulationClient queueing", () => {
     it("routes preview to interactive lane and full/batch to compute lane", async () => {
         const client = await import("./simulationClient");
 
-        const previewPromise = client.requestSimulation(createInput(1), { detailLevel: "preview" });
+        const previewPromise = client.requestSimulation(legacyInputToPlan(createInput(1)), { detailLevel: "preview" });
         expect(MockWorker.instances).toHaveLength(1);
         const interactiveWorker = MockWorker.instances[0];
         expect(interactiveWorker.posted).toHaveLength(1);
         expect(interactiveWorker.posted[0].kind).toBe("SIMULATION");
         expect((interactiveWorker.posted[0].payload as { options?: { detailLevel?: string } }).options?.detailLevel).toBe("preview");
 
-        const fullPromise = client.requestSimulation(createInput(2), { detailLevel: "full" });
-        const batchPromise = client.requestSimulationBatch([createInput(3)], { detailLevel: "full" });
+        const fullPromise = client.requestSimulation(legacyInputToPlan(createInput(2)), { detailLevel: "full" });
+        const batchPromise = client.requestSimulationBatch([legacyInputToPlan(createInput(3))], { detailLevel: "full" });
         expect(MockWorker.instances).toHaveLength(2);
         const computeWorker = MockWorker.instances[1];
         expect(computeWorker.posted).toHaveLength(2);
@@ -199,17 +207,17 @@ describe("simulationClient queueing", () => {
         expect(batchResult).toHaveLength(1);
     });
 
-    it("sends plan-based simulations through the dedicated worker kinds", async () => {
+    it("sends plan-based simulations through the plan-only worker kinds", async () => {
         const client = await import("./simulationClient");
-        const plan = legacyInputToPlanV2(createInput(7));
+        const plan = legacyInputToPlan(createInput(7));
 
-        const singlePromise = client.requestSimulationPlan(plan, { detailLevel: "full" });
-        const batchPromise = client.requestSimulationPlanBatch([plan], { detailLevel: "full" });
+        const singlePromise = client.requestSimulation(plan, { detailLevel: "full" });
+        const batchPromise = client.requestSimulationBatch([plan], { detailLevel: "full" });
 
         expect(MockWorker.instances).toHaveLength(1);
         const computeWorker = MockWorker.instances[0];
         expect(computeWorker.posted).toHaveLength(2);
-        expect(computeWorker.posted.map((request) => request.kind)).toEqual(["PLAN_SIMULATION", "PLAN_SIMULATION_BATCH"]);
+        expect(computeWorker.posted.map((request) => request.kind)).toEqual(["SIMULATION", "SIMULATION_BATCH"]);
 
         computeWorker.respondSuccess(0, createResult("full", 0.75));
         computeWorker.respondSuccess(1, [createResult("full", 0.8)]);
@@ -222,9 +230,9 @@ describe("simulationClient queueing", () => {
     it("applies latest-wins queue coalescing and promise fan-out for preview requests", async () => {
         const client = await import("./simulationClient");
 
-        const first = client.requestSimulation(createInput(101), { detailLevel: "preview" });
-        const second = client.requestSimulation(createInput(202), { detailLevel: "preview" });
-        const third = client.requestSimulation(createInput(303), { detailLevel: "preview" });
+        const first = client.requestSimulation(legacyInputToPlan(createInput(101)), { detailLevel: "preview" });
+        const second = client.requestSimulation(legacyInputToPlan(createInput(202)), { detailLevel: "preview" });
+        const third = client.requestSimulation(legacyInputToPlan(createInput(303)), { detailLevel: "preview" });
 
         expect(MockWorker.instances).toHaveLength(1);
         const interactiveWorker = MockWorker.instances[0];
@@ -234,9 +242,13 @@ describe("simulationClient queueing", () => {
 
         expect(interactiveWorker.posted).toHaveLength(2);
         const latestQueuedPayload = interactiveWorker.posted[1].payload as {
-            input: SimulationInput;
+            plan: {
+                simulationSettings: {
+                    seed?: number;
+                };
+            };
         };
-        expect(latestQueuedPayload.input.simulation_settings.seed).toBe(303);
+        expect(latestQueuedPayload.plan.simulationSettings.seed).toBe(303);
 
         const latestResult = createResult("preview", 0.9);
         interactiveWorker.respondSuccess(1, latestResult);
@@ -251,9 +263,9 @@ describe("simulationClient queueing", () => {
     it("terminates both lanes and rejects pending/queued requests", async () => {
         const client = await import("./simulationClient");
 
-        const previewInFlight = client.requestSimulation(createInput(11), { detailLevel: "preview" });
-        const previewQueued = client.requestSimulation(createInput(12), { detailLevel: "preview" });
-        const fullInFlight = client.requestSimulation(createInput(13), { detailLevel: "full" });
+        const previewInFlight = client.requestSimulation(legacyInputToPlan(createInput(11)), { detailLevel: "preview" });
+        const previewQueued = client.requestSimulation(legacyInputToPlan(createInput(12)), { detailLevel: "preview" });
+        const fullInFlight = client.requestSimulation(legacyInputToPlan(createInput(13)), { detailLevel: "full" });
 
         expect(MockWorker.instances).toHaveLength(2);
         const [interactiveWorker, computeWorker] = MockWorker.instances;

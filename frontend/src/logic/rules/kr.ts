@@ -92,8 +92,39 @@ export function getLatestKoreaRuleBook(): KoreaRuleBook {
     return KR_RULES_LATEST;
 }
 
+function getRuleBookKey(ruleSet: SimulationRuleSet): string {
+    return [
+        ruleSet.version,
+        ruleSet.taxYear,
+        ruleSet.healthInsuranceYear,
+        ruleSet.pensionYear,
+        ruleSet.historicalDataVersion,
+        ruleSet.historicalDataStartYear,
+        ruleSet.historicalDataEndYear
+    ].join("|");
+}
+
+const SUPPORTED_RULE_BOOKS = new Map<string, KoreaRuleBook>([
+    [getRuleBookKey(KR_RULES_LATEST.simulationRuleSet), KR_RULES_LATEST]
+]);
+
+export function resolveKoreaRuleBook(ruleSet?: SimulationRuleSet): KoreaRuleBook {
+    if (!ruleSet) {
+        return KR_RULES_LATEST;
+    }
+
+    const exact = SUPPORTED_RULE_BOOKS.get(getRuleBookKey(ruleSet));
+    if (!exact) {
+        throw new Error(
+            `Unsupported Korean rulebook: ${ruleSet.version} (tax ${ruleSet.taxYear}, health insurance ${ruleSet.healthInsuranceYear}, pension ${ruleSet.pensionYear})`
+        );
+    }
+
+    return exact;
+}
+
 export function resolveSimulationRuleSet(ruleSet?: SimulationRuleSet): SimulationRuleSet {
-    return ruleSet ?? KR_RULES_LATEST.simulationRuleSet;
+    return resolveKoreaRuleBook(ruleSet).simulationRuleSet;
 }
 
 export function createRuleMetadata(ruleSet?: SimulationRuleSet): RuleMetadata {
@@ -113,9 +144,7 @@ export function createRuleMetadata(ruleSet?: SimulationRuleSet): RuleMetadata {
 }
 
 export function calculateProgressiveIncomeTax(annualIncome: number, ruleSet?: SimulationRuleSet): number {
-    const rules = getLatestKoreaRuleBook();
-    const resolved = resolveSimulationRuleSet(ruleSet);
-    void resolved;
+    const rules = resolveKoreaRuleBook(ruleSet);
 
     const taxable = Math.max(0, annualIncome - rules.tax.basicDeduction);
     const bracket =
@@ -126,9 +155,7 @@ export function calculateProgressiveIncomeTax(annualIncome: number, ruleSet?: Si
 }
 
 export function calculateNationalPensionAdjustmentFactor(startAge: number | undefined, ruleSet?: SimulationRuleSet): number {
-    const rules = getLatestKoreaRuleBook();
-    const resolved = resolveSimulationRuleSet(ruleSet);
-    void resolved;
+    const rules = resolveKoreaRuleBook(ruleSet);
 
     const age = startAge ?? rules.pension.baseStartAge;
     const rawDiff = age - rules.pension.baseStartAge;
@@ -149,9 +176,7 @@ export function calculateAnnualPensionTaxCredit(
     useManualRate = false,
     ruleSet?: SimulationRuleSet
 ): number {
-    const rules = getLatestKoreaRuleBook();
-    const resolved = resolveSimulationRuleSet(ruleSet);
-    void resolved;
+    const rules = resolveKoreaRuleBook(ruleSet);
 
     const eligiblePension = Math.min(
         Math.max(0, pensionSavingsContribution),

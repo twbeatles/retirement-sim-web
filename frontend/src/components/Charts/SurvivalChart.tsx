@@ -10,6 +10,7 @@ import {
     Legend,
     ReferenceLine
 } from 'recharts';
+import { getSampleDisplayPaths } from '../../logic/resultDisplay';
 import type { SimulationResult } from '../../logic/types';
 
 export const SurvivalChart = React.memo(function SurvivalChart({ result }: { result: SimulationResult }) {
@@ -33,12 +34,13 @@ export const SurvivalChart = React.memo(function SurvivalChart({ result }: { res
             return data;
         }
 
-        if (!result.sampleTimelines.length) {
+        const samplePaths = getSampleDisplayPaths(result);
+        if (samplePaths.length === 0) {
             return [];
         }
 
         // Fallback for legacy payloads
-        const timelines = result.sampleTimelines;
+        const timelines = samplePaths.map((sample) => sample.timeline);
         const totalPaths = timelines.length;
         const months = timelines[0].length;
         const data = [] as Array<{ month: number; age: number; survivalRate: number }>;

@@ -4,6 +4,7 @@
  */
 import React, { useState, useEffect, useRef } from 'react';
 import { type SimulationInput, type WhatIfParameter } from '../logic/types';
+import { legacyInputToPlan } from '../logic/plan';
 import { requestSimulation } from '../logic/simulationClient';
 import {
     createPreviewSimulationOptions,
@@ -128,7 +129,7 @@ export const WhatIfSlider = React.memo(function WhatIfSlider({ input, onInputCha
             setIsCalculating(true);
 
             try {
-                const result = await requestSimulation(testInput, previewOptions);
+                const result = await requestSimulation(legacyInputToPlan(testInput), previewOptions);
 
                 if (seq === latestPreviewSeq.current) {
                     setSuccessRate(result.summary.successRate);

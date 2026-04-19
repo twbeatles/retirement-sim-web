@@ -1,3 +1,4 @@
+import { getRepresentativeLedgerTimeline, getRepresentativePath, getRepresentativeTimeline, getSampleDisplayPaths } from "./resultDisplay";
 import { type LedgerTimelineRow, type SimulationResult, type TimelineRow } from "./types";
 
 function downloadBlob(content: string, filename: string, contentType: string) {
@@ -145,9 +146,13 @@ function convertLedgerToCSV(ledgerTimeline: LedgerTimelineRow[]): string {
 
 export function exportSimulationResult(result: SimulationResult) {
     let csvContent = "";
-    const ledgerRetirementRows = (result.ledgerTimeline ?? []).length > 0
+    const representativePath = getRepresentativePath(result);
+    const representativeTimeline = getRepresentativeTimeline(result);
+    const representativeLedger = getRepresentativeLedgerTimeline(result);
+    const samplePaths = getSampleDisplayPaths(result);
+    const ledgerRetirementRows = representativeLedger.length > 0
         ? (() => {
-            const rows = result.ledgerTimeline ?? [];
+            const rows = representativeLedger;
             const retirementStartIndex = rows.findIndex((row) => row.isRetired);
             return retirementStartIndex >= 0 ? rows.slice(retirementStartIndex, retirementStartIndex + 12) : rows.slice(0, 12);
         })()
@@ -178,7 +183,7 @@ export function exportSimulationResult(result: SimulationResult) {
     csvContent += "\n";
 
     if (result.mode === "deterministic") {
-        csvContent += convertTimelineToCSV(result.timeline);
+        csvContent += convertTimelineToCSV(representativeTimeline);
     } else {
         const distributionLabel = result.mode === "historical" ? "Historical Backtest" : "Monte Carlo";
         if (result.trajectoryStats) {
@@ -194,20 +199,26 @@ export function exportSimulationResult(result: SimulationResult) {
             ].join(","));
 
             csvContent += rows.join("\n");
-            csvContent += "\n\n=== Sample Path Details (Path #1) ===\n";
+            csvContent += `\n\n=== Representative Path (${representativePath?.label ?? "Representative path"}) ===\n`;
         } else {
-            csvContent += `Note: Timeline data is from the first sample path of the ${distributionLabel} result.\n\n`;
+            csvContent += `Note: Timeline data is from the representative path of the ${distributionLabel} result.\n\n`;
         }
 
-        // We assume sampleTimelines[0] exists
-        if (result.sampleTimelines && result.sampleTimelines.length > 0) {
-            csvContent += convertTimelineToCSV(result.sampleTimelines[0]);
+        if (representativeTimeline.length > 0) {
+            csvContent += convertTimelineToCSV(representativeTimeline);
+        }
+
+        if (samplePaths.length > 0) {
+            for (const sample of samplePaths) {
+                csvContent += `\n\n=== ${sample.label} ===\n`;
+                csvContent += convertTimelineToCSV(sample.timeline);
+            }
         }
     }
 
-    if (result.ledgerTimeline && result.ledgerTimeline.length > 0) {
+    if (representativeLedger.length > 0) {
         csvContent += "\n\n=== Ledger Timeline ===\n";
-        csvContent += convertLedgerToCSV(result.ledgerTimeline);
+        csvContent += convertLedgerToCSV(representativeLedger);
     }
 
     // Create BOM for Excel (UTF-8)

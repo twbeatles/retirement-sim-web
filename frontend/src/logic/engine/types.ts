@@ -17,6 +17,7 @@ export interface SimulationContext {
     reverseAnnuityPayment?: number;
     medicalShockMonths?: Map<number, number>;
     contributionByMonth?: Float64Array;
+    salaryIncomeByMonth?: Float64Array;
     bucketState?: {
         shortTerm: number;
         midTerm: number;

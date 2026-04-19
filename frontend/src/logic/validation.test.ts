@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { INITIAL_INPUT } from "./constants";
-import { legacyInputToPlanV2 } from "./planV2";
-import { validateSimulationInput } from "./validation";
+import { legacyInputToPlan } from "./plan";
+import { validateSimulationInput, validateSimulationPlan } from "./validation";
 
 describe("validateSimulationInput", () => {
     it("rejects non-finite and negative numeric inputs", () => {
@@ -11,8 +11,16 @@ describe("validateSimulationInput", () => {
 
         const warnings = validateSimulationInput(input);
 
-        expect(warnings.some((warning) => warning.field === "general.current_balance" && warning.severity === "error")).toBe(true);
-        expect(warnings.some((warning) => warning.field === "general.monthly_contribution" && warning.severity === "error")).toBe(true);
+        expect(
+            warnings.some(
+                (warning) => warning.field === "general.current_balance" && warning.severity === "error"
+            )
+        ).toBe(true);
+        expect(
+            warnings.some(
+                (warning) => warning.field === "general.monthly_contribution" && warning.severity === "error"
+            )
+        ).toBe(true);
     });
 
     it("rejects historical start years outside the bundled snapshot range", () => {
@@ -54,7 +62,7 @@ describe("validateSimulationInput", () => {
         input.realEstate = [
             {
                 id: "home",
-                name: "자가주택",
+                name: "Residential home",
                 currentValue: 700000000,
                 growthRate: 0.02,
                 rentalYield: 0,
@@ -67,40 +75,41 @@ describe("validateSimulationInput", () => {
 
         expect(
             warnings.some(
-                (warning) =>
-                    warning.field === "housing_status" &&
-                    warning.severity === "info"
+                (warning) => warning.field === "housing_status" && warning.severity === "info"
             )
         ).toBe(true);
     });
+});
 
-    it("validates plan_v2 specific expense and income fields", () => {
-        const input = structuredClone(INITIAL_INPUT);
-        input.plan_v2 = legacyInputToPlanV2(input);
-        input.plan_v2.expensePlan.discretionaryMonthly = Number.POSITIVE_INFINITY;
-        input.plan_v2.incomeStreams.push({
+describe("validateSimulationPlan", () => {
+    it("validates canonical plan expense and income fields", () => {
+        const plan = legacyInputToPlan(structuredClone(INITIAL_INPUT));
+        plan.expensePlan.monthlyBuckets.discretionary = Number.POSITIVE_INFINITY;
+        plan.incomeStreams.push({
             id: "manual_rental",
             type: "rental_income",
-            name: "임대소득",
+            name: "Manual rental",
             monthlyAmount: -1000,
-            startAge: input.current_age,
+            startAge: plan.profile.currentAge,
+            annualGrowthRate: 0,
+            inflationLinked: false,
             taxable: true,
             healthInsuranceIncluded: true
         });
 
-        const warnings = validateSimulationInput(input);
+        const warnings = validateSimulationPlan(plan);
 
         expect(
             warnings.some(
                 (warning) =>
-                    warning.field === "plan_v2.expensePlan.discretionaryMonthly" &&
+                    warning.field === "plan.expensePlan.monthlyBuckets.discretionary" &&
                     warning.severity === "error"
             )
         ).toBe(true);
         expect(
             warnings.some(
                 (warning) =>
-                    warning.field.includes("plan_v2.incomeStreams") &&
+                    warning.field.includes("plan.incomeStreams") &&
                     warning.field.endsWith("monthlyAmount") &&
                     warning.severity === "error"
             )

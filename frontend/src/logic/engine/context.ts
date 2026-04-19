@@ -87,8 +87,10 @@ export function buildSimulationContext(input: SimulationInput): SimulationContex
     }
 
     let contributionByMonth: Float64Array | undefined;
+    let salaryIncomeByMonth: Float64Array | undefined;
     if (input.labor_income?.enabled) {
         contributionByMonth = new Float64Array(totalMonths);
+        salaryIncomeByMonth = new Float64Array(totalMonths);
 
         let currentIncome = input.labor_income.currentNetMonthlyIncome;
         let currentRate = input.labor_income.currentSavingsRate;
@@ -105,6 +107,7 @@ export function buildSimulationContext(input: SimulationInput): SimulationContex
             }
 
             const inflationFactor = Math.pow(1.0 + infl_m, month);
+            salaryIncomeByMonth[month] = currentIncome * inflationFactor;
             contributionByMonth[month] = currentIncome * currentRate * inflationFactor;
         }
     }
@@ -157,6 +160,7 @@ export function buildSimulationContext(input: SimulationInput): SimulationContex
         reverseAnnuityPayment,
         medicalShockMonths,
         contributionByMonth,
+        salaryIncomeByMonth,
         businessIncomeByMonth,
         realEstateState,
         pensionState,

@@ -1,5 +1,10 @@
 import React, { Suspense, lazy, useMemo } from "react";
 import { exportSimulationResult } from "../../../logic/export";
+import {
+    getRepresentativeLedgerTimeline,
+    getRepresentativeTimeline,
+    getSampleDisplayPaths
+} from "../../../logic/resultDisplay";
 import { formatMoney } from "../../../utils/format";
 import { ANALYSIS_TABS } from "../../../logic/uiConstants";
 import type { AnalysisTabType } from "../types";
@@ -53,9 +58,9 @@ export const ResultsSection = React.memo(function ResultsSection({
 }: ResultsSectionProps) {
     const timeline = useMemo(() => {
         if (!result) return [];
-        if (result.mode === "deterministic") return result.timeline;
-        return result.sampleTimelines[0] || [];
+        return getRepresentativeTimeline(result);
     }, [result]);
+    const samplePaths = useMemo(() => (result ? getSampleDisplayPaths(result) : []), [result]);
 
     const summary = result?.summary;
     const isPreviewResult = result?.detailLevel === "preview";
@@ -81,7 +86,7 @@ export const ResultsSection = React.memo(function ResultsSection({
             : "결정론";
     const modeLabel = summary?.calculationMode === "distribution" ? "분포 분석" : "단일 경로";
     const ledgerSummary = useMemo(() => {
-        const ledgerTimeline = result?.ledgerTimeline ?? [];
+        const ledgerTimeline = result ? getRepresentativeLedgerTimeline(result) : [];
         if (!ledgerTimeline || ledgerTimeline.length === 0) {
             return null;
         }
@@ -235,6 +240,31 @@ export const ResultsSection = React.memo(function ResultsSection({
                                 ))}
                             </tbody>
                         </table>
+                    </div>
+                </div>
+            )}
+
+            {samplePaths.length > 0 && !isPreviewResult && (
+                <div className="mb-8 rounded-[2rem] border border-slate-200/60 dark:border-zinc-800/60 bg-white/70 dark:bg-zinc-900/70 backdrop-blur-2xl p-6 shadow-xl shadow-slate-200/40 dark:shadow-zinc-900/40">
+                    <h3 className="text-lg sm:text-xl font-extrabold text-slate-900 dark:text-white mb-2">샘플 경로</h3>
+                    <p className="text-xs sm:text-sm font-semibold text-slate-500 dark:text-slate-400 mb-4">
+                        분포 요약과 별도로 보조 해석용 샘플 경로를 따로 표시합니다.
+                    </p>
+                    <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                        {samplePaths.map((sample) => {
+                            const lastRow = sample.timeline[sample.timeline.length - 1];
+                            return (
+                                <div key={`${sample.label}-${sample.pathIndex ?? "na"}`} className="rounded-2xl border border-slate-200/60 dark:border-zinc-700/50 bg-white/50 dark:bg-black/20 p-4">
+                                    <div className="text-xs font-bold uppercase tracking-wide text-slate-500 dark:text-slate-400 mb-2">{sample.label}</div>
+                                    <div className="text-xl font-black text-slate-900 dark:text-white">
+                                        {lastRow ? formatMoney(lastRow.totalAssetsReal) : "-"}
+                                    </div>
+                                    <div className="mt-1 text-xs font-semibold text-slate-400 dark:text-slate-500">
+                                        {lastRow ? `${Math.floor(lastRow.age)}세 기준 실질 총자산` : "경로 정보 없음"}
+                                    </div>
+                                </div>
+                            );
+                        })}
                     </div>
                 </div>
             )}

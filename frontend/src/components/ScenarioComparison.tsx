@@ -4,8 +4,9 @@
  */
 import React, { useCallback, useEffect, useMemo, useState } from "react";
 import { LineChart, Line, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid, Legend } from "recharts";
+import { getRepresentativeTimeline } from "../logic/resultDisplay";
 import type { SimulationResult } from "../logic/types";
-import { requestSimulationPlanBatch } from "../logic/simulationClient";
+import { requestSimulationBatch } from "../logic/simulationClient";
 import { scenarioStorage, type SavedScenario } from "../services/storage";
 
 const COLORS = ["#8884d8", "#82ca9d", "#ffc658", "#ff7300", "#00C49F", "#FFBB28"];
@@ -61,15 +62,9 @@ export function ScenarioComparison({ currentResult }: Props) {
             }));
         }
 
-        if (result.mode !== "deterministic" && result.sampleTimelines.length > 0) {
-            return result.sampleTimelines[0].map((row) => ({
-                month: row.month,
-                value: row.totalAssetsReal
-            }));
-        }
-
-        if (result.mode === "deterministic") {
-            return result.timeline.map((row) => ({
+        const representativeTimeline = getRepresentativeTimeline(result);
+        if (representativeTimeline.length > 0) {
+            return representativeTimeline.map((row) => ({
                 month: row.month,
                 value: row.totalAssetsReal
             }));
@@ -109,7 +104,7 @@ export function ScenarioComparison({ currentResult }: Props) {
                     }
                 }));
 
-                const batchResults = await requestSimulationPlanBatch(batchPlans, {
+                const batchResults = await requestSimulationBatch(batchPlans, {
                     detailLevel: "full",
                     includeSampleTimelines: false,
                     includeTrajectoryStats: true,

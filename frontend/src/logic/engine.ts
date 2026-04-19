@@ -44,6 +44,13 @@ import type {
     SimulationContext,
 } from "./engine/types";
 
+type DistributionPathSnapshot = {
+    index: number;
+    finalTotalAssetsReal: number;
+    retirementTotalAssetsReal: number;
+    depletionAge: number;
+};
+
 function simulateOnePath(
     input: SimulationInput,
     ctx: SimulationContext,
@@ -287,6 +294,13 @@ function simulateOnePath(
     for (let m = 0; m < totalMonths; m++) {
         const age = current_age + m / 12.0;
         const isRetired = m >= monthsToRetire;
+        let oneOffIncome = 0;
+        let oneOffExpense = 0;
+        let debtService = 0;
+        let salaryIncome = 0;
+        let businessIncomeCash = 0;
+        let rentalIncomeCash = 0;
+        let tradingCostPaid = 0;
 
         // CPI priority: historical path inflation -> configured spike path -> base inflation.
         let effectiveInflM = infl_m;
@@ -301,7 +315,13 @@ function simulateOnePath(
         // 1. One-off events (Inflation Adjusted)
         const eventAmountRaw = eventsMap.get(m);
         if (eventAmountRaw) {
-            applyGeneralDelta(eventAmountRaw * cpi, Boolean(ctx.taxEfficientRebalance));
+            const eventAmount = eventAmountRaw * cpi;
+            if (eventAmount >= 0) {
+                oneOffIncome += eventAmount;
+            } else {
+                oneOffExpense += Math.abs(eventAmount);
+            }
+            applyGeneralDelta(eventAmount, Boolean(ctx.taxEfficientRebalance));
         }
 
         // 2. Debt
@@ -309,19 +329,22 @@ function simulateOnePath(
             debt *= (1.0 + debtMonthlyRate);
             const pay = input.debt.monthly_payment > 0 ? Math.min(input.debt.monthly_payment, debt) : 0;
             debt -= pay;
+            debtService += pay;
             applyGeneralDelta(-pay);
         }
 
         // 3. Contributions (Working years)
         if (!isRetired) {
             const contribution = contributionByMonth ? contributionByMonth[m] : input.general.monthly_contribution;
+            salaryIncome = ctx.salaryIncomeByMonth ? ctx.salaryIncomeByMonth[m] : 0;
             applyGeneralDelta(contribution, Boolean(ctx.taxEfficientRebalance));
             balPrivate += input.private_pension.monthly_contribution;
         }
 
         // Phase 1: Business Income
         if (ctx.businessIncomeByMonth) {
-            applyGeneralDelta(ctx.businessIncomeByMonth[m], Boolean(ctx.taxEfficientRebalance));
+            businessIncomeCash = ctx.businessIncomeByMonth[m];
+            applyGeneralDelta(businessIncomeCash, Boolean(ctx.taxEfficientRebalance));
         }
 
         // 4. Returns
@@ -399,11 +422,12 @@ function simulateOnePath(
             if (assetBalances) {
                 const turnover = rebalanceToTargets(!(ctx.taxEfficientRebalance ?? false));
                 if (ctx.tradingCostRate && turnover > 0) {
-                    applyGeneralDelta(-(turnover * ctx.tradingCostRate));
+                    tradingCostPaid = turnover * ctx.tradingCostRate;
+                    applyGeneralDelta(-tradingCostPaid);
                 }
             } else if (ctx.tradingCostRate && balGeneral > 0) {
-                const tradingCost = balGeneral * ctx.tradingCostRate;
-                applyGeneralDelta(-tradingCost);
+                tradingCostPaid = balGeneral * ctx.tradingCostRate;
+                applyGeneralDelta(-tradingCostPaid);
             }
         }
 
@@ -421,6 +445,7 @@ function simulateOnePath(
                 // Income (Rent - Management)
                 const rent = realEstateValues[i] * ctx.realEstateState.rentalYields[i];
                 const cost = realEstateValues[i] * ctx.realEstateState.managementCosts[i];
+                rentalIncomeCash += Math.max(0, rent);
                 applyGeneralDelta(rent - cost, Boolean(ctx.taxEfficientRebalance));
             }
         }
@@ -505,10 +530,13 @@ function simulateOnePath(
         let natPension = 0;
         let privPension = 0;
         let withdrawalGross = 0;
+        let withdrawalPrincipal = 0;
         let reverseAnnuityIncome = 0;
         let severancePayout = 0;
         let healthInsurancePremium = 0;
         let healthInsuranceAssessableIncome = 0;
+        const interestDividendIncome = 0;
+        const realizedCapitalGain = 0;
 
         if (isRetired) {
             // National Pension
@@ -663,6 +691,7 @@ function simulateOnePath(
             if (withdrawalGross > balGeneral) {
                 withdrawalGross = balGeneral;
             }
+            withdrawalPrincipal = withdrawalGross;
             applyGeneralDelta(-withdrawalGross);
             lastWithdrawalGross = withdrawalGross;
 
@@ -688,7 +717,17 @@ function simulateOnePath(
                     // - Private Pension: If strictly annuity? (Complex). Let's assume 100% for now to be conservative.
                     // - Financial Income (Interest/Div): > 10M separate? 
 
-                    const consideredIncomeAnnual = (natPension + privPension + additionalPensionPayout) * 12;
+                    const consideredIncomeAnnual = (
+                        salaryIncome
+                        + businessIncomeCash
+                        + rentalIncomeCash
+                        + natPension
+                        + privPension
+                        + additionalPensionPayout
+                        + severancePayout
+                        + interestDividendIncome
+                        + realizedCapitalGain
+                    ) * 12;
                     healthInsuranceAssessableIncome = consideredIncomeAnnual / 12;
 
                     // Property Value: Real Estate + (Maybe simulated House value)
@@ -743,7 +782,16 @@ function simulateOnePath(
             const taxRate = input.withdrawal.taxRate || 0.0;
             taxPaid = withdrawalGross * taxRate;
         } else {
-            const totalMonthly = natPension + privPension + additionalPensionPayout + reverseAnnuityIncome + severancePayout + withdrawalGross;
+            const totalMonthly =
+                salaryIncome
+                + businessIncomeCash
+                + rentalIncomeCash
+                + natPension
+                + privPension
+                + additionalPensionPayout
+                + severancePayout
+                + interestDividendIncome
+                + realizedCapitalGain;
             const annualIncome = totalMonthly * 12; // Simplified annualized
 
             const annualTax = calculateProgressiveIncomeTax(annualIncome, input.rule_set);
@@ -751,15 +799,31 @@ function simulateOnePath(
         }
 
         // Fix: Prevent NaN when totalIncome is 0
-        const totalIncomeForTax = natPension + privPension + additionalPensionPayout + reverseAnnuityIncome + severancePayout + withdrawalGross;
+        const totalIncomeForTax =
+            salaryIncome
+            + businessIncomeCash
+            + rentalIncomeCash
+            + natPension
+            + privPension
+            + additionalPensionPayout
+            + severancePayout
+            + interestDividendIncome
+            + realizedCapitalGain;
+        const totalGrossCashIncome =
+            totalIncomeForTax
+            + reverseAnnuityIncome
+            + oneOffIncome
+            + withdrawalGross;
         const annualTaxableIncome = Math.max(0, totalIncomeForTax * 12);
         const monthlyTaxCredit = calculateAnnualTaxCredit(input, annualTaxableIncome) / 12;
         taxPaid = Math.max(0, taxPaid - monthlyTaxCredit);
 
-        const withdrawalNet = withdrawalGross > 0 && totalIncomeForTax > 0
-            ? withdrawalGross - (taxPaid * (withdrawalGross / totalIncomeForTax))
-            : withdrawalGross;
-        const totalIncomeNet = totalIncomeForTax - taxPaid;
+        const withdrawalNet = taxStrategy === "simple"
+            ? Math.max(0, withdrawalGross - taxPaid)
+            : withdrawalGross > 0 && totalIncomeForTax > 0
+                ? withdrawalGross - (taxPaid * (withdrawalGross / totalIncomeForTax))
+                : withdrawalGross;
+        const totalIncomeNet = totalGrossCashIncome - taxPaid;
         const totalAssets = balGeneral + balPrivate - debt + realEstateTotal + additionalPensionTotal;
         const totalAssetsReal = totalAssets / cpi;
 
@@ -800,7 +864,26 @@ function simulateOnePath(
                     healthInsurancePremium,
                     taxCreditApplied: monthlyTaxCredit,
                     assessableIncomeForHealthInsurance: healthInsuranceAssessableIncome,
-                    totalIncomeNet
+                    totalIncomeNet,
+                    sources: {
+                        salary: salaryIncome,
+                        businessIncome: businessIncomeCash,
+                        rentalIncome: rentalIncomeCash,
+                        nationalPension: natPension,
+                        privatePension: privPension,
+                        additionalPension: additionalPensionPayout,
+                        severance: severancePayout,
+                        reverseMortgage: reverseAnnuityIncome,
+                        interestDividend: interestDividendIncome,
+                        realizedCapitalGain,
+                        withdrawalPrincipal,
+                        oneOffIncome,
+                        oneOffExpense,
+                        medicalShock: ctx.medicalShockMonths?.get(m) ?? 0,
+                        housingCost: 0,
+                        debtService,
+                        tradingCost: tradingCostPaid
+                    }
                 }
             };
         }
@@ -828,6 +911,144 @@ function simulateOnePath(
         firstDepletionMonth,
         monthsSimulated: totalMonths
     };
+}
+
+function selectRepresentativePathIndex(
+    paths: DistributionPathSnapshot[],
+    targetFinalP50: number,
+    targetRetirementP50: number,
+    targetMedianDepletionAge: number | null
+): number {
+    if (paths.length === 0) {
+        return -1;
+    }
+
+    const sorted = [...paths].sort((left, right) => {
+        const finalDistance = Math.abs(left.finalTotalAssetsReal - targetFinalP50) - Math.abs(right.finalTotalAssetsReal - targetFinalP50);
+        if (Math.abs(finalDistance) > 1e-9) {
+            return finalDistance;
+        }
+
+        const retirementDistance =
+            Math.abs(left.retirementTotalAssetsReal - targetRetirementP50) -
+            Math.abs(right.retirementTotalAssetsReal - targetRetirementP50);
+        if (Math.abs(retirementDistance) > 1e-9) {
+            return retirementDistance;
+        }
+
+        const targetAge = targetMedianDepletionAge ?? Number.POSITIVE_INFINITY;
+        const leftAgeDistance = left.depletionAge >= 0 ? Math.abs(left.depletionAge - targetAge) : Number.POSITIVE_INFINITY;
+        const rightAgeDistance = right.depletionAge >= 0 ? Math.abs(right.depletionAge - targetAge) : Number.POSITIVE_INFINITY;
+        if (Math.abs(leftAgeDistance - rightAgeDistance) > 1e-9) {
+            return leftAgeDistance - rightAgeDistance;
+        }
+
+        return left.index - right.index;
+    });
+
+    return sorted[0].index;
+}
+
+function selectPathIndexClosestToTarget(
+    paths: DistributionPathSnapshot[],
+    targetFinalValue: number,
+    excludedIndices: Set<number>
+): number | null {
+    const candidate = [...paths]
+        .filter((path) => !excludedIndices.has(path.index))
+        .sort((left, right) => {
+            const distance = Math.abs(left.finalTotalAssetsReal - targetFinalValue) - Math.abs(right.finalTotalAssetsReal - targetFinalValue);
+            if (Math.abs(distance) > 1e-9) {
+                return distance;
+            }
+            return left.index - right.index;
+        })[0];
+
+    return candidate?.index ?? null;
+}
+
+function selectSamplePathIndices(
+    paths: DistributionPathSnapshot[],
+    terminalStats: { p10: number; p50: number; p90: number },
+    representativeIndex: number
+): Array<{ label: string; index: number }> {
+    const excluded = new Set<number>(representativeIndex >= 0 ? [representativeIndex] : []);
+    const targets: Array<{ label: string; value: number }> = [
+        { label: "Downside sample", value: terminalStats.p10 },
+        { label: "Median sample", value: terminalStats.p50 },
+        { label: "Upside sample", value: terminalStats.p90 }
+    ];
+    const selected: Array<{ label: string; index: number }> = [];
+
+    for (const target of targets) {
+        const index = selectPathIndexClosestToTarget(paths, target.value, excluded);
+        if (index === null) {
+            continue;
+        }
+        excluded.add(index);
+        selected.push({ label: target.label, index });
+    }
+
+    if (selected.length >= 3) {
+        return selected;
+    }
+
+    for (const path of [...paths].sort((left, right) => left.index - right.index)) {
+        if (excluded.has(path.index)) {
+            continue;
+        }
+        excluded.add(path.index);
+        selected.push({
+            label: `Sample path ${selected.length + 1}`,
+            index: path.index
+        });
+        if (selected.length >= 3) {
+            break;
+        }
+    }
+
+    return selected;
+}
+
+function replayHistoricalPath(
+    input: SimulationInput,
+    ctx: SimulationContext,
+    pathIndex: number
+): TimelineRow[] {
+    return simulateOnePath(input, ctx, false, pathIndex, { captureTimeline: true }).timeline;
+}
+
+function replayMonteCarloPath(
+    input: SimulationInput,
+    ctx: SimulationContext,
+    targetIndex: number
+): TimelineRow[] {
+    setSeed(input.simulation_settings.seed);
+
+    let captured: TimelineRow[] = [];
+
+    for (let pathIndex = 0; pathIndex <= targetIndex; pathIndex++) {
+        let pathEndAge = input.end_age;
+        if (input.longevity_risk?.useDistribution) {
+            const meanAge = input.longevity_risk.averageLifeExpectancy || 83.5;
+            const stdDev = input.longevity_risk.stdDevYears || 5;
+            pathEndAge = Math.round(meanAge + stdDev * randomNormal());
+            pathEndAge = Math.max(input.retire_age + 1, Math.min(pathEndAge, 120));
+        }
+
+        const pathTotalMonths = (pathEndAge - input.current_age) * 12;
+        const pathCtx = { ...ctx, totalMonths: pathTotalMonths };
+        const simulation = simulateOnePath(input, pathCtx, true, undefined, {
+            captureTimeline: pathIndex === targetIndex,
+            trajectoryLength: ctx.totalMonths
+        });
+
+        if (pathIndex === targetIndex) {
+            captured = simulation.timeline;
+        }
+    }
+
+    return captured;
 }
 
 export function runSimulation(
@@ -961,12 +1182,48 @@ export function runSimulation(
                 totalAssets: totalAssetsStats
             }
         };
+        const pathSnapshots: DistributionPathSnapshot[] = Array.from({ length: numScenarios }, (_, index) => ({
+            index,
+            finalTotalAssetsReal: finalAssetsReal[index],
+            retirementTotalAssetsReal: retirementAssetsReal[index],
+            depletionAge: firstDepletionAgeByPath[index]
+        }));
+        const representativeIndex = isPreview
+            ? -1
+            : selectRepresentativePathIndex(
+                pathSnapshots,
+                totalAssetsRealStats.p50,
+                percentileSorted(sortedRetReal, 50),
+                depletionStats.medianDepletionAge
+            );
+        const representativeTimeline = representativeIndex >= 0
+            ? replayHistoricalPath(input, ctx, representativeIndex)
+            : undefined;
+        const samplePathDefs = !isPreview
+            ? selectSamplePathIndices(pathSnapshots, totalAssetsRealStats, representativeIndex)
+            : [];
+        const display = {
+            representative: representativeTimeline
+                ? {
+                    label: "Representative path",
+                    pathIndex: representativeIndex,
+                    timeline: representativeTimeline
+                }
+                : undefined,
+            samples: samplePathDefs
+                .map((sample) => ({
+                    label: sample.label,
+                    pathIndex: sample.index,
+                    timeline: replayHistoricalPath(input, ctx, sample.index)
+                }))
+        };
 
         return {
             mode: "historical",
             detailLevel,
             pathCount: numScenarios,
             sampleTimelines,
+            display,
             summary,
             survivalSeries
         };
@@ -1013,6 +1270,14 @@ export function runSimulation(
             mode: "deterministic",
             detailLevel,
             timeline: deterministic.timeline,
+            display: {
+                representative: {
+                    label: "Representative path",
+                    pathIndex: null,
+                    timeline: deterministic.timeline
+                },
+                samples: []
+            },
             summary
         };
     } else {
@@ -1026,7 +1291,6 @@ export function runSimulation(
         // Memory Optimization: Store only sample timelines
         const MAX_SAMPLE_PATHS = includeSampleTimelines ? Math.min(maxSampleTimelines, paths) : 0;
         const sampleTimelines: TimelineRow[][] = [];
-
         // Store only final values for stats
         const finalAssets = new Float64Array(paths);
         const finalAssetsReal = new Float64Array(paths);
@@ -1191,12 +1455,47 @@ export function runSimulation(
                 totalAssetsReal: totalAssetsRealStats
             }
         };
+        const pathSnapshots: DistributionPathSnapshot[] = Array.from({ length: paths }, (_, index) => ({
+            index,
+            finalTotalAssetsReal: finalAssetsReal[index],
+            retirementTotalAssetsReal: retirementAssetsReal[index],
+            depletionAge: firstDepletionAgeByPath[index]
+        }));
+        const representativeIndex = isPreview
+            ? -1
+            : selectRepresentativePathIndex(
+                pathSnapshots,
+                totalAssetsRealStats.p50,
+                percentileSorted(sortedRetReal, 50),
+                depletionStats.medianDepletionAge
+            );
+        const representativeTimeline = representativeIndex >= 0
+            ? replayMonteCarloPath(input, ctx, representativeIndex)
+            : undefined;
+        const samplePathDefs = !isPreview
+            ? selectSamplePathIndices(pathSnapshots, totalAssetsRealStats, representativeIndex)
+            : [];
+        const display = {
+            representative: representativeTimeline
+                ? {
+                    label: "Representative path",
+                    pathIndex: representativeIndex,
+                    timeline: representativeTimeline
+                }
+                : undefined,
+            samples: samplePathDefs.map((sample) => ({
+                label: sample.label,
+                pathIndex: sample.index,
+                timeline: replayMonteCarloPath(input, ctx, sample.index)
+            }))
+        };
 
         return {
             mode: "montecarlo",
             detailLevel,
             pathCount: paths,
             sampleTimelines,
+            display,
             summary,
             trajectoryStats: allTraj && trajStats ? trajStats : undefined,
             survivalSeries: allTraj && survivalSeries ? survivalSeries : undefined

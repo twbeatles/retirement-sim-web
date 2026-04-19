@@ -4,7 +4,7 @@
  */
 
 import type { SimulationRuleSet } from "./types";
-import { getLatestKoreaRuleBook, resolveSimulationRuleSet } from "./rules/kr";
+import { resolveKoreaRuleBook } from "./rules/kr";
 
 /**
  * Calculate Monthly Premium for Regional Subscriber
@@ -19,9 +19,7 @@ export function calculateRegionalHealthInsurance(
     carValue: number = 0,
     ruleSet?: SimulationRuleSet
 ): number {
-    const rules = getLatestKoreaRuleBook();
-    const resolved = resolveSimulationRuleSet(ruleSet);
-    void resolved;
+    const rules = resolveKoreaRuleBook(ruleSet);
 
     // 1. Income Premium (소득 정률제)
     // 2024: (Annual Income * 7.09%) / 12

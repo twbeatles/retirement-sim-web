@@ -1,16 +1,13 @@
 import {
-    type SimulationInput,
     type SimulationResult,
     type SensitivityResult,
     type SimulationRunOptions
 } from "./types";
-import type { SimulationPlanV2 } from "./planV2";
+import type { SimulationPlanV3 } from "./plan";
 
 export type WorkerRequestKind =
     | "SIMULATION"
-    | "PLAN_SIMULATION"
     | "SIMULATION_BATCH"
-    | "PLAN_SIMULATION_BATCH"
     | "SOLVE_CONTRIBUTION"
     | "SOLVE_LABOR_SAVINGS_RATE"
     | "SOLVE_RETIRE_AGE"
@@ -29,42 +26,32 @@ export type WorkerLaneQueueMeta = {
 };
 
 export type SimulationRequestPayload = {
-    input: SimulationInput;
-    options?: SimulationRunOptions;
-};
-
-export type PlanSimulationRequestPayload = {
-    plan: SimulationPlanV2;
+    plan: SimulationPlanV3;
     options?: SimulationRunOptions;
 };
 
 export type SimulationBatchRequestPayload = {
-    inputs: SimulationInput[];
-    options?: SimulationRunOptions;
-};
-
-export type PlanSimulationBatchRequestPayload = {
-    plans: SimulationPlanV2[];
+    plans: SimulationPlanV3[];
     options?: SimulationRunOptions;
 };
 
 export type SolveContributionRequestPayload = {
-    input: SimulationInput;
+    plan: SimulationPlanV3;
     targetSuccessRate: number;
 };
 
 export type SolveLaborSavingsRateRequestPayload = {
-    input: SimulationInput;
+    plan: SimulationPlanV3;
     targetSuccessRate: number;
 };
 
 export type SolveRetireAgeRequestPayload = {
-    input: SimulationInput;
+    plan: SimulationPlanV3;
     targetSuccessRate: number;
 };
 
 export type SensitivityAnalysisRequestPayload = {
-    input: SimulationInput;
+    plan: SimulationPlanV3;
     parameter: "annual_return" | "annual_inflation" | "withdrawal_rate";
     variations: number[];
 };
@@ -78,14 +65,12 @@ export type PensionOptimizationResult = {
 };
 
 export type PensionOptimizationRequestPayload = {
-    input: SimulationInput;
+    plan: SimulationPlanV3;
 };
 
 export type WorkerRequestByKind = {
     SIMULATION: SimulationRequestPayload;
-    PLAN_SIMULATION: PlanSimulationRequestPayload;
     SIMULATION_BATCH: SimulationBatchRequestPayload;
-    PLAN_SIMULATION_BATCH: PlanSimulationBatchRequestPayload;
     SOLVE_CONTRIBUTION: SolveContributionRequestPayload;
     SOLVE_LABOR_SAVINGS_RATE: SolveLaborSavingsRateRequestPayload;
     SOLVE_RETIRE_AGE: SolveRetireAgeRequestPayload;
@@ -95,9 +80,7 @@ export type WorkerRequestByKind = {
 
 export type WorkerResponseByKind = {
     SIMULATION: SimulationResult;
-    PLAN_SIMULATION: SimulationResult;
     SIMULATION_BATCH: SimulationResult[];
-    PLAN_SIMULATION_BATCH: SimulationResult[];
     SOLVE_CONTRIBUTION: number | null;
     SOLVE_LABOR_SAVINGS_RATE: number | null;
     SOLVE_RETIRE_AGE: number | null;

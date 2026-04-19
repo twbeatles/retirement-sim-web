@@ -11,10 +11,14 @@ env/
 
 # Node
 node_modules/
+frontend/node_modules/
 dist/
+frontend/dist/
 build/
 coverage/
 .npm/
+.pnpm-store/
+.parcel-cache/
 .eslintcache
 .vite/
 *.tsbuildinfo
@@ -48,6 +52,7 @@ yarn-error.log*
 backup/
 *.bak
 *.tmp
+*.orig
 temp/
 frontend/test_output.txt
 frontend/tsc_errors.txt

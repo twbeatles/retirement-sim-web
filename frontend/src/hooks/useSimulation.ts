@@ -5,7 +5,7 @@ import {
     type SimulationResult,
     type SimulationRunOptions
 } from "../logic/types";
-import { legacyInputToPlanV2 } from "../logic/planV2";
+import { legacyInputToPlan } from "../logic/plan";
 import { createPreviewSimulationOptions } from "../logic/simulationRequestPolicy";
 
 type SimulationHookReturn = {
@@ -26,13 +26,12 @@ type SimulationHookReturn = {
 };
 
 type SimulationClientModule = {
-    requestSimulation: (input: SimulationInput, options?: SimulationRunOptions) => Promise<SimulationResult>;
-    requestSimulationPlan: (plan: ReturnType<typeof legacyInputToPlanV2>, options?: SimulationRunOptions) => Promise<SimulationResult>;
-    requestSolveContribution: (input: SimulationInput, targetSuccessRate: number) => Promise<number | null>;
-    requestSolveLaborSavingsRate: (input: SimulationInput, targetSuccessRate: number) => Promise<number | null>;
-    requestSolveRetireAge: (input: SimulationInput, targetSuccessRate: number) => Promise<number | null>;
+    requestSimulation: (plan: ReturnType<typeof legacyInputToPlan>, options?: SimulationRunOptions) => Promise<SimulationResult>;
+    requestSolveContribution: (plan: ReturnType<typeof legacyInputToPlan>, targetSuccessRate: number) => Promise<number | null>;
+    requestSolveLaborSavingsRate: (plan: ReturnType<typeof legacyInputToPlan>, targetSuccessRate: number) => Promise<number | null>;
+    requestSolveRetireAge: (plan: ReturnType<typeof legacyInputToPlan>, targetSuccessRate: number) => Promise<number | null>;
     requestSensitivityAnalysis: (
-        input: SimulationInput,
+        plan: ReturnType<typeof legacyInputToPlan>,
         parameter: "annual_return" | "annual_inflation" | "withdrawal_rate",
         variations: number[]
     ) => Promise<SensitivityResult>;
@@ -59,11 +58,8 @@ export function useSimulation(): SimulationHookReturn {
         setIsCalculating(true);
 
         try {
-            const detailLevel = options?.detailLevel ?? "full";
             const client = await loadSimulationClient();
-            const response = detailLevel === "preview"
-                ? await client.requestSimulation(input, options)
-                : await client.requestSimulationPlan(legacyInputToPlanV2(input), options);
+            const response = await client.requestSimulation(legacyInputToPlan(input), options);
             if (seq === latestSimulationSeq.current) {
                 setResult(response);
                 setError(null);
@@ -84,23 +80,23 @@ export function useSimulation(): SimulationHookReturn {
 
     const runSimulationPreview = useCallback((input: SimulationInput, previewPathCap = 80) => {
         return loadSimulationClient().then(({ requestSimulation }) =>
-            requestSimulation(input, createPreviewSimulationOptions(previewPathCap))
+            requestSimulation(legacyInputToPlan(input), createPreviewSimulationOptions(previewPathCap))
         );
     }, []);
 
     const solveContribution = useCallback(async (input: SimulationInput, targetSuccessRate: number) => {
         const { requestSolveContribution } = await loadSimulationClient();
-        return requestSolveContribution(input, targetSuccessRate);
+        return requestSolveContribution(legacyInputToPlan(input), targetSuccessRate);
     }, []);
 
     const solveLaborSavingsRate = useCallback(async (input: SimulationInput, targetSuccessRate: number) => {
         const { requestSolveLaborSavingsRate } = await loadSimulationClient();
-        return requestSolveLaborSavingsRate(input, targetSuccessRate);
+        return requestSolveLaborSavingsRate(legacyInputToPlan(input), targetSuccessRate);
     }, []);
 
     const solveRetireAge = useCallback(async (input: SimulationInput, targetSuccessRate: number) => {
         const { requestSolveRetireAge } = await loadSimulationClient();
-        return requestSolveRetireAge(input, targetSuccessRate);
+        return requestSolveRetireAge(legacyInputToPlan(input), targetSuccessRate);
     }, []);
 
     const runSensitivityAnalysisFunc = useCallback(
@@ -110,7 +106,7 @@ export function useSimulation(): SimulationHookReturn {
             variations: number[]
         ) => {
             const { requestSensitivityAnalysis } = await loadSimulationClient();
-            const sensitivity = await requestSensitivityAnalysis(input, parameter, variations);
+            const sensitivity = await requestSensitivityAnalysis(legacyInputToPlan(input), parameter, variations);
             setSensitivityResults((prev) => {
                 if (!prev) {
                     return [sensitivity];

@@ -1,13 +1,10 @@
 import type {
     SensitivityResult,
     SimulationDetailLevel,
-    SimulationInput,
     SimulationResult,
     SimulationRunOptions
 } from "./types";
-import type {
-    SimulationPlanV2
-} from "./planV2";
+import type { SimulationPlanV3 } from "./plan";
 import type {
     PensionOptimizationResult,
     SimulationRequestPriority,
@@ -293,66 +290,52 @@ export function sendWorkerRequest<K extends WorkerRequestKind>(
 }
 
 export function requestSimulation(
-    input: SimulationInput,
+    plan: SimulationPlanV3,
     options?: SimulationRunOptions
 ): Promise<SimulationResult> {
-    return requestSimulationCoalesced({ input, options });
-}
-
-export function requestSimulationPlan(
-    plan: SimulationPlanV2,
-    options?: SimulationRunOptions
-): Promise<SimulationResult> {
-    return sendRawWorkerRequest("compute", "PLAN_SIMULATION", { plan, options });
+    return requestSimulationCoalesced({ plan, options });
 }
 
 export function requestSimulationBatch(
-    inputs: SimulationInput[],
+    plans: SimulationPlanV3[],
     options?: SimulationRunOptions
 ): Promise<SimulationResult[]> {
-    return sendRawWorkerRequest("compute", "SIMULATION_BATCH", { inputs, options });
-}
-
-export function requestSimulationPlanBatch(
-    plans: SimulationPlanV2[],
-    options?: SimulationRunOptions
-): Promise<SimulationResult[]> {
-    return sendRawWorkerRequest("compute", "PLAN_SIMULATION_BATCH", { plans, options });
+    return sendRawWorkerRequest("compute", "SIMULATION_BATCH", { plans, options });
 }
 
 export function requestSolveContribution(
-    input: SimulationInput,
+    plan: SimulationPlanV3,
     targetSuccessRate: number
 ): Promise<number | null> {
-    return sendRawWorkerRequest("compute", "SOLVE_CONTRIBUTION", { input, targetSuccessRate });
+    return sendRawWorkerRequest("compute", "SOLVE_CONTRIBUTION", { plan, targetSuccessRate });
 }
 
 export function requestSolveLaborSavingsRate(
-    input: SimulationInput,
+    plan: SimulationPlanV3,
     targetSuccessRate: number
 ): Promise<number | null> {
-    return sendRawWorkerRequest("compute", "SOLVE_LABOR_SAVINGS_RATE", { input, targetSuccessRate });
+    return sendRawWorkerRequest("compute", "SOLVE_LABOR_SAVINGS_RATE", { plan, targetSuccessRate });
 }
 
 export function requestSolveRetireAge(
-    input: SimulationInput,
+    plan: SimulationPlanV3,
     targetSuccessRate: number
 ): Promise<number | null> {
-    return sendRawWorkerRequest("compute", "SOLVE_RETIRE_AGE", { input, targetSuccessRate });
+    return sendRawWorkerRequest("compute", "SOLVE_RETIRE_AGE", { plan, targetSuccessRate });
 }
 
 export function requestSensitivityAnalysis(
-    input: SimulationInput,
+    plan: SimulationPlanV3,
     parameter: "annual_return" | "annual_inflation" | "withdrawal_rate",
     variations: number[]
 ): Promise<SensitivityResult> {
-    return sendRawWorkerRequest("compute", "SENSITIVITY_ANALYSIS", { input, parameter, variations });
+    return sendRawWorkerRequest("compute", "SENSITIVITY_ANALYSIS", { plan, parameter, variations });
 }
 
 export function requestPensionOptimization(
-    input: SimulationInput
+    plan: SimulationPlanV3
 ): Promise<PensionOptimizationResult[]> {
-    return sendRawWorkerRequest("compute", "PENSION_OPTIMIZATION", { input });
+    return sendRawWorkerRequest("compute", "PENSION_OPTIMIZATION", { plan });
 }
 
 export function terminateSimulationWorker(): void {

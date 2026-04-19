@@ -1,7 +1,7 @@
 /// <reference lib="webworker" />
 
-import { runSimulation } from "./engine";
-import { runSimulationPlanBatchV2, runSimulationPlanV2 } from "./planSimulation";
+import { planToLegacyInput } from "./plan";
+import { runSimulationPlan, runSimulationPlanBatch } from "./planSimulation";
 import { optimizePensionStartAge, solveForLaborSavingsRate, solveForMonthlyContribution, solveForRetirementAge } from "./solver";
 import { runSensitivityAnalysis } from "./riskAnalysis";
 import {
@@ -22,30 +22,18 @@ ctx.onmessage = (event: MessageEvent<AnyWorkerRequest>) => {
         switch (msg.kind) {
             case "SIMULATION": {
                 const payload = msg.payload as WorkerRequestByKind["SIMULATION"];
-                responsePayload = runSimulation(payload.input, payload.options);
-                break;
-            }
-            case "PLAN_SIMULATION": {
-                const payload = msg.payload as WorkerRequestByKind["PLAN_SIMULATION"];
-                responsePayload = runSimulationPlanV2(payload.plan, payload.options);
+                responsePayload = runSimulationPlan(payload.plan, payload.options);
                 break;
             }
             case "SIMULATION_BATCH": {
                 const payload = msg.payload as WorkerRequestByKind["SIMULATION_BATCH"];
-                responsePayload = payload.inputs.map((input) =>
-                    runSimulation(input, payload.options)
-                );
-                break;
-            }
-            case "PLAN_SIMULATION_BATCH": {
-                const payload = msg.payload as WorkerRequestByKind["PLAN_SIMULATION_BATCH"];
-                responsePayload = runSimulationPlanBatchV2(payload.plans, payload.options);
+                responsePayload = runSimulationPlanBatch(payload.plans, payload.options);
                 break;
             }
             case "SOLVE_CONTRIBUTION": {
                 const payload = msg.payload as WorkerRequestByKind["SOLVE_CONTRIBUTION"];
                 responsePayload = solveForMonthlyContribution(
-                    payload.input,
+                    planToLegacyInput(payload.plan),
                     payload.targetSuccessRate
                 );
                 break;
@@ -53,7 +41,7 @@ ctx.onmessage = (event: MessageEvent<AnyWorkerRequest>) => {
             case "SOLVE_LABOR_SAVINGS_RATE": {
                 const payload = msg.payload as WorkerRequestByKind["SOLVE_LABOR_SAVINGS_RATE"];
                 responsePayload = solveForLaborSavingsRate(
-                    payload.input,
+                    planToLegacyInput(payload.plan),
                     payload.targetSuccessRate
                 );
                 break;
@@ -61,7 +49,7 @@ ctx.onmessage = (event: MessageEvent<AnyWorkerRequest>) => {
             case "SOLVE_RETIRE_AGE": {
                 const payload = msg.payload as WorkerRequestByKind["SOLVE_RETIRE_AGE"];
                 responsePayload = solveForRetirementAge(
-                    payload.input,
+                    planToLegacyInput(payload.plan),
                     payload.targetSuccessRate
                 );
                 break;
@@ -69,7 +57,7 @@ ctx.onmessage = (event: MessageEvent<AnyWorkerRequest>) => {
             case "SENSITIVITY_ANALYSIS": {
                 const payload = msg.payload as WorkerRequestByKind["SENSITIVITY_ANALYSIS"];
                 responsePayload = runSensitivityAnalysis(
-                    payload.input,
+                    planToLegacyInput(payload.plan),
                     payload.parameter,
                     payload.variations
                 );
@@ -77,7 +65,7 @@ ctx.onmessage = (event: MessageEvent<AnyWorkerRequest>) => {
             }
             case "PENSION_OPTIMIZATION": {
                 const payload = msg.payload as WorkerRequestByKind["PENSION_OPTIMIZATION"];
-                responsePayload = optimizePensionStartAge(payload.input);
+                responsePayload = optimizePensionStartAge(planToLegacyInput(payload.plan));
                 break;
             }
             default:
