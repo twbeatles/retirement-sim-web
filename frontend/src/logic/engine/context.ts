@@ -6,12 +6,76 @@ import {
     mapAssetClassToHistorical,
 } from "../historicalData";
 import { monthlyRateFromAnnual } from "../math";
+import type { SimulationPlanV3 } from "../plan";
 import { createRuleMetadata } from "../rules/kr";
 import type { SimulationInput } from "../types";
 import { calculatePortfolioMetrics } from "./portfolio";
-import type { SimulationContext } from "./types";
+import type { IncomeTreatment, LiquidAccountBucket, SimulationContext } from "./types";
 
-export function buildSimulationContext(input: SimulationInput): SimulationContext {
+function buildLiquidWithdrawalOrder(plan?: SimulationPlanV3): LiquidAccountBucket[] | undefined {
+    if (!plan) {
+        return undefined;
+    }
+
+    const priorities = new Map<LiquidAccountBucket, number>();
+    for (const account of plan.accounts) {
+        if (account.type === "cash" || account.type === "taxable_investment") {
+            priorities.set("general", Math.min(priorities.get("general") ?? Number.POSITIVE_INFINITY, account.withdrawalPriority));
+        }
+        if (
+            account.type === "pension_savings" ||
+            account.type === "irp" ||
+            account.type === "dc" ||
+            account.type === "db" ||
+            account.type === "annuity"
+        ) {
+            priorities.set("privatePension", Math.min(priorities.get("privatePension") ?? Number.POSITIVE_INFINITY, account.withdrawalPriority));
+        }
+    }
+
+    const order = Array.from(priorities.entries())
+        .sort((left, right) => {
+            const priorityDistance = left[1] - right[1];
+            return Math.abs(priorityDistance) > 1e-9
+                ? priorityDistance
+                : left[0].localeCompare(right[0]);
+        })
+        .map(([bucket]) => bucket);
+
+    return order.length > 0 ? order : undefined;
+}
+
+function buildIncomeTreatmentBySource(plan?: SimulationPlanV3): SimulationContext["incomeTreatmentBySource"] {
+    if (!plan) {
+        return undefined;
+    }
+
+    const streamTypeToSource = {
+        salary: "salary",
+        national_pension: "nationalPension",
+        private_annuity: "additionalPension",
+        db_pension: "additionalPension",
+        rental_income: "rentalIncome",
+        business_income: "businessIncome",
+        severance: "severance",
+        reverse_mortgage: "reverseMortgage"
+    } as const;
+
+    const bySource: SimulationContext["incomeTreatmentBySource"] = {};
+    for (const stream of plan.incomeStreams) {
+        const source = streamTypeToSource[stream.type];
+        const current = bySource[source];
+        const next: IncomeTreatment = {
+            taxable: (current?.taxable ?? false) || stream.taxable,
+            healthInsuranceIncluded: (current?.healthInsuranceIncluded ?? false) || stream.healthInsuranceIncluded
+        };
+        bySource[source] = next;
+    }
+
+    return bySource;
+}
+
+export function buildSimulationContext(input: SimulationInput, plan?: SimulationPlanV3): SimulationContext {
     const { mu, sigma } = calculatePortfolioMetrics(input);
     const mu_m = monthlyRateFromAnnual(mu);
     const sig_m = sigma / Math.sqrt(12.0);
@@ -165,7 +229,9 @@ export function buildSimulationContext(input: SimulationInput): SimulationContex
         realEstateState,
         pensionState,
         annualPortfolioReturn: mu,
-        annualInflation
+        annualInflation,
+        liquidWithdrawalOrder: buildLiquidWithdrawalOrder(plan),
+        incomeTreatmentBySource: buildIncomeTreatmentBySource(plan)
     };
 
     if (input.rebalancing?.enabled) {

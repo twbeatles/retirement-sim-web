@@ -1,49 +1,18 @@
 import React, { useState } from "react";
-import type { HousingStatus, SimulationInput, SimulationResult } from "../logic/types";
+import type { SimulationInput, SimulationResult, ValidationWarning } from "../logic/types";
 import { PlanGuidedChecklist } from "./PlanGuidedChecklist";
+import { HOUSING_OPTIONS, PRESETS, STEPS, type SimpleDashboardPreset } from "./simple-dashboard/constants";
+import { getFeedback, getGaugeColor } from "./simple-dashboard/summaryHelpers";
 import { InputSlider } from "./ui/InputSlider";
 
 interface SimpleDashboardProps {
     input: SimulationInput;
     result: SimulationResult | null;
+    validationWarnings?: ValidationWarning[];
     onInputChange: (input: SimulationInput) => void;
 }
 
-const STEPS = [
-    { id: "basic", title: "기본 정보", icon: "📋", description: "나이와 은퇴 목표를 설정하세요" },
-    { id: "assets", title: "자산 현황", icon: "💰", description: "현재 보유 자산을 입력하세요" },
-    { id: "savings", title: "저축 계획", icon: "🏦", description: "월 저축 금액을 설정하세요" },
-    { id: "result", title: "결과 확인", icon: "📊", description: "은퇴 준비도를 확인하세요" }
-];
-
-const PRESETS = [
-    { id: "worker", label: "직장인", icon: "👔", savings: 1000000, asset: 50000000 },
-    { id: "public", label: "공무원", icon: "🏛️", savings: 800000, asset: 30000000 },
-    { id: "self", label: "자영업자", icon: "🏪", savings: 1500000, asset: 80000000 }
-];
-
-const HOUSING_OPTIONS: Array<{ id: HousingStatus; label: string }> = [
-    { id: "own_outright", label: "무주담 주택" },
-    { id: "mortgage", label: "주담대 보유" },
-    { id: "jeonse", label: "전세" },
-    { id: "rent", label: "월세" }
-];
-
-function getGaugeColor(rate: number) {
-    if (rate >= 0.9) return "var(--success)";
-    if (rate >= 0.7) return "#22c55e";
-    if (rate >= 0.5) return "var(--warning)";
-    return "var(--danger)";
-}
-
-function getFeedback(rate: number) {
-    if (rate >= 0.9) return { emoji: "🎉", text: "아주 훌륭합니다! 은퇴 준비가 잘 되어 있어요." };
-    if (rate >= 0.7) return { emoji: "😊", text: "양호합니다. 조금만 더 저축하면 완벽해요!" };
-    if (rate >= 0.5) return { emoji: "🤔", text: "주의가 필요합니다. 저축액을 늘려보세요." };
-    return { emoji: "⚠️", text: "대책이 필요합니다. 은퇴 계획을 점검하세요." };
-}
-
-export const SimpleDashboard = React.memo(function SimpleDashboard({ input, result, onInputChange }: SimpleDashboardProps) {
+export const SimpleDashboard = React.memo(function SimpleDashboard({ input, result, validationWarnings = [], onInputChange }: SimpleDashboardProps) {
     const [currentStep, setCurrentStep] = useState(0);
 
     const successRate = result?.summary.successRate ?? 0;
@@ -58,7 +27,7 @@ export const SimpleDashboard = React.memo(function SimpleDashboard({ input, resu
     const gaugeOffset = gaugeLength * (1 - clampedSuccessRate);
     const feedback = getFeedback(successRate);
 
-    const handlePreset = (preset: (typeof PRESETS)[0]) => {
+    const handlePreset = (preset: SimpleDashboardPreset) => {
         onInputChange({
             ...input,
             general: {
@@ -96,6 +65,31 @@ export const SimpleDashboard = React.memo(function SimpleDashboard({ input, resu
                     style={{ width: `${((currentStep + 1) / STEPS.length) * 100}%` }}
                 />
             </div>
+
+            {validationWarnings.length > 0 && (
+                <div
+                    className="mb-8 rounded-2xl border border-amber-200 bg-amber-50/90 p-4 text-left dark:border-amber-900/40 dark:bg-amber-900/10"
+                    role={validationWarnings.some((warning) => warning.severity === "error") ? "alert" : "status"}
+                >
+                    <div className="mb-2 text-sm font-bold text-amber-900 dark:text-amber-200">
+                        입력값 확인
+                    </div>
+                    <div className="flex flex-col gap-2">
+                        {validationWarnings.map((warning, index) => (
+                            <div
+                                key={`${warning.field}-${index}`}
+                                className={`rounded-lg border px-3 py-2 text-xs font-medium ${
+                                    warning.severity === "error"
+                                        ? "border-red-200 bg-red-50 text-red-700 dark:border-red-900/40 dark:bg-red-900/20 dark:text-red-300"
+                                        : "border-amber-200 bg-white/60 text-amber-800 dark:border-amber-900/30 dark:bg-zinc-900/20 dark:text-amber-200"
+                                }`}
+                            >
+                                {warning.message}
+                            </div>
+                        ))}
+                    </div>
+                </div>
+            )}
 
             <div className="min-h-[400px] w-full min-w-full">
                 {currentStep === 0 && (

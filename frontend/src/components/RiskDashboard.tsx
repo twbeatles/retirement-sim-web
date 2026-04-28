@@ -77,7 +77,7 @@ export const RiskDashboard = React.memo(function RiskDashboard({ input, result, 
             ...input,
             medical_shocks: {
                 enabled: true,
-                occurrences: [...occurrences, { age: 70, amount: 50000000, description: "Medical event" }]
+                occurrences: [...occurrences, { age: 70, amount: 50000000, description: "의료비 이벤트" }]
             }
         });
     };
@@ -223,7 +223,7 @@ export const RiskDashboard = React.memo(function RiskDashboard({ input, result, 
                         <Tooltip content="은퇴 초기 하락장은 후기 하락장보다 자산에 훨씬 치명적인 영향을 미칩니다." />
                     </p>
                     <div className="bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-900/30 rounded-xl p-3 flex items-start gap-2 mt-2 text-sm text-blue-800 dark:text-blue-300">
-                        <strong>Tip:</strong> 은퇴 직후 몇 년간 방어적 자산 배분 비중을 높이면 이 리스크를 줄일 수 있습니다.
+                        <strong>팁:</strong> 은퇴 직후 몇 년간 방어적 자산 배분 비중을 높이면 이 리스크를 줄일 수 있습니다.
                     </div>
                     <div className="mt-6 flex items-center">
                         <label className="flex items-center gap-3 text-sm cursor-pointer font-semibold text-slate-700 dark:text-slate-300 hover:text-slate-900 dark:hover:text-slate-100 group">
@@ -288,7 +288,7 @@ export const RiskDashboard = React.memo(function RiskDashboard({ input, result, 
                                         onChange={(event) => updateMedicalShock(index, "amount", Number(event.target.value))}
                                         placeholder="금액"
                                     />
-                                    <span className="text-slate-500 dark:text-slate-400 text-sm font-medium">KRW 발생:</span>
+                                    <span className="text-slate-500 dark:text-slate-400 text-sm font-medium">원 발생:</span>
                                     <input
                                         type="text"
                                         className="flex-1 min-w-[120px] px-3 py-2 bg-white dark:bg-zinc-900 border border-slate-200 dark:border-zinc-700 rounded-lg text-sm text-slate-900 dark:text-white focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20 outline-none transition-all"

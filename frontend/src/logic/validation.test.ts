@@ -79,6 +79,36 @@ describe("validateSimulationInput", () => {
             )
         ).toBe(true);
     });
+
+    it("rejects annual rates that would break monthly compounding", () => {
+        const input = structuredClone(INITIAL_INPUT);
+        input.annual_inflation = -1;
+        input.portfolio.assetClasses[0].expectedAnnualReturn = -1;
+        input.stress_test = {
+            enabled: true,
+            startFromRetirement: true,
+            durationMonths: 12,
+            annualDeclineRate: 1
+        };
+
+        const warnings = validateSimulationInput(input);
+
+        expect(
+            warnings.some(
+                (warning) => warning.field === "annual_inflation" && warning.severity === "error"
+            )
+        ).toBe(true);
+        expect(
+            warnings.some(
+                (warning) => warning.field === "portfolio" && warning.severity === "error"
+            )
+        ).toBe(true);
+        expect(
+            warnings.some(
+                (warning) => warning.field === "stress_test" && warning.severity === "error"
+            )
+        ).toBe(true);
+    });
 });
 
 describe("validateSimulationPlan", () => {
@@ -111,6 +141,42 @@ describe("validateSimulationPlan", () => {
                 (warning) =>
                     warning.field.includes("plan.incomeStreams") &&
                     warning.field.endsWith("monthlyAmount") &&
+                    warning.severity === "error"
+            )
+        ).toBe(true);
+    });
+
+    it("rejects invalid V3 annual rates", () => {
+        const plan = legacyInputToPlan(structuredClone(INITIAL_INPUT));
+        plan.simulationSettings.annualInflation = -1;
+        plan.simulationSettings.portfolio.assetClasses[0].expectedAnnualReturn = -1;
+        plan.simulationSettings.stressTest = {
+            enabled: true,
+            startFromRetirement: true,
+            durationMonths: 12,
+            annualDeclineRate: 1
+        };
+
+        const warnings = validateSimulationPlan(plan);
+
+        expect(
+            warnings.some(
+                (warning) =>
+                    warning.field === "plan.simulationSettings.annualInflation" &&
+                    warning.severity === "error"
+            )
+        ).toBe(true);
+        expect(
+            warnings.some(
+                (warning) =>
+                    warning.field.endsWith(".expectedAnnualReturn") &&
+                    warning.severity === "error"
+            )
+        ).toBe(true);
+        expect(
+            warnings.some(
+                (warning) =>
+                    warning.field === "plan.simulationSettings.stressTest.annualDeclineRate" &&
                     warning.severity === "error"
             )
         ).toBe(true);

@@ -1,4 +1,11 @@
-import type { SimulationInput, TimelineRow } from "../types";
+import type { SimulationInput, TimelineCashflowSources, TimelineRow } from "../types";
+
+export type LiquidAccountBucket = "general" | "privatePension";
+
+export type IncomeTreatment = {
+    taxable: boolean;
+    healthInsuranceIncluded: boolean;
+};
 
 export interface SimulationContext {
     mu_m: number;
@@ -50,6 +57,8 @@ export interface SimulationContext {
     assetExpectedMonthlyReturns?: number[];
     assetMonthlyVolatility?: number[];
     correlation?: number;
+    liquidWithdrawalOrder?: LiquidAccountBucket[];
+    incomeTreatmentBySource?: Partial<Record<keyof TimelineCashflowSources, IncomeTreatment>>;
 }
 
 export type PathSimulationOptions = {

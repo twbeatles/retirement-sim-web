@@ -2,6 +2,7 @@ import type { SimulationPlanV3 } from "../plan";
 import type { ValidationWarning } from "../types";
 import { resolveSimulationRuleSet } from "../rules/kr";
 import {
+    isFiniteNumber,
     pushError,
     pushInfo,
     pushWarning,
@@ -22,7 +23,7 @@ export function validatePlanV3(
     const { validateRulebook = true } = options;
 
     if (plan.planVersion !== "v3") {
-        pushError(warnings, "plan.planVersion", "Plan schema version is not supported.");
+        pushError(warnings, "plan.planVersion", "지원되지 않는 플랜 스키마 버전입니다.");
         return;
     }
 
@@ -38,25 +39,25 @@ export function validatePlanV3(
         }
     }
 
-    requireFinite(warnings, "plan.profile.currentAge", "Plan current age", plan.profile.currentAge);
+    requireFinite(warnings, "plan.profile.currentAge", "플랜 현재 나이", plan.profile.currentAge);
     requireFinite(
         warnings,
         "plan.profile.retirementAge",
-        "Plan retirement age",
+        "플랜 은퇴 나이",
         plan.profile.retirementAge
     );
-    requireFinite(warnings, "plan.profile.endAge", "Plan end age", plan.profile.endAge);
+    requireFinite(warnings, "plan.profile.endAge", "플랜 종료 나이", plan.profile.endAge);
 
     if (plan.profile.retirementAge <= plan.profile.currentAge) {
         pushError(
             warnings,
             "plan.profile.retirementAge",
-            "Retirement age must be greater than current age."
+            "은퇴 나이는 현재 나이보다 커야 합니다."
         );
     }
 
     if (plan.profile.endAge <= plan.profile.retirementAge) {
-        pushError(warnings, "plan.profile.endAge", "End age must be greater than retirement age.");
+        pushError(warnings, "plan.profile.endAge", "종료 나이는 은퇴 나이보다 커야 합니다.");
     }
 
     const accountIds = new Set<string>();
@@ -64,11 +65,11 @@ export function validatePlanV3(
         const fieldBase = `plan.accounts.${index}`;
         accountIds.add(account.id);
 
-        requireFinite(warnings, `${fieldBase}.balance`, `Account "${account.name}" balance`, account.balance);
+        requireFinite(warnings, `${fieldBase}.balance`, `계정 "${account.name}" 잔액`, account.balance);
         requireNonNegative(
             warnings,
             `${fieldBase}.balance`,
-            `Account "${account.name}" balance`,
+            `계정 "${account.name}" 잔액`,
             account.balance
         );
 
@@ -76,13 +77,13 @@ export function validatePlanV3(
             requireFinite(
                 warnings,
                 `${fieldBase}.monthlyContribution`,
-                `Account "${account.name}" monthly contribution`,
+                `계정 "${account.name}" 월 납입액`,
                 account.monthlyContribution
             );
             requireNonNegative(
                 warnings,
                 `${fieldBase}.monthlyContribution`,
-                `Account "${account.name}" monthly contribution`,
+                `계정 "${account.name}" 월 납입액`,
                 account.monthlyContribution
             );
         }
@@ -91,7 +92,14 @@ export function validatePlanV3(
             pushWarning(
                 warnings,
                 `${fieldBase}.annualReturn`,
-                `Account "${account.name}" annual return looks outside the usual range.`
+                `계정 "${account.name}" 연 수익률이 일반적인 범위를 벗어난 것으로 보입니다.`
+            );
+        }
+        if (account.annualReturn !== undefined && isFiniteNumber(account.annualReturn) && account.annualReturn <= -1) {
+            pushError(
+                warnings,
+                `${fieldBase}.annualReturn`,
+                `계정 "${account.name}" 연 수익률은 -100%보다 커야 합니다.`
             );
         }
 
@@ -99,14 +107,14 @@ export function validatePlanV3(
             pushError(
                 warnings,
                 `${fieldBase}.annualVolatility`,
-                `Account "${account.name}" annual volatility must be 0 or greater.`
+                `계정 "${account.name}" 연 변동성은 0 이상이어야 합니다.`
             );
         }
 
         requireFinite(
             warnings,
             `${fieldBase}.withdrawalPriority`,
-            `Account "${account.name}" withdrawal priority`,
+            `계정 "${account.name}" 인출 우선순위`,
             account.withdrawalPriority
         );
 
@@ -114,7 +122,7 @@ export function validatePlanV3(
             pushError(
                 warnings,
                 `${fieldBase}.withdrawalPriority`,
-                `Account "${account.name}" withdrawal priority must be greater than 0.`
+                `계정 "${account.name}" 인출 우선순위는 0보다 커야 합니다.`
             );
         }
 
@@ -122,19 +130,19 @@ export function validatePlanV3(
             requireRatio(
                 warnings,
                 `${fieldBase}.debtTerms.annualInterest`,
-                `Account "${account.name}" debt interest`,
+                `계정 "${account.name}" 부채 이자율`,
                 account.debtTerms.annualInterest
             );
             requireFinite(
                 warnings,
                 `${fieldBase}.debtTerms.monthlyPayment`,
-                `Account "${account.name}" debt payment`,
+                `계정 "${account.name}" 월 상환액`,
                 account.debtTerms.monthlyPayment
             );
             requireNonNegative(
                 warnings,
                 `${fieldBase}.debtTerms.monthlyPayment`,
-                `Account "${account.name}" debt payment`,
+                `계정 "${account.name}" 월 상환액`,
                 account.debtTerms.monthlyPayment
             );
         }
@@ -143,13 +151,13 @@ export function validatePlanV3(
             requireFinite(
                 warnings,
                 `${fieldBase}.payout.monthlyPayout`,
-                `Account "${account.name}" monthly payout`,
+                `계정 "${account.name}" 월 수령액`,
                 account.payout.monthlyPayout
             );
             requireNonNegative(
                 warnings,
                 `${fieldBase}.payout.monthlyPayout`,
-                `Account "${account.name}" monthly payout`,
+                `계정 "${account.name}" 월 수령액`,
                 account.payout.monthlyPayout
             );
         }
@@ -159,14 +167,14 @@ export function validatePlanV3(
                 pushError(
                     warnings,
                     `${fieldBase}.realEstate.rentalYield`,
-                    `Account "${account.name}" rental yield must be 0 or greater.`
+                    `계정 "${account.name}" 임대수익률은 0 이상이어야 합니다.`
                 );
             }
             if (account.realEstate.managementCost < 0) {
                 pushError(
                     warnings,
                     `${fieldBase}.realEstate.managementCost`,
-                    `Account "${account.name}" management cost must be 0 or greater.`
+                    `계정 "${account.name}" 관리비율은 0 이상이어야 합니다.`
                 );
             }
         }
@@ -177,22 +185,22 @@ export function validatePlanV3(
         requireFinite(
             warnings,
             `${fieldBase}.monthlyAmount`,
-            `Income stream "${stream.name}" monthly amount`,
+            `소득 흐름 "${stream.name}" 월 금액`,
             stream.monthlyAmount
         );
         requireNonNegative(
             warnings,
             `${fieldBase}.monthlyAmount`,
-            `Income stream "${stream.name}" monthly amount`,
+            `소득 흐름 "${stream.name}" 월 금액`,
             stream.monthlyAmount
         );
-        requireFinite(warnings, `${fieldBase}.startAge`, `Income stream "${stream.name}" start age`, stream.startAge);
+        requireFinite(warnings, `${fieldBase}.startAge`, `소득 흐름 "${stream.name}" 시작 나이`, stream.startAge);
 
         if (stream.endAge !== undefined && stream.endAge <= stream.startAge) {
             pushError(
                 warnings,
                 `${fieldBase}.endAge`,
-                `Income stream "${stream.name}" end age must be greater than the start age.`
+                `소득 흐름 "${stream.name}" 종료 나이는 시작 나이보다 커야 합니다.`
             );
         }
 
@@ -200,7 +208,7 @@ export function validatePlanV3(
             pushError(
                 warnings,
                 `${fieldBase}.annualGrowthRate`,
-                `Income stream "${stream.name}" growth rate must be finite.`
+                `소득 흐름 "${stream.name}" 성장률은 유한한 숫자여야 합니다.`
             );
         }
 
@@ -208,7 +216,7 @@ export function validatePlanV3(
             pushWarning(
                 warnings,
                 `${fieldBase}.sourceAccountId`,
-                `Income stream "${stream.name}" references an unknown account.`
+                `소득 흐름 "${stream.name}"이 알 수 없는 계정을 참조합니다.`
             );
         }
     });
@@ -216,61 +224,61 @@ export function validatePlanV3(
     requireFinite(
         warnings,
         "plan.expensePlan.monthlyBuckets.essential",
-        "Essential monthly spending",
+        "월 필수 생활비",
         plan.expensePlan.monthlyBuckets.essential
     );
     requireNonNegative(
         warnings,
         "plan.expensePlan.monthlyBuckets.essential",
-        "Essential monthly spending",
+        "월 필수 생활비",
         plan.expensePlan.monthlyBuckets.essential
     );
     requireFinite(
         warnings,
         "plan.expensePlan.monthlyBuckets.discretionary",
-        "Discretionary monthly spending",
+        "월 선택 지출",
         plan.expensePlan.monthlyBuckets.discretionary
     );
     requireNonNegative(
         warnings,
         "plan.expensePlan.monthlyBuckets.discretionary",
-        "Discretionary monthly spending",
+        "월 선택 지출",
         plan.expensePlan.monthlyBuckets.discretionary
     );
     requireFinite(
         warnings,
         "plan.expensePlan.monthlyBuckets.housing",
-        "Housing monthly spending",
+        "월 주거비",
         plan.expensePlan.monthlyBuckets.housing
     );
     requireNonNegative(
         warnings,
         "plan.expensePlan.monthlyBuckets.housing",
-        "Housing monthly spending",
+        "월 주거비",
         plan.expensePlan.monthlyBuckets.housing
     );
     requireFinite(
         warnings,
         "plan.expensePlan.monthlyBuckets.medical",
-        "Medical monthly spending",
+        "월 의료비",
         plan.expensePlan.monthlyBuckets.medical
     );
     requireNonNegative(
         warnings,
         "plan.expensePlan.monthlyBuckets.medical",
-        "Medical monthly spending",
+        "월 의료비",
         plan.expensePlan.monthlyBuckets.medical
     );
     requireFinite(
         warnings,
         "plan.expensePlan.monthlyBuckets.dependentSupport",
-        "Dependent support monthly spending",
+        "월 부양비",
         plan.expensePlan.monthlyBuckets.dependentSupport
     );
     requireNonNegative(
         warnings,
         "plan.expensePlan.monthlyBuckets.dependentSupport",
-        "Dependent support monthly spending",
+        "월 부양비",
         plan.expensePlan.monthlyBuckets.dependentSupport
     );
 
@@ -279,33 +287,33 @@ export function validatePlanV3(
             pushError(
                 warnings,
                 `plan.expensePlan.oneOffEvents.${index}.monthIndex`,
-                `One-off event "${event.name}" month index must be a non-negative integer.`
+                `일회성 이벤트 "${event.name}"의 월 번호는 0 이상의 정수여야 합니다.`
             );
         }
         requireFinite(
             warnings,
             `plan.expensePlan.oneOffEvents.${index}.amount`,
-            `One-off event "${event.name}" amount`,
+            `일회성 이벤트 "${event.name}" 금액`,
             event.amount
         );
     });
 
     plan.expensePlan.stageAdjustments.forEach((expense, index) => {
         const fieldBase = `plan.expensePlan.stageAdjustments.${index}`;
-        requireFinite(warnings, `${fieldBase}.amount`, `Stage adjustment "${expense.name}" amount`, expense.amount);
+        requireFinite(warnings, `${fieldBase}.amount`, `단계별 지출 "${expense.name}" 금액`, expense.amount);
         requireNonNegative(
             warnings,
             `${fieldBase}.amount`,
-            `Stage adjustment "${expense.name}" amount`,
+            `단계별 지출 "${expense.name}" 금액`,
             expense.amount
         );
-        requireFinite(warnings, `${fieldBase}.startAge`, `Stage adjustment "${expense.name}" start age`, expense.startAge);
+        requireFinite(warnings, `${fieldBase}.startAge`, `단계별 지출 "${expense.name}" 시작 나이`, expense.startAge);
 
         if (expense.endAge !== undefined && expense.endAge < expense.startAge) {
             pushError(
                 warnings,
                 `${fieldBase}.endAge`,
-                `Stage adjustment "${expense.name}" end age cannot be before the start age.`
+                `단계별 지출 "${expense.name}" 종료 나이는 시작 나이보다 빠를 수 없습니다.`
             );
         }
 
@@ -313,7 +321,7 @@ export function validatePlanV3(
             pushError(
                 warnings,
                 `${fieldBase}.intervalYears`,
-                `Stage adjustment "${expense.name}" interval must be greater than 0.`
+                `단계별 지출 "${expense.name}" 반복 간격은 0보다 커야 합니다.`
             );
         }
     });
@@ -321,13 +329,13 @@ export function validatePlanV3(
     requireFinite(
         warnings,
         "plan.withdrawalPolicy.retirementSpendingTarget",
-        "Retirement spending target",
+        "은퇴 생활비 목표",
         plan.withdrawalPolicy.retirementSpendingTarget
     );
     requireNonNegative(
         warnings,
         "plan.withdrawalPolicy.retirementSpendingTarget",
-        "Retirement spending target",
+        "은퇴 생활비 목표",
         plan.withdrawalPolicy.retirementSpendingTarget
     );
 
@@ -344,7 +352,71 @@ export function validatePlanV3(
         pushInfo(
             warnings,
             "plan.withdrawalPolicy.retirementSpendingTarget",
-            "Retirement spending target is lower than essential baseline spending."
+            "은퇴 생활비 목표가 필수 생활비 기준보다 낮습니다."
         );
+    }
+
+    requireFinite(
+        warnings,
+        "plan.simulationSettings.annualInflation",
+        "플랜 연 물가상승률",
+        plan.simulationSettings.annualInflation
+    );
+    if (
+        isFiniteNumber(plan.simulationSettings.annualInflation) &&
+        plan.simulationSettings.annualInflation <= -1
+    ) {
+        pushError(
+            warnings,
+            "plan.simulationSettings.annualInflation",
+            "플랜 연 물가상승률은 -100%보다 커야 합니다."
+        );
+    }
+
+    plan.simulationSettings.portfolio.assetClasses.forEach((asset, index) => {
+        const fieldBase = `plan.simulationSettings.portfolio.assetClasses.${index}`;
+        requireFinite(
+            warnings,
+            `${fieldBase}.expectedAnnualReturn`,
+            `포트폴리오 자산 "${asset.name}" 기대수익률`,
+            asset.expectedAnnualReturn
+        );
+        if (isFiniteNumber(asset.expectedAnnualReturn) && asset.expectedAnnualReturn <= -1) {
+            pushError(
+                warnings,
+                `${fieldBase}.expectedAnnualReturn`,
+                `포트폴리오 자산 "${asset.name}" 기대수익률은 -100%보다 커야 합니다.`
+            );
+        }
+        requireFinite(
+            warnings,
+            `${fieldBase}.annualVolatility`,
+            `포트폴리오 자산 "${asset.name}" 연 변동성`,
+            asset.annualVolatility
+        );
+        if (isFiniteNumber(asset.annualVolatility) && asset.annualVolatility < 0) {
+            pushError(
+                warnings,
+                `${fieldBase}.annualVolatility`,
+                `포트폴리오 자산 "${asset.name}" 연 변동성은 0 이상이어야 합니다.`
+            );
+        }
+    });
+
+    const stressTest = plan.simulationSettings.stressTest;
+    if (stressTest.enabled) {
+        requireFinite(
+            warnings,
+            "plan.simulationSettings.stressTest.annualDeclineRate",
+            "플랜 스트레스 테스트 연간 하락률",
+            stressTest.annualDeclineRate
+        );
+        if (isFiniteNumber(stressTest.annualDeclineRate) && stressTest.annualDeclineRate >= 1) {
+            pushError(
+                warnings,
+                "plan.simulationSettings.stressTest.annualDeclineRate",
+                "플랜 스트레스 테스트 연간 하락률은 100% 미만이어야 합니다."
+            );
+        }
     }
 }

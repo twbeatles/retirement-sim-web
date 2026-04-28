@@ -35,6 +35,9 @@ export function validateLegacySimulationInput(
     }
 
     requireFinite(warnings, "annual_inflation", "연간 물가상승률", input.annual_inflation);
+    if (isFiniteNumber(input.annual_inflation) && input.annual_inflation <= -1) {
+        pushError(warnings, "annual_inflation", "연간 물가상승률은 -100%보다 커야 합니다.");
+    }
     if (isFiniteNumber(input.annual_inflation) && input.annual_inflation < -0.02) {
         pushWarning(warnings, "annual_inflation", "연간 물가상승률이 -2%보다 낮습니다. 가정을 다시 확인해주세요.");
     }
@@ -55,6 +58,9 @@ export function validateLegacySimulationInput(
     requireFinite(warnings, "private_pension.monthly_contribution", "개인연금 월 납입액", input.private_pension.monthly_contribution);
     requireNonNegative(warnings, "private_pension.monthly_contribution", "개인연금 월 납입액", input.private_pension.monthly_contribution);
     requireFinite(warnings, "private_pension.annual_return", "개인연금 예상 수익률", input.private_pension.annual_return);
+    if (isFiniteNumber(input.private_pension.annual_return) && input.private_pension.annual_return <= -1) {
+        pushError(warnings, "private_pension.annual_return", "개인연금 예상 수익률은 -100%보다 커야 합니다.");
+    }
     if (isFiniteNumber(input.private_pension.annual_return) && (input.private_pension.annual_return < -0.5 || input.private_pension.annual_return > 0.5)) {
         pushWarning(warnings, "private_pension.annual_return", "개인연금 예상 수익률 범위를 확인해주세요.");
     }
@@ -63,6 +69,9 @@ export function validateLegacySimulationInput(
         pushError(warnings, "private_pension.payout_years", "개인연금 수령 기간은 0 이상이어야 합니다.");
     }
     requireFinite(warnings, "private_pension.annuity_annual_rate", "개인연금 연금화 이율", input.private_pension.annuity_annual_rate);
+    if (isFiniteNumber(input.private_pension.annuity_annual_rate) && input.private_pension.annuity_annual_rate <= -1) {
+        pushError(warnings, "private_pension.annuity_annual_rate", "개인연금 연금화 이율은 -100%보다 커야 합니다.");
+    }
     if (isFiniteNumber(input.private_pension.annuity_annual_rate) && (input.private_pension.annuity_annual_rate < 0 || input.private_pension.annuity_annual_rate > 0.2)) {
         pushWarning(warnings, "private_pension.annuity_annual_rate", "개인연금 연금화 이율 범위를 확인해주세요.");
     }
@@ -127,6 +136,9 @@ export function validateLegacySimulationInput(
         requireFinite(warnings, "portfolio", `"${asset.name}" 변동성`, asset.annualVolatility);
         requireRatio(warnings, "portfolio", `"${asset.name}" 비중`, asset.allocation);
 
+        if (isFiniteNumber(asset.expectedAnnualReturn) && asset.expectedAnnualReturn <= -1) {
+            pushError(warnings, "portfolio", `"${asset.name}"의 기대 수익률은 -100%보다 커야 합니다.`);
+        }
         if (asset.expectedAnnualReturn > 0.20) {
             pushWarning(warnings, "portfolio", `"${asset.name}"의 기대 수익률(${(asset.expectedAnnualReturn * 100).toFixed(1)}%)이 비현실적으로 높습니다.`);
         }
@@ -144,8 +156,8 @@ export function validateLegacySimulationInput(
     requireRatio(warnings, "withdrawal.taxRate", "단일 세율", input.withdrawal.taxRate);
     requireRatio(warnings, "withdrawal.initialSafeRate", "초기 인출 비율", input.withdrawal.initialSafeRate);
     requireRatio(warnings, "withdrawal.percentageRate", "정률 인출 비율", input.withdrawal.percentageRate);
-    requireRatio(warnings, "withdrawal.vpwMaxWithdrawalRate", "VPW 최대 인출률", input.withdrawal.vpwMaxWithdrawalRate);
-    requireRatio(warnings, "withdrawal.vpwMinWithdrawalRate", "VPW 최소 인출률", input.withdrawal.vpwMinWithdrawalRate);
+    requireRatio(warnings, "withdrawal.vpwMaxWithdrawalRate", "가변 인출 최대 인출률", input.withdrawal.vpwMaxWithdrawalRate);
+    requireRatio(warnings, "withdrawal.vpwMinWithdrawalRate", "가변 인출 최소 인출률", input.withdrawal.vpwMinWithdrawalRate);
     requireRatio(warnings, "withdrawal.vpwMaxYoYChange", "연간 인출 변동 상한", input.withdrawal.vpwMaxYoYChange);
     if (input.withdrawal.fixedMonthlyAmount !== undefined) {
         requireFinite(warnings, "withdrawal.fixedMonthlyAmount", "월 고정 인출액", input.withdrawal.fixedMonthlyAmount);
@@ -196,6 +208,10 @@ export function validateLegacySimulationInput(
         input.realEstate.forEach((re) => {
             requireFinite(warnings, "realEstate", `부동산 "${re.name}" 가치`, re.currentValue);
             requireNonNegative(warnings, "realEstate", `부동산 "${re.name}" 가치`, re.currentValue);
+            requireFinite(warnings, "realEstate", `부동산 "${re.name}" 성장률`, re.growthRate);
+            if (isFiniteNumber(re.growthRate) && re.growthRate <= -1) {
+                pushError(warnings, "realEstate", `부동산 "${re.name}"의 성장률은 -100%보다 커야 합니다.`);
+            }
             if (re.growthRate < -0.2) {
                 pushWarning(warnings, "realEstate", `부동산 "${re.name}"의 성장률(${(re.growthRate * 100).toFixed(1)}%)이 지나치게 낮습니다.`);
             }
@@ -232,6 +248,10 @@ export function validateLegacySimulationInput(
                 pushWarning(warnings, "additionalPensions", `연금 "${pension.name}"의 수령 시작 나이(${pension.startAge}세)가 시뮬레이션 종료 나이보다 늦습니다.`);
             }
             if ((pension.type === "personal" || pension.type === "dc") && pension.expectedReturn !== undefined) {
+                requireFinite(warnings, "additionalPensions", `연금 "${pension.name}"의 기대수익률`, pension.expectedReturn);
+                if (isFiniteNumber(pension.expectedReturn) && pension.expectedReturn <= -1) {
+                    pushError(warnings, "additionalPensions", `연금 "${pension.name}"의 기대수익률은 -100%보다 커야 합니다.`);
+                }
                 if (pension.expectedReturn < -0.2 || pension.expectedReturn > 0.2) {
                     pushWarning(warnings, "additionalPensions", `연금 "${pension.name}"의 기대수익률(${(pension.expectedReturn * 100).toFixed(1)}%) 범위를 확인해주세요.`);
                 }
@@ -253,6 +273,10 @@ export function validateLegacySimulationInput(
             if (biz.monthlyIncome < 0) {
                 pushError(warnings, "businessIncome", `사업소득 "${biz.name}"의 월 소득이 음수입니다.`);
             }
+            requireFinite(warnings, "businessIncome", `사업소득 "${biz.name}"의 성장률`, biz.growthRate);
+            if (isFiniteNumber(biz.growthRate) && biz.growthRate <= -1) {
+                pushError(warnings, "businessIncome", `사업소득 "${biz.name}"의 성장률은 -100%보다 커야 합니다.`);
+            }
             if (biz.growthRate < -0.2) {
                 pushWarning(warnings, "businessIncome", `사업소득 "${biz.name}"의 성장률(${(biz.growthRate * 100).toFixed(1)}%)이 지나치게 낮습니다.`);
             }
@@ -264,17 +288,17 @@ export function validateLegacySimulationInput(
 
     if (input.withdrawal.strategy === "bucket") {
         if (!input.bucket) {
-            pushError(warnings, "bucket", "Bucket 전략 설정이 필요합니다.");
+            pushError(warnings, "bucket", "버킷 전략 설정이 필요합니다.");
         } else if (!input.bucket.shortTermYears || input.bucket.shortTermYears < 1) {
-            pushError(warnings, "bucket", "Bucket 전략의 단기 버킷 기간이 설정되지 않았습니다.");
+            pushError(warnings, "bucket", "버킷 전략의 단기 버킷 기간이 설정되지 않았습니다.");
         } else if (!input.bucket.midTermYears || input.bucket.midTermYears < 1) {
-            pushError(warnings, "bucket", "Bucket 전략의 중기 버킷 기간이 설정되지 않았습니다.");
+            pushError(warnings, "bucket", "버킷 전략의 중기 버킷 기간이 설정되지 않았습니다.");
         }
     }
 
     if (input.withdrawal.strategy === "guardrails" && input.guardrails) {
         if (input.guardrails.upperThreshold <= input.guardrails.lowerThreshold) {
-            pushError(warnings, "guardrails", "Guardrails 상한선은 하한선보다 커야 합니다.");
+            pushError(warnings, "guardrails", "가드레일 상한선은 하한선보다 커야 합니다.");
         }
     }
 
@@ -294,6 +318,9 @@ export function validateLegacySimulationInput(
         if (input.stress_test.annualDeclineRate <= 0) {
             pushError(warnings, "stress_test", "스트레스 테스트 연간 하락률은 0보다 커야 합니다.");
         }
+        if (input.stress_test.annualDeclineRate >= 1) {
+            pushError(warnings, "stress_test", "스트레스 테스트 연간 하락률은 100% 미만이어야 합니다.");
+        }
         if (input.stress_test.annualDeclineRate > 0.5) {
             pushWarning(warnings, "stress_test", "연간 50% 이상의 하락률은 극단적인 시나리오입니다.");
         }
@@ -302,6 +329,19 @@ export function validateLegacySimulationInput(
         }
         if (input.stress_test.durationMonths > 60) {
             pushInfo(warnings, "stress_test", "5년 이상의 지속적 폭락은 매우 드문 시나리오입니다.");
+        }
+    }
+
+    if (input.inflation_scenario) {
+        requireFinite(warnings, "inflation_scenario.baseRate", "인플레이션 시나리오 기본 물가상승률", input.inflation_scenario.baseRate);
+        if (isFiniteNumber(input.inflation_scenario.baseRate) && input.inflation_scenario.baseRate <= -1) {
+            pushError(warnings, "inflation_scenario.baseRate", "인플레이션 시나리오 기본 물가상승률은 -100%보다 커야 합니다.");
+        }
+        if (input.inflation_scenario.spikeRate !== undefined) {
+            requireFinite(warnings, "inflation_scenario.spikeRate", "인플레이션 시나리오 급등 물가상승률", input.inflation_scenario.spikeRate);
+            if (isFiniteNumber(input.inflation_scenario.spikeRate) && input.inflation_scenario.spikeRate <= -1) {
+                pushError(warnings, "inflation_scenario.spikeRate", "인플레이션 시나리오 급등 물가상승률은 -100%보다 커야 합니다.");
+            }
         }
     }
 

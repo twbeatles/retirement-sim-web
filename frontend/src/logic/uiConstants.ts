@@ -13,5 +13,5 @@ export const SIDEBAR_TABS = [
 export const ANALYSIS_TABS: { id: AnalysisTabType; label: string }[] = [
     { id: 'risk', label: '📊 리스크 분석' },
     { id: 'compare', label: '📈 시나리오 비교' },
-    { id: 'whatif', label: '🎚️ What-If' }
+    { id: 'whatif', label: '🎚️ 가정 변경' }
 ];

@@ -82,6 +82,9 @@ export function meanTyped(arr: ArrayLike<number>): number {
 
 // Compound Interest Utils
 export function monthlyRateFromAnnual(annualRate: number): number {
+    if (!Number.isFinite(annualRate) || annualRate <= -1) {
+        throw new Error("Annual rate must be finite and greater than -100%.");
+    }
     return Math.pow(1.0 + annualRate, 1.0 / 12.0) - 1.0;
 }
 

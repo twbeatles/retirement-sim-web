@@ -19,13 +19,13 @@ export function AdvancedSection({ input, setInput }: AdvancedSectionProps) {
         <>
             <PlanV2Editor input={input} onChange={setInput} />
 
-            <Suspense fallback={<div className="text-center text-slate-500 dark:text-slate-400 py-8 animate-pulse font-medium">Loading...</div>}>
+            <Suspense fallback={<div className="text-center text-slate-500 dark:text-slate-400 py-8 animate-pulse font-medium">로딩 중...</div>}>
                 <BacktestingPanel input={input} onInputChange={setInput} />
             </Suspense>
 
             <WithdrawalSettings withdrawal={input.withdrawal} onChange={(withdrawal) => setInput({ ...input, withdrawal })} />
 
-            <Section title="⚠️ 리스크 관리 (Stress Test)">
+            <Section title="⚠️ 리스크 관리 (스트레스 테스트)">
                 <label className="flex items-center gap-2 cursor-pointer text-sm font-semibold text-slate-700 dark:text-slate-300">
                     <input
                         type="checkbox"

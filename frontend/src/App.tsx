@@ -80,8 +80,14 @@ export default function App() {
         () => validationWarnings.some((warning) => warning.severity === "error"),
         [validationWarnings]
     );
-    const { runSimulation, isCalculating, result, error } = useSimulation();
+    const { runSimulation, clearResult, isCalculating, result, error } = useSimulation();
     useAutoSimulation({ input, viewMode, runSimulation, hasBlockingValidationError });
+
+    useEffect(() => {
+        if (hasBlockingValidationError) {
+            clearResult();
+        }
+    }, [clearResult, hasBlockingValidationError]);
 
     const handlePrint = useCallback(() => {
         setShowPrintView(true);
@@ -149,7 +155,12 @@ export default function App() {
             {viewMode === "simple" ? (
                 <Suspense fallback={<div className="text-center text-slate-400 py-8 lg:col-span-full">대시보드 로딩 중...</div>}>
                     <div className="flex flex-col gap-6 max-w-5xl mx-auto w-full min-w-[320px] lg:col-span-full">
-                        <SimpleDashboard input={input} result={result} onInputChange={setInput} />
+                        <SimpleDashboard
+                            input={input}
+                            result={result}
+                            validationWarnings={validationWarnings}
+                            onInputChange={setInput}
+                        />
                     </div>
                 </Suspense>
             ) : (

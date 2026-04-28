@@ -143,7 +143,7 @@ export const BacktestingPanel: React.FC<BacktestingPanelProps> = ({ input, onInp
                     </div>
 
                     <div className="p-4 bg-white dark:bg-zinc-800 border border-slate-100 dark:border-zinc-700/50 rounded-xl">
-                        <div className="text-sm font-bold text-slate-800 dark:text-slate-200 mb-3">🧩 자산 매핑 (Historical Source)</div>
+                        <div className="text-sm font-bold text-slate-800 dark:text-slate-200 mb-3">🧩 자산 매핑 (역사적 데이터 소스)</div>
                         <div className="flex flex-col gap-3">
                             {input.portfolio.assetClasses.map((asset) => {
                                 const selected = historicalMapping[asset.id]

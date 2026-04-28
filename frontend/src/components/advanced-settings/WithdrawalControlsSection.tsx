@@ -36,7 +36,7 @@ export function WithdrawalControlsSection({
         <>
             {withdrawalStrategy === "guardrails" && (
                 <CollapsibleSection
-                    title="🛡️ Guardrails 설정"
+                    title="🛡️ 가드레일 설정"
                     isOpen={guardrailsOpen}
                     onToggle={onToggleGuardrails}
                 >
@@ -87,7 +87,7 @@ export function WithdrawalControlsSection({
 
             {withdrawalStrategy === "bucket" && (
                 <CollapsibleSection
-                    title="🪣 Bucket 설정"
+                    title="🪣 버킷 설정"
                     isOpen={bucketOpen}
                     onToggle={onToggleBucket}
                 >

@@ -50,6 +50,24 @@ The engine supports:
 - guardrails
 - bucket
 
+## Spending Contract
+
+`targetMonthlySpending` in legacy UI state and `withdrawalPolicy.retirementSpendingTarget` in `SimulationPlanV3` both mean current-value monthly living expenses. During retirement months, `target_spending` and `bucket` strategies multiply that target by the simulated CPI factor before calculating nominal cash needs.
+
+Taxes and health-insurance premiums are not embedded in the living-expense target. They are calculated as separate monthly costs, deducted from assets, and surfaced consistently in timeline, ledger, CSV export, and report consumers.
+
+Mortgage payments are debt service. They count in total expenses through the debt-service source and must not be double-counted as the housing bucket.
+
+## Plan-Aware V3 Fields
+
+The v3 plan-aware execution path applies these fields during calculation:
+
+- `incomeStreams[].taxable`
+- `incomeStreams[].healthInsuranceIncluded`
+- `accounts[].withdrawalPriority`
+
+`taxable=false` excludes the active income stream from detailed taxable-income calculations. `healthInsuranceIncluded=false` excludes the active stream from detailed health-insurance assessable income. Liquid account withdrawal priority currently covers cash, taxable-investment, and private-pension account groups; debt and owner-occupied housing accounts are excluded from drawdown sources.
+
 ## Canonical Monthly Cashflow Sources
 
 The canonical timeline source map tracks these buckets directly:
@@ -97,6 +115,10 @@ Probabilistic results expose:
 - `survivalSeries`
 - `display.representative`
 - `display.samples[]`
+
+`summary.survivalStats` is derived from depletion data regardless of whether `survivalSeries` is requested. `survivalSeries` is a chart payload only.
+
+`includeSampleTimelines=false` or `maxSampleTimelines=0` suppresses both legacy sample timelines and `display.samples[]`. Full-detail runs should retain `display.representative`; preview runs may omit detail-heavy display payloads.
 
 The representative path is selected by:
 

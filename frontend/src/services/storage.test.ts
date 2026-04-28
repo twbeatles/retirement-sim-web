@@ -67,7 +67,7 @@ describe("scenarioStorage", () => {
         const notice = scenarioStorage.consumeResetNotice();
         expect(notice?.previousVersion).toBe(3);
         expect(notice?.currentVersion).toBe(4);
-        expect(notice?.message).toContain("SimulationPlanV3");
+        expect(notice?.message).toContain("플랜 저장소 업그레이드");
         expect(scenarioStorage.consumeResetNotice()).toBeNull();
     });
 

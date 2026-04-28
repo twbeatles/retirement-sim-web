@@ -97,7 +97,7 @@ class ScenarioStorage {
                         currentVersion: DB_VERSION,
                         resetAt: Date.now(),
                         message:
-                            "Local IndexedDB scenarios were reset for the SimulationPlanV3 storage upgrade. Re-import a JSON backup if you need to restore older scenarios."
+                            "플랜 저장소 업그레이드를 위해 로컬 시나리오가 초기화되었습니다. 이전 시나리오가 필요하면 JSON 백업을 다시 가져오세요."
                     });
                 }
             };

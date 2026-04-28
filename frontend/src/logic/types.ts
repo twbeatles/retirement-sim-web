@@ -241,6 +241,7 @@ export type TimelineRow = {
 
     totalAssets: number;   // Nominal
     totalAssetsReal: number; // Real (inflation adjusted)
+    inflationFactor?: number;
 
     cashflow: {
         nationalPension: number;

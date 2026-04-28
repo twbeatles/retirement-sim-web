@@ -40,7 +40,7 @@ const SLIDERS: SliderConfig[] = [
     },
     {
         id: 'withdrawal_rate',
-        label: '인출률(SWR)',
+        label: '인출률',
         min: 0.02,
         max: 0.08,
         step: 0.005,
@@ -179,7 +179,7 @@ export const WhatIfSlider = React.memo(function WhatIfSlider({ input, onInputCha
 
     return (
         <div className="bg-white dark:bg-zinc-900 rounded-2xl p-4 lg:p-6 shadow-sm border border-slate-100 dark:border-zinc-800 transition-all">
-            <h3 className="text-base font-bold text-slate-900 dark:text-white mt-0 mb-1 border-b border-transparent">What-If 분석</h3>
+            <h3 className="text-base font-bold text-slate-900 dark:text-white mt-0 mb-1 border-b border-transparent">가정 변경 분석</h3>
             <p className="text-sm font-medium text-slate-500 dark:text-slate-400 mb-6 mt-0">
                 파라미터를 조정하면 실시간으로 성공 확률 변화를 확인할 수 있습니다.
             </p>

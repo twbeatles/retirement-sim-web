@@ -8,7 +8,7 @@ import type {
 function createFallbackRepresentative(result: SimulationResult): SimulationDisplayPath | undefined {
     if (result.mode === "deterministic") {
         return {
-            label: "Representative path",
+            label: "대표 경로",
             pathIndex: null,
             timeline: result.timeline,
             ledgerTimeline: result.ledgerTimeline
@@ -20,7 +20,7 @@ function createFallbackRepresentative(result: SimulationResult): SimulationDispl
     }
 
     return {
-        label: "Representative path",
+        label: "대표 경로",
         pathIndex: 0,
         timeline: result.sampleTimelines[0],
         ledgerTimeline: result.ledgerTimeline
@@ -49,7 +49,7 @@ export function getSampleDisplayPaths(result: SimulationResult): SimulationDispl
     }
 
     return result.sampleTimelines.map((timeline, index) => ({
-        label: `Sample path ${index + 1}`,
+        label: `샘플 경로 ${index + 1}`,
         pathIndex: index,
         timeline
     }));

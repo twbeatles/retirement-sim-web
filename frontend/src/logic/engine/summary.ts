@@ -127,6 +127,53 @@ export function buildSurvivalStats(
     };
 }
 
+export function buildSurvivalStatsFromDepletionMonths(
+    totalMonths: number,
+    currentAge: number,
+    firstDepletionMonthByPath: ArrayLike<number>,
+    totalPaths: number
+): SimulationSummary["survivalStats"] {
+    if (totalPaths <= 0 || totalMonths <= 0) {
+        return {
+            finalSurvivalRate: 100,
+            lowestSurvivalRate: 100,
+            firstBelowHundredPercentAge: null
+        };
+    }
+
+    let finalAliveCount = 0;
+    let lowestSurvivalRate = 100;
+    let firstBelowHundredPercentAge: number | null = null;
+
+    for (let month = 0; month < totalMonths; month++) {
+        let aliveCount = 0;
+        for (let path = 0; path < firstDepletionMonthByPath.length; path++) {
+            const depletionMonth = firstDepletionMonthByPath[path];
+            if (depletionMonth < 0 || depletionMonth > month) {
+                aliveCount++;
+            }
+        }
+
+        if (month === totalMonths - 1) {
+            finalAliveCount = aliveCount;
+        }
+
+        const survivalRate = (aliveCount / Math.max(1, totalPaths)) * 100;
+        if (survivalRate < lowestSurvivalRate) {
+            lowestSurvivalRate = survivalRate;
+        }
+        if (firstBelowHundredPercentAge === null && survivalRate < 100) {
+            firstBelowHundredPercentAge = Math.floor(currentAge + month / 12);
+        }
+    }
+
+    return {
+        finalSurvivalRate: (finalAliveCount / Math.max(1, totalPaths)) * 100,
+        lowestSurvivalRate,
+        firstBelowHundredPercentAge
+    };
+}
+
 export function buildSurvivalSeriesFromDepletionMonths(
     totalMonths: number,
     currentAge: number,

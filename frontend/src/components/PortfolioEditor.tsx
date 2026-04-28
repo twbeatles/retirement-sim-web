@@ -10,8 +10,8 @@ const PRESETS = [
         desc: "주식/채권 균형형",
         icon: "⚖️",
         assets: [
-            { id: "stock", name: "주식 (Global/US)", expectedAnnualReturn: 0.08, annualVolatility: 0.18, allocation: 0.6 },
-            { id: "bond", name: "채권 (Gov/Agg)", expectedAnnualReturn: 0.035, annualVolatility: 0.05, allocation: 0.4 }
+            { id: "stock", name: "주식 (글로벌/미국)", expectedAnnualReturn: 0.08, annualVolatility: 0.18, allocation: 0.6 },
+            { id: "bond", name: "채권 (국채/종합채권)", expectedAnnualReturn: 0.035, annualVolatility: 0.05, allocation: 0.4 }
         ]
     },
     {
@@ -20,8 +20,8 @@ const PRESETS = [
         desc: "공격적 성장형",
         icon: "🚀",
         assets: [
-            { id: "stock", name: "주식 (Global/US)", expectedAnnualReturn: 0.08, annualVolatility: 0.18, allocation: 0.8 },
-            { id: "bond", name: "채권 (Gov/Agg)", expectedAnnualReturn: 0.035, annualVolatility: 0.05, allocation: 0.2 }
+            { id: "stock", name: "주식 (글로벌/미국)", expectedAnnualReturn: 0.08, annualVolatility: 0.18, allocation: 0.8 },
+            { id: "bond", name: "채권 (국채/종합채권)", expectedAnnualReturn: 0.035, annualVolatility: 0.05, allocation: 0.2 }
         ]
     },
     {
@@ -198,7 +198,7 @@ export function PortfolioEditor({ portfolio, onChange }: Props) {
                 <div className="flex flex-col gap-1">
                     <span className="text-xs font-semibold text-slate-500 dark:text-slate-400 flex items-center gap-1">
                         기대 수익률
-                        <Tooltip content="포트폴리오 내 자산들의 가중 평균 기대 수익률입니다. (CAGR)" />
+                        <Tooltip content="포트폴리오 내 자산들의 가중 평균 기대 수익률입니다. (연평균성장률)" />
                     </span>
                     <span className="text-lg font-bold text-slate-900 dark:text-white">{(metrics.ret * 100).toFixed(1)}%</span>
                 </div>

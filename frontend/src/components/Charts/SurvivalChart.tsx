@@ -68,7 +68,7 @@ export const SurvivalChart = React.memo(function SurvivalChart({ result }: { res
     }
 
     if (survivalData.length === 0) {
-        return <div>No survival data available.</div>;
+        return <div>표시할 자산 생존 데이터가 없습니다.</div>;
     }
 
     return (

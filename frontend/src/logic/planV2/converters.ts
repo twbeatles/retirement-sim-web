@@ -377,7 +377,7 @@ export function legacyInputToPlanV2(input: SimulationInput): SimulationPlanV2 {
         expensePlan: {
             essentialMonthly: input.withdrawal.targetMonthlySpending ?? input.withdrawal.fixedMonthlyAmount ?? 0,
             discretionaryMonthly: 0,
-            housingMonthly: input.housing_status === "mortgage" ? input.debt.monthly_payment : 0,
+            housingMonthly: 0,
             medicalBaselineMonthly: 0,
             oneOffEvents,
             stageAdjustments,

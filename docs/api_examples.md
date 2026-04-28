@@ -30,6 +30,7 @@ const result = runSimulation(
 
 console.log(result.summary.source);
 console.log(result.summary.retirementPoint.totalAssetsReal);
+console.log(result.summary.survivalStats.finalSurvivalRate);
 ```
 
 ## 2. Normalize To The Canonical Plan
@@ -64,6 +65,12 @@ const monthly = await requestSolveContribution(plan, 0.9);
 const savingsRate = await requestSolveLaborSavingsRate(plan, 0.9);
 const retireAge = await requestSolveRetireAge(plan, 0.85);
 ```
+
+Result option notes:
+
+- `includeSurvivalSeries` only controls chart payload size. `summary.survivalStats` remains populated from depletion data.
+- `includeSampleTimelines=false` or `maxSampleTimelines=0` leaves `display.samples[]` empty.
+- Preview and full runs use the same canonical plan payload; preview can omit representative/sample detail to keep responses small.
 
 Worker kinds:
 
@@ -266,3 +273,10 @@ const samplePaths = getSampleDisplayPaths(full);
   }
 }
 ```
+
+In this plan shape:
+
+- `retirementSpendingTarget` is a current-value living-expense target.
+- `taxable` determines whether the stream contributes to detailed taxable income.
+- `healthInsuranceIncluded` determines whether the stream contributes to detailed health-insurance assessable income.
+- `withdrawalPriority` controls supported liquid account drawdown order.

@@ -10,14 +10,14 @@ const FAVORITES_KEY = 'retirement_sim_favorite_assets_v1';
 // Default popular assets
 const DEFAULT_FAVORITES: FavoriteAsset[] = [
     { id: 'sp500', name: 'S&P 500', expectedAnnualReturn: 0.10, annualVolatility: 0.16, category: 'stock' },
-    { id: 'intl_stock', name: '선진국 주식 (ex-US)', expectedAnnualReturn: 0.08, annualVolatility: 0.18, category: 'stock' },
+    { id: 'intl_stock', name: '선진국 주식 (미국 제외)', expectedAnnualReturn: 0.08, annualVolatility: 0.18, category: 'stock' },
     { id: 'em_stock', name: '신흥국 주식', expectedAnnualReturn: 0.09, annualVolatility: 0.22, category: 'stock' },
     { id: 'kospi', name: 'KOSPI200', expectedAnnualReturn: 0.07, annualVolatility: 0.22, category: 'stock' },
     { id: 'us_bond', name: '미국 국채 (중기)', expectedAnnualReturn: 0.04, annualVolatility: 0.05, category: 'bond' },
     { id: 'kr_bond', name: '한국 국고채', expectedAnnualReturn: 0.035, annualVolatility: 0.04, category: 'bond' },
-    { id: 'tips', name: '물가연동채 (TIPS)', expectedAnnualReturn: 0.03, annualVolatility: 0.06, category: 'bond' },
+    { id: 'tips', name: '물가연동채', expectedAnnualReturn: 0.03, annualVolatility: 0.06, category: 'bond' },
     { id: 'gold', name: '금', expectedAnnualReturn: 0.04, annualVolatility: 0.15, category: 'commodity' },
-    { id: 'reit', name: '리츠 (REITs)', expectedAnnualReturn: 0.07, annualVolatility: 0.18, category: 'reit' },
+    { id: 'reit', name: '리츠', expectedAnnualReturn: 0.07, annualVolatility: 0.18, category: 'reit' },
     { id: 'cash', name: '예금/현금', expectedAnnualReturn: 0.025, annualVolatility: 0.005, category: 'cash' }
 ];
 

@@ -47,13 +47,15 @@ npm run verify:ci
 - `compute` worker lane for full simulation, batch runs, solver, sensitivity, and pension optimization
 - latest-wins coalescing for `SIMULATION`
 - representative-path consumers should use shared `resultDisplay` helpers instead of raw sample arrays
+- blocking validation errors clear the current result and invalidate stale in-flight simulation responses
+- `includeSampleTimelines=false` keeps both legacy sample timelines and `display.samples[]` out of the response payload
 
-## Latest Verification Snapshot (2026-04-19)
+## Latest Verification Snapshot (2026-04-28)
 
 From `frontend/` after `npm run verify:ci`:
 
-- Entry JS: `~56.1 KiB`
-- Initial JS total (index + modulepreload): `~266.5 KiB`
+- Entry JS: `60.3 KiB`
+- Initial JS total (index plus modulepreload): `270.7 KiB`
 - `lint` passed
 - `check:duplicates` passed
 - `typecheck` passed

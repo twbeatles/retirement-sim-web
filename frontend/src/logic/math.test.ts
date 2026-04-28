@@ -16,6 +16,11 @@ describe('Math Utils', () => {
         it('handles zero', () => {
             expect(monthlyRateFromAnnual(0)).toBe(0);
         });
+
+        it('rejects invalid annual rates', () => {
+            expect(() => monthlyRateFromAnnual(-1)).toThrow();
+            expect(() => monthlyRateFromAnnual(Number.NaN)).toThrow();
+        });
     });
 
     describe('annuityPayment', () => {

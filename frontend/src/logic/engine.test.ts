@@ -185,8 +185,27 @@ describe('Simulation Engine', () => {
         expect(row1.cashflow.withdrawalNet).toBe(900);
 
         // Balance starts at 10000.
-        // After m=0 loop: 10000 - 1000 = 9000.
-        expect(row1.general).toBe(9000);
+        // After m=0 loop: 10000 - 1000 withdrawal - 100 tax = 8900.
+        expect(row1.general).toBe(8900);
+    });
+
+    it('inflates target spending withdrawals from current-value spending', () => {
+        const input = createBaseInput();
+        input.current_age = 65;
+        input.retire_age = 65;
+        input.end_age = 66;
+        input.annual_inflation = 0.12;
+        input.general.current_balance = 100000;
+        input.portfolio.assetClasses[0].expectedAnnualReturn = 0;
+        input.withdrawal.strategy = 'target_spending';
+        input.withdrawal.targetMonthlySpending = 1000;
+
+        const result = runSimulation(input);
+        const timeline = 'timeline' in result ? result.timeline : [];
+
+        expect(timeline[0].cashflow.withdrawalGross).toBeCloseTo(1000 * (timeline[0].inflationFactor ?? 1), 6);
+        expect(timeline[11].cashflow.withdrawalGross).toBeCloseTo(1000 * (timeline[11].inflationFactor ?? 1), 6);
+        expect(timeline[11].cashflow.withdrawalGross).toBeGreaterThan(timeline[0].cashflow.withdrawalGross);
     });
 
     it('includes reverse annuity income after start age', () => {
@@ -556,6 +575,53 @@ describe('Simulation Engine', () => {
         expect(result.summary.depletion?.firstDepletionMonthByPath).toHaveLength(5);
     });
 
+    it('keeps survival summary accurate when survival series payload is disabled', () => {
+        const input = createBaseInput();
+        input.current_age = 65;
+        input.retire_age = 65;
+        input.end_age = 67;
+        input.general.current_balance = 1000;
+        input.portfolio.assetClasses[0].expectedAnnualReturn = 0;
+        input.withdrawal.strategy = 'fixed_amount';
+        input.withdrawal.fixedMonthlyAmount = 1000;
+        input.simulation_settings = {
+            mode: 'montecarlo',
+            mc_paths: 5,
+            seed: 42
+        };
+
+        const result = runSimulation(input, {
+            detailLevel: 'full',
+            includeSurvivalSeries: false,
+            includeTrajectoryStats: false
+        });
+
+        expect(result.mode).toBe('montecarlo');
+        if (result.mode !== 'montecarlo') return;
+        expect(result.survivalSeries).toBeUndefined();
+        expect(result.summary.survivalStats.finalSurvivalRate).toBeLessThan(100);
+    });
+
+    it('omits legacy and display samples when maxSampleTimelines is zero', () => {
+        const input = createBaseInput();
+        input.simulation_settings = {
+            mode: 'montecarlo',
+            mc_paths: 5,
+            seed: 42
+        };
+
+        const result = runSimulation(input, {
+            detailLevel: 'full',
+            includeSampleTimelines: true,
+            maxSampleTimelines: 0
+        });
+
+        expect(result.mode).toBe('montecarlo');
+        if (result.mode !== 'montecarlo') return;
+        expect(result.sampleTimelines).toHaveLength(0);
+        expect(result.display.samples).toHaveLength(0);
+    });
+
     it('keeps seed-fixed montecarlo summary and sample timelines stable', () => {
         const input = createKernelParityInput();
         const result = runSimulation(input, {
@@ -573,16 +639,16 @@ describe('Simulation Engine', () => {
         expect(result.sampleTimelines).toHaveLength(3);
         expect(result.sampleTimelines.map((timeline) => timeline.length)).toEqual([540, 540, 540]);
 
-        expect(result.summary.finalTotalAssets).toBeCloseTo(4796906554.014606, 6);
-        expect(result.summary.finalTotalAssetsReal).toBeCloseTo(1967675730.395671, 6);
-        expect(result.summary.successRate).toBeCloseTo(1, 8);
+        expect(result.summary.finalTotalAssets).toBeCloseTo(2045844559.1952581, 6);
+        expect(result.summary.finalTotalAssetsReal).toBeCloseTo(839198896.6142124, 6);
+        expect(result.summary.successRate).toBeCloseTo(0.453125, 8);
 
-        expect(result.summary.mc?.totalAssets.p10).toBeCloseTo(466516058.5331348, 6);
-        expect(result.summary.mc?.totalAssets.p50).toBeCloseTo(2802316493.1167784, 6);
-        expect(result.summary.mc?.totalAssets.p90).toBeCloseTo(11042208541.582485, 6);
-        expect(result.summary.mc?.totalAssetsReal.p10).toBeCloseTo(191363395.52982277, 6);
-        expect(result.summary.mc?.totalAssetsReal.p50).toBeCloseTo(1149501265.0973158, 6);
-        expect(result.summary.mc?.totalAssetsReal.p90).toBeCloseTo(4529478636.404866, 6);
+        expect(result.summary.mc?.totalAssets.p10).toBeCloseTo(0, 6);
+        expect(result.summary.mc?.totalAssets.p50).toBeCloseTo(0, 6);
+        expect(result.summary.mc?.totalAssets.p90).toBeCloseTo(6604008630.229191, 6);
+        expect(result.summary.mc?.totalAssetsReal.p10).toBeCloseTo(0, 6);
+        expect(result.summary.mc?.totalAssetsReal.p50).toBeCloseTo(0, 6);
+        expect(result.summary.mc?.totalAssetsReal.p90).toBeCloseTo(2708943223.8679333, 6);
 
         expect(result.trajectoryStats?.month).toHaveLength(540);
         expect(result.survivalSeries?.month).toHaveLength(540);
@@ -590,8 +656,8 @@ describe('Simulation Engine', () => {
         const last = result.sampleTimelines[0][539];
         expect(last.month).toBe(539);
         expect(last.age).toBeCloseTo(89.91666666666666, 8);
-        expect(last.totalAssets).toBeCloseTo(2053615134.526869, 6);
-        expect(last.totalAssetsReal).toBeCloseTo(842386361.7689017, 6);
+        expect(last.totalAssets).toBeCloseTo(0, 6);
+        expect(last.totalAssetsReal).toBeCloseTo(0, 6);
         expect(last.cashflow.nationalPension).toBeCloseTo(3255074.8306594263, 6);
     });
 });

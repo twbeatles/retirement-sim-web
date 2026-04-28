@@ -4,6 +4,17 @@ import { normalizePlan, planToLegacyInput, type SimulationPlanV3 } from "./plan"
 import type { SimulationPlanV2 } from "./planV2";
 import type { LedgerTimelineRow, SimulationResult, SimulationRunOptions, TimelineRow } from "./types";
 
+const INCOME_SOURCE_TYPES = {
+    salary: ["salary"],
+    businessIncome: ["business_income"],
+    rentalIncome: ["rental_income"],
+    nationalPension: ["national_pension"],
+    privatePension: ["private_annuity"],
+    additionalPension: ["private_annuity", "db_pension"],
+    severance: ["severance"],
+    reverseMortgage: ["reverse_mortgage"],
+} satisfies Record<string, Array<SimulationPlanV3["incomeStreams"][number]["type"]>>;
+
 function isStreamActive(
     age: number,
     startAge: number,
@@ -65,6 +76,18 @@ export function buildLedgerTimelineFromPlan(
             isStreamActive(row.age, stream.startAge, stream.endAge)
         );
         const sourceMap = row.cashflow.sources;
+        const inflationFactor = row.inflationFactor ?? 1;
+        const inflate = (amount: number) => amount * inflationFactor;
+        const hasTaxableStreamForSource = (
+            sourceTypes: Array<SimulationPlanV3["incomeStreams"][number]["type"]>
+        ) => {
+            const matchingStreams = activeStreams.filter((stream) => sourceTypes.includes(stream.type));
+            return matchingStreams.length === 0 || matchingStreams.some((stream) => stream.taxable);
+        };
+        const taxableSourceAmount = (
+            sourceTypes: Array<SimulationPlanV3["incomeStreams"][number]["type"]>,
+            amount: number
+        ) => hasTaxableStreamForSource(sourceTypes) ? amount : 0;
 
         const salary = sourceMap?.salary ?? activeStreams
             .filter((stream) => stream.type === "salary")
@@ -85,12 +108,21 @@ export function buildLedgerTimelineFromPlan(
         const oneOffNet = plan.expensePlan.oneOffEvents
             .filter((event) => event.monthIndex === row.month)
             .reduce((sum, event) => sum + event.amount, 0);
-        const oneOffIncome = sourceMap?.oneOffIncome ?? Math.max(0, oneOffNet);
-        const oneOffExpense = sourceMap?.oneOffExpense ?? Math.max(0, -oneOffNet);
+        const oneOffIncome = sourceMap?.oneOffIncome ?? inflate(Math.max(0, oneOffNet));
+        const oneOffExpense = sourceMap?.oneOffExpense ?? inflate(Math.max(0, -oneOffNet));
 
-        const stageAdjustments = plan.expensePlan.stageAdjustments
-            .reduce((sum, adjustment) => sum + calculateStageAdjustmentMonthlyAmount(row.age, adjustment), 0);
+        const stageAdjustments = sourceMap
+            ? 0
+            : plan.expensePlan.stageAdjustments
+                .reduce((sum, adjustment) => sum + inflate(calculateStageAdjustmentMonthlyAmount(row.age, adjustment)), 0);
         const medicalShock = sourceMap?.medicalShock ?? medicalShockByMonth.get(row.month) ?? 0;
+        const essentialExpense = inflate(plan.expensePlan.monthlyBuckets.essential);
+        const discretionaryExpense = inflate(plan.expensePlan.monthlyBuckets.discretionary);
+        const housingExpense = plan.profile.housingStatus === "mortgage" && (sourceMap?.debtService ?? 0) > 0
+            ? 0
+            : inflate(plan.expensePlan.monthlyBuckets.housing);
+        const medicalBaseline = inflate(plan.expensePlan.monthlyBuckets.medical);
+        const dependentSupport = inflate(plan.expensePlan.monthlyBuckets.dependentSupport);
 
         const healthInsuranceAssessableIncomeMonthly =
             row.cashflow.assessableIncomeForHealthInsurance
@@ -114,13 +146,13 @@ export function buildLedgerTimelineFromPlan(
         }
 
         const taxableIncomeMonthly =
-            salary
-            + businessIncome
-            + rentalIncome
-            + row.cashflow.nationalPension
-            + row.cashflow.privatePension
-            + row.cashflow.additionalPension
-            + severance
+            taxableSourceAmount(INCOME_SOURCE_TYPES.salary, salary)
+            + taxableSourceAmount(INCOME_SOURCE_TYPES.businessIncome, businessIncome)
+            + taxableSourceAmount(INCOME_SOURCE_TYPES.rentalIncome, rentalIncome)
+            + taxableSourceAmount(INCOME_SOURCE_TYPES.nationalPension, row.cashflow.nationalPension)
+            + taxableSourceAmount(INCOME_SOURCE_TYPES.privatePension, row.cashflow.privatePension)
+            + taxableSourceAmount(INCOME_SOURCE_TYPES.additionalPension, row.cashflow.additionalPension)
+            + taxableSourceAmount(INCOME_SOURCE_TYPES.severance, severance)
             + (sourceMap?.interestDividend ?? 0)
             + (sourceMap?.realizedCapitalGain ?? 0);
 
@@ -139,10 +171,11 @@ export function buildLedgerTimelineFromPlan(
             + (sourceMap?.realizedCapitalGain ?? 0);
 
         const totalExpenses =
-            plan.expensePlan.monthlyBuckets.essential
-            + plan.expensePlan.monthlyBuckets.discretionary
-            + plan.expensePlan.monthlyBuckets.housing
-            + plan.expensePlan.monthlyBuckets.medical
+            essentialExpense
+            + discretionaryExpense
+            + housingExpense
+            + medicalBaseline
+            + dependentSupport
             + medicalShock
             + stageAdjustments
             + oneOffExpense
@@ -170,10 +203,10 @@ export function buildLedgerTimelineFromPlan(
                 totalNet: totalGross - row.cashflow.taxPaid - healthInsurancePremium
             },
             expenses: {
-                essential: plan.expensePlan.monthlyBuckets.essential,
-                discretionary: plan.expensePlan.monthlyBuckets.discretionary,
-                housing: plan.expensePlan.monthlyBuckets.housing,
-                medicalBaseline: plan.expensePlan.monthlyBuckets.medical,
+                essential: essentialExpense,
+                discretionary: discretionaryExpense,
+                housing: housingExpense,
+                medicalBaseline,
                 medicalShock,
                 stageAdjustments,
                 oneOffExpense,
@@ -206,7 +239,7 @@ export function runSimulationPlan(
 ): SimulationResult {
     const normalizedPlan = normalizePlan(plan);
     const legacyInput = planToLegacyInput(normalizedPlan);
-    const result = runSimulation(legacyInput, options);
+    const result = runSimulation(legacyInput, options, normalizedPlan);
 
     if (result.mode === "deterministic") {
         const representativeLedger = buildLedgerTimelineFromPlan(normalizedPlan, result.timeline);

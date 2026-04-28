@@ -150,11 +150,48 @@ function convertPlanV3ToV2(plan: SimulationPlanV3): SimulationPlanV2 {
 }
 
 export function legacyInputToPlan(input: SimulationInput): SimulationPlanV3 {
-    return migratePlanV2ToV3(legacyInputToPlanV2(input));
+    const derivedPlan = migratePlanV2ToV3(legacyInputToPlanV2(input));
+    const embeddedPlan = (input as { plan_v3?: SimulationPlanV3 }).plan_v3;
+    if (embeddedPlan?.planVersion !== "v3") {
+        return derivedPlan;
+    }
+
+    const embeddedAccounts = new Map(embeddedPlan.accounts.map((account) => [account.id, account]));
+    const embeddedStreams = new Map(embeddedPlan.incomeStreams.map((stream) => [stream.id, stream]));
+
+    return {
+        ...derivedPlan,
+        accounts: derivedPlan.accounts.map((account) => {
+            const embedded = embeddedAccounts.get(account.id);
+            if (!embedded) {
+                return account;
+            }
+            return {
+                ...account,
+                taxTreatment: embedded.taxTreatment,
+                healthInsuranceTreatment: embedded.healthInsuranceTreatment,
+                withdrawalPriority: embedded.withdrawalPriority,
+            };
+        }),
+        incomeStreams: derivedPlan.incomeStreams.map((stream) => {
+            const embedded = embeddedStreams.get(stream.id);
+            if (!embedded) {
+                return stream;
+            }
+            return {
+                ...stream,
+                taxable: embedded.taxable,
+                healthInsuranceIncluded: embedded.healthInsuranceIncluded,
+            };
+        }),
+    };
 }
 
 export function planToLegacyInput(plan: SimulationPlanV3): SimulationInput {
-    return planV2ToLegacyInput(convertPlanV3ToV2(plan));
+    return {
+        ...planV2ToLegacyInput(convertPlanV3ToV2(plan)),
+        plan_v3: structuredClone(plan),
+    } as SimulationInput;
 }
 
 export function normalizePlan(plan: SimulationPlanV2 | SimulationPlanV3): SimulationPlanV3 {

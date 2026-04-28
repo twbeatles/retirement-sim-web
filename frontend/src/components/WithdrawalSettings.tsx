@@ -7,13 +7,13 @@ interface Props {
 }
 
 const STRATEGIES: { id: WithdrawalStrategy; label: string; desc: string }[] = [
-    { id: "target_spending", label: "목표 생활비 충당 (Gap Filler)", desc: "국민/개인연금으로 부족한 금액만큼만 인출합니다." },
+    { id: "target_spending", label: "목표 생활비 충당", desc: "국민/개인연금으로 부족한 금액만큼만 인출합니다." },
     { id: "fixed_amount", label: "고정 금액 인출", desc: "매월 정해진 금액을 무조건 인출합니다." },
     { id: "fixed_percentage", label: "자산 비율 인출 (정율)", desc: "현재 잔액의 N%를 매년(월할) 인출합니다." },
-    { id: "safe_withdrawal_rate", label: "4% 룰 (Safe Withdrawal Rate)", desc: "초기 자산의 N%를 인출하되, 물가 상승분을 반영하여 구매력을 유지합니다." },
-    { id: "vpw", label: "가변 인출 (VPW)", desc: "기대 수명을 고려하여, 자산이 고갈되지 않으면서 수익률에 따라 인출액을 조절합니다." },
-    { id: "guardrails", label: "가드레일 (Guardrails)", desc: "시장 상황에 따라 인출액을 자동으로 상/하향 조절합니다." },
-    { id: "bucket", label: "버킷 전략 (Bucket)", desc: "단기/중기/장기 버킷을 활용해 인출 안정성을 높입니다." },
+    { id: "safe_withdrawal_rate", label: "4% 룰", desc: "초기 자산의 N%를 인출하되, 물가 상승분을 반영하여 구매력을 유지합니다." },
+    { id: "vpw", label: "가변 인출", desc: "기대 수명을 고려하여, 자산이 고갈되지 않으면서 수익률에 따라 인출액을 조절합니다." },
+    { id: "guardrails", label: "가드레일", desc: "시장 상황에 따라 인출액을 자동으로 상/하향 조절합니다." },
+    { id: "bucket", label: "버킷 전략", desc: "단기/중기/장기 버킷을 활용해 인출 안정성을 높입니다." },
 ];
 
 export function WithdrawalSettings({ withdrawal, onChange }: Props) {
@@ -105,7 +105,7 @@ export function WithdrawalSettings({ withdrawal, onChange }: Props) {
             {withdrawal.strategy === "vpw" && (
                 <div className="flex flex-col gap-3">
                     <div className="p-3 bg-slate-50 dark:bg-zinc-800/50 border border-slate-100 dark:border-zinc-700/50 rounded-lg text-sm text-slate-600 dark:text-slate-400 mb-2">
-                        VPW는 기대 수명과 포트폴리오 수익률에 따라 매년 최적의 인출률을 계산합니다.
+                        가변 인출은 기대 수명과 포트폴리오 수익률에 따라 매년 최적의 인출률을 계산합니다.
                     </div>
                     <div className="flex flex-col gap-1.5">
                         <label className="text-sm font-semibold text-slate-700 dark:text-slate-300">최대 인출률 상한 (선택사항, 0~1)</label>
@@ -159,8 +159,8 @@ export function WithdrawalSettings({ withdrawal, onChange }: Props) {
                             value={withdrawal.taxStrategy || "simple"}
                             onChange={(e) => updateField("taxStrategy", e.target.value)}
                         >
-                            <option value="simple">단일 세율 (Simple)</option>
-                            <option value="detailed">종합과세 누진세율 (Detailed)</option>
+                            <option value="simple">단일 세율</option>
+                            <option value="detailed">종합과세 누진세율</option>
                         </select>
                         <div className="pointer-events-none absolute inset-y-0 right-0 flex items-center px-2 text-slate-500">
                             <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 9l-7 7-7-7"></path></svg>

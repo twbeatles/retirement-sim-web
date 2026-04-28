@@ -32,6 +32,16 @@ The engine still uses monthly portfolio projection with stochastic and historica
 - one-off expense and medical-shock handling
 - historical-path replay
 
+## Plan-Aware V3 Fields
+
+These `SimulationPlanV3` fields are part of the active calculation path, not metadata-only fields:
+
+- `incomeStreams[].taxable`
+- `incomeStreams[].healthInsuranceIncluded`
+- `accounts[].withdrawalPriority`
+
+Liquid withdrawal ordering supports cash, taxable investment, and private-pension account groups. Debt and owner-occupied housing accounts are excluded from withdrawal sources.
+
 ## Canonical Cashflow Sources
 
 The monthly source map should be treated as the primary decomposition for taxation, reporting, and ledger display:
@@ -58,8 +68,9 @@ The monthly source map should be treated as the primary decomposition for taxati
 
 - `summary.retirementPoint` describes retirement-date assets
 - `summary.finalTotalAssets` and terminal distribution stats describe end-of-horizon assets
+- `summary.survivalStats` is calculated from depletion data even when `survivalSeries` is omitted
 - representative-path consumers should default to `result.display.representative`
-- sample paths should be shown as explicitly secondary scenarios
+- sample paths should be shown as explicitly secondary scenarios, and `includeSampleTimelines=false` or `maxSampleTimelines=0` should keep `display.samples[]` empty
 
 ## Current Rulebook And Data Assumptions
 

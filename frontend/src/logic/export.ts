@@ -12,35 +12,51 @@ function downloadBlob(content: string, filename: string, contentType: string) {
     setTimeout(() => URL.revokeObjectURL(url), 100);
 }
 
+function formatResultMode(mode: SimulationResult["mode"]): string {
+    if (mode === "historical") return "역사적 백테스트";
+    if (mode === "montecarlo") return "몬테카를로";
+    return "결정론";
+}
+
+function formatCalculationMode(mode: SimulationResult["summary"]["calculationMode"]): string {
+    return mode === "distribution" ? "분포 분석" : "단일 경로";
+}
+
+function formatResultSource(source: SimulationResult["summary"]["source"]): string {
+    if (source === "historical") return "역사적 백테스트";
+    if (source === "montecarlo") return "몬테카를로";
+    return "결정론";
+}
+
 function convertTimelineToCSV(timeline: TimelineRow[]): string {
     if (!timeline || timeline.length === 0) {
-        return "No timeline data available";
+        return "타임라인 데이터가 없습니다";
     }
 
     const headers = [
-        "Month",
-        "Age",
-        "Retired",
-        "General Balance",
-        "Private Pension Balance",
-        "Real Estate",
-        "Addt'l Pensions",
-        "Debt",
-        "Total Assets (Nominal)",
-        "Total Assets (Real)",
-        "National Pension (Income)",
-        "Private Pension (Income)",
-        "Addt'l Pension (Income)",
-        "Withdrawal (Gross)",
-        "Withdrawal (Net)",
-        "Tax Paid",
-        "Total Net Income"
+        "월",
+        "나이",
+        "은퇴 여부",
+        "일반 자산 잔액",
+        "개인연금 잔액",
+        "부동산",
+        "추가 연금",
+        "부채",
+        "총자산(명목)",
+        "총자산(실질)",
+        "국민연금 소득",
+        "개인연금 소득",
+        "추가 연금 소득",
+        "인출액(세전)",
+        "인출액(세후)",
+        "납부 세금",
+        "총 순소득"
     ];
 
     const rows = timeline.map(r => [
         r.month,
         r.age.toFixed(1),
-        r.isRetired ? "Yes" : "No",
+        r.isRetired ? "예" : "아니오",
         Math.round(r.general),
         Math.round(r.privatePension),
         Math.round(r.realEstate || 0),
@@ -62,51 +78,51 @@ function convertTimelineToCSV(timeline: TimelineRow[]): string {
 
 function convertLedgerToCSV(ledgerTimeline: LedgerTimelineRow[]): string {
     if (!ledgerTimeline || ledgerTimeline.length === 0) {
-        return "No ledger data available";
+        return "원장 데이터가 없습니다";
     }
 
     const headers = [
-        "Month",
-        "Age",
-        "Retired",
-        "Salary",
-        "National Pension",
-        "Private Pension",
-        "Additional Pension",
-        "Business Income",
-        "Rental Income",
-        "Severance",
-        "Reverse Mortgage",
-        "One-off Income",
-        "Withdrawal Gross",
-        "Total Gross Income",
-        "Total Net Income",
-        "Essential Expense",
-        "Discretionary Expense",
-        "Housing Expense",
-        "Medical Baseline",
-        "Medical Shock",
-        "Stage Adjustments",
-        "One-off Expense",
-        "Tax Paid",
-        "Health Insurance",
-        "Total Expense",
-        "Taxable Income",
-        "HI Assessable Income",
-        "Tax Credit Applied",
-        "Taxable Investments",
-        "Private Pension Balance",
-        "Real Estate",
-        "Additional Pensions Balance",
-        "Debt",
-        "Total Assets",
-        "Total Assets Real"
+        "월",
+        "나이",
+        "은퇴 여부",
+        "근로소득",
+        "국민연금",
+        "개인연금",
+        "추가 연금",
+        "사업소득",
+        "임대소득",
+        "퇴직금",
+        "주택연금",
+        "일회성 소득",
+        "인출액(세전)",
+        "총소득(세전)",
+        "총 순소득",
+        "필수 생활비",
+        "선택 지출",
+        "주거비",
+        "기본 의료비",
+        "의료비 쇼크",
+        "생애단계 조정",
+        "일회성 지출",
+        "납부 세금",
+        "건강보험료",
+        "총지출",
+        "과세소득",
+        "건보 산정소득",
+        "적용 세액공제",
+        "과세 투자자산",
+        "개인연금 잔액",
+        "부동산",
+        "추가 연금 잔액",
+        "부채",
+        "총자산",
+        "총자산(실질)"
     ];
 
     const rows = ledgerTimeline.map((row) => [
         row.month,
         row.age.toFixed(1),
-        row.isRetired ? "Yes" : "No",
+        row.isRetired ? "예" : "아니오",
         Math.round(row.incomes.salary),
         Math.round(row.incomes.nationalPension),
         Math.round(row.incomes.privatePension),
@@ -164,31 +180,31 @@ export function exportSimulationResult(result: SimulationResult) {
         : null;
 
     // Add Summary Section at top
-    csvContent += `Mode,${result.mode}\n`;
-    csvContent += `Calculation Mode,${result.summary.calculationMode}\n`;
-    csvContent += `Source,${result.summary.source}\n`;
-    csvContent += `Rule Version,${result.summary.ruleMetadata.version}\n`;
-    csvContent += `Historical Data Range,${result.summary.ruleMetadata.historicalDataRange.startYear}-${result.summary.ruleMetadata.historicalDataRange.endYear}\n`;
-    csvContent += `Retire Age,${result.summary.retireAge}\n`;
-    csvContent += `Success Rate,${result.summary.successRate}\n`;
-    csvContent += `Retirement Assets (Real),${Math.round(result.summary.retirementPoint.totalAssetsReal)}\n`;
-    csvContent += `Final Assets (Real P50),${Math.round(result.summary.terminalStats.totalAssetsReal.p50)}\n`;
-    csvContent += `Final Assets (Mean Real),${Math.round(result.summary.finalTotalAssetsReal)}\n`;
+    csvContent += `모드,${formatResultMode(result.mode)}\n`;
+    csvContent += `계산 방식,${formatCalculationMode(result.summary.calculationMode)}\n`;
+    csvContent += `데이터 소스,${formatResultSource(result.summary.source)}\n`;
+    csvContent += `규칙 버전,${result.summary.ruleMetadata.version}\n`;
+    csvContent += `역사적 데이터 범위,${result.summary.ruleMetadata.historicalDataRange.startYear}-${result.summary.ruleMetadata.historicalDataRange.endYear}\n`;
+    csvContent += `은퇴 나이,${result.summary.retireAge}\n`;
+    csvContent += `성공률,${result.summary.successRate}\n`;
+    csvContent += `은퇴 시 자산(실질),${Math.round(result.summary.retirementPoint.totalAssetsReal)}\n`;
+    csvContent += `최종 자산(실질 P50),${Math.round(result.summary.terminalStats.totalAssetsReal.p50)}\n`;
+    csvContent += `최종 자산(실질 평균),${Math.round(result.summary.finalTotalAssetsReal)}\n`;
     if (essentialCoverageRate !== null) {
-        csvContent += `Essential Spending Coverage Rate,${essentialCoverageRate}\n`;
+        csvContent += `필수생활비 충족률,${essentialCoverageRate}\n`;
     }
     if (result.summary.assumptionWarnings.length > 0) {
-        csvContent += `Assumptions,${result.summary.assumptionWarnings.map((warning) => warning.message).join(" | ")}\n`;
+        csvContent += `가정 및 경고,${result.summary.assumptionWarnings.map((warning) => warning.message).join(" | ")}\n`;
     }
     csvContent += "\n";
 
     if (result.mode === "deterministic") {
         csvContent += convertTimelineToCSV(representativeTimeline);
     } else {
-        const distributionLabel = result.mode === "historical" ? "Historical Backtest" : "Monte Carlo";
+        const distributionLabel = result.mode === "historical" ? "역사적 백테스트" : "몬테카를로";
         if (result.trajectoryStats) {
-            csvContent += `\n\n=== ${distributionLabel} Trajectory Statistics (Real Assets) ===\n`;
-            csvContent += "Month,P10 (Worst 10%),P50 (Median),P90 (Best 10%)\n";
+            csvContent += `\n\n=== ${distributionLabel} 경로 통계(실질 자산) ===\n`;
+            csvContent += "월,P10(하위 10%),P50(중위값),P90(상위 10%)\n";
 
             const stats = result.trajectoryStats;
             const rows = stats.month.map((m, i) => [
@@ -199,9 +215,9 @@ export function exportSimulationResult(result: SimulationResult) {
             ].join(","));
 
             csvContent += rows.join("\n");
-            csvContent += `\n\n=== Representative Path (${representativePath?.label ?? "Representative path"}) ===\n`;
+            csvContent += `\n\n=== 대표 경로 (${representativePath?.label ?? "대표 경로"}) ===\n`;
         } else {
-            csvContent += `Note: Timeline data is from the representative path of the ${distributionLabel} result.\n\n`;
+            csvContent += `참고: 타임라인 데이터는 ${distributionLabel} 결과의 대표 경로입니다.\n\n`;
         }
 
         if (representativeTimeline.length > 0) {
@@ -217,7 +233,7 @@ export function exportSimulationResult(result: SimulationResult) {
     }
 
     if (representativeLedger.length > 0) {
-        csvContent += "\n\n=== Ledger Timeline ===\n";
+        csvContent += "\n\n=== 월별 원장 ===\n";
         csvContent += convertLedgerToCSV(representativeLedger);
     }
 

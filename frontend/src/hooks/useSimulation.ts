@@ -11,6 +11,7 @@ import { createPreviewSimulationOptions } from "../logic/simulationRequestPolicy
 type SimulationHookReturn = {
     runSimulation: (input: SimulationInput, options?: SimulationRunOptions) => Promise<SimulationResult>;
     runSimulationPreview: (input: SimulationInput, previewPathCap?: number) => Promise<SimulationResult>;
+    clearResult: () => void;
     solveContribution: (input: SimulationInput, targetSuccessRate: number) => Promise<number | null>;
     solveLaborSavingsRate: (input: SimulationInput, targetSuccessRate: number) => Promise<number | null>;
     solveRetireAge: (input: SimulationInput, targetSuccessRate: number) => Promise<number | null>;
@@ -56,6 +57,7 @@ export function useSimulation(): SimulationHookReturn {
     const runSimulation = useCallback(async (input: SimulationInput, options?: SimulationRunOptions) => {
         const seq = ++latestSimulationSeq.current;
         setIsCalculating(true);
+        setError(null);
 
         try {
             const client = await loadSimulationClient();
@@ -76,6 +78,13 @@ export function useSimulation(): SimulationHookReturn {
                 setIsCalculating(false);
             }
         }
+    }, []);
+
+    const clearResult = useCallback(() => {
+        latestSimulationSeq.current++;
+        setResult(null);
+        setError(null);
+        setIsCalculating(false);
     }, []);
 
     const runSimulationPreview = useCallback((input: SimulationInput, previewPathCap = 80) => {
@@ -122,6 +131,7 @@ export function useSimulation(): SimulationHookReturn {
     return {
         runSimulation,
         runSimulationPreview,
+        clearResult,
         solveContribution,
         solveLaborSavingsRate,
         solveRetireAge,

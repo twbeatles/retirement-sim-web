@@ -6,16 +6,24 @@ Retirement planning simulator for Korea-focused scenarios, built with React, Typ
 
 - Runtime, worker, storage, and export now use `SimulationPlanV3`.
 - `SimulationPlanV2` remains only as an import-migration source.
+- The user-facing app, validation copy, and primary export labels are Korean-first.
 - Public worker/client APIs are plan-only:
   - `requestSimulation(plan, options)`
   - `requestSimulationBatch(plans, options)`
   - solver and sensitivity APIs also take canonical plans
+- The plan-aware engine path applies these V3 fields in calculation:
+  - `incomeStreams[].taxable`
+  - `incomeStreams[].healthInsuranceIncluded`
+  - `accounts[].withdrawalPriority`
+- `targetMonthlySpending` and `retirementSpendingTarget` are current-value living-expense targets. Post-retirement monthly runs CPI-index that target, while tax and health-insurance premiums are separate expenses.
 - Probabilistic results expose:
   - distribution summaries
   - `display.representative`
   - `display.samples[]`
+- `summary.survivalStats` is computed from depletion data regardless of `includeSurvivalSeries`.
+- `includeSampleTimelines=false` or `maxSampleTimelines=0` also suppresses `display.samples[]`.
 - Exported plan files and IndexedDB storage use `schemaVersion: 3`.
-- Older local IndexedDB data is reset on schema cut and the UI shows a re-import notice.
+- Older or unavailable local IndexedDB storage surfaces a reset/fallback notice, and JSON import/export remains available.
 
 ## Supported Data And Rules
 
@@ -38,9 +46,17 @@ Retirement planning simulator for Korea-focused scenarios, built with React, Typ
 frontend/
   src/
     components/
+      plan-editor/      # V3 plan editor sections
+      scenario-manager/ # scenario presets/helpers
+      simple-dashboard/ # dashboard display helpers
     hooks/
     logic/
       engine/
+        runSimulation.ts
+        pathSimulation.ts
+        pathReplay.ts
+        pathSelection.ts
+        summary.ts
       plan/              # SimulationPlanV3 schema and converters
       planV2/            # v2 import migration helpers only
       rules/
@@ -78,7 +94,5 @@ npm run verify:ci
 - [GEMINI.md](GEMINI.md)
 - [docs/api_examples.md](docs/api_examples.md)
 - [docs/modeling_notes.md](docs/modeling_notes.md)
-- [docs/roadmap.md](docs/roadmap.md)
-- [docs/retirement_calculator_readiness_review_2026-04-14.md](docs/retirement_calculator_readiness_review_2026-04-14.md)
-- [docs/functional_implementation_review_2026-04-19.md](docs/functional_implementation_review_2026-04-19.md)
-- [docs/functional_implementation_review_addendum_2026-04-19.md](docs/functional_implementation_review_addendum_2026-04-19.md)
+- [docs/deployment.md](docs/deployment.md)
+- [docs/perf_automation.md](docs/perf_automation.md)
