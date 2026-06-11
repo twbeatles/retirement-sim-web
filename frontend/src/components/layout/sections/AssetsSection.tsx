@@ -3,6 +3,7 @@ import { ExpenseManager } from "../../ExpenseManager";
 import { Section, Field } from "../../common/UIComponents";
 import { num } from "../../../utils/format";
 import type { SimulationInput, PensionType } from "../../../logic/types";
+import { parseOptionalNumber } from "./assetsHelpers";
 
 const IncomeManager = lazy(() => import("../../IncomeManager").then((m) => ({ default: m.IncomeManager })));
 const PortfolioEditor = lazy(() => import("../../PortfolioEditor").then((m) => ({ default: m.PortfolioEditor })));
@@ -10,15 +11,6 @@ const PortfolioEditor = lazy(() => import("../../PortfolioEditor").then((m) => (
 interface AssetsSectionProps {
     input: SimulationInput;
     setInput: React.Dispatch<React.SetStateAction<SimulationInput>>;
-}
-
-function parseOptionalNumber(value: string): number | undefined {
-    if (value.trim() === "") {
-        return undefined;
-    }
-
-    const parsed = Number(value);
-    return Number.isFinite(parsed) ? parsed : undefined;
 }
 
 export function AssetsSection({ input, setInput }: AssetsSectionProps) {

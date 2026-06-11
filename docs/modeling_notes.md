@@ -104,6 +104,19 @@ Historical dataset range:
 
 - `1985-2024`
 
+## Runtime Validation And Limits
+
+The model intentionally rejects malformed runtime settings before simulation:
+
+- unknown `simulationSettings.mode` / `simulation_settings.mode`
+- Monte Carlo path counts above `10,000`
+- invalid or non-finite seed values
+- unsupported enum values in account, income, policy, rulebook, and strategy fields
+- duplicate account or income stream IDs
+- imported plan arrays above the shared `500` item collection cap
+
+These checks exist in validation and in the engine mode guard so malformed external JSON or damaged storage records cannot silently produce deterministic-looking results.
+
 ## Result Semantics
 
 Deterministic results expose a single representative path.

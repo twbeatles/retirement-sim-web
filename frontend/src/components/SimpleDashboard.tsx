@@ -2,7 +2,7 @@ import React, { useState } from "react";
 import type { SimulationInput, SimulationResult, ValidationWarning } from "../logic/types";
 import { PlanGuidedChecklist } from "./PlanGuidedChecklist";
 import { HOUSING_OPTIONS, PRESETS, STEPS, type SimpleDashboardPreset } from "./simple-dashboard/constants";
-import { getFeedback, getGaugeColor } from "./simple-dashboard/summaryHelpers";
+import { deriveSimpleDashboardMetrics } from "./simple-dashboard/dashboardMetrics";
 import { InputSlider } from "./ui/InputSlider";
 
 interface SimpleDashboardProps {
@@ -15,17 +15,17 @@ interface SimpleDashboardProps {
 export const SimpleDashboard = React.memo(function SimpleDashboard({ input, result, validationWarnings = [], onInputChange }: SimpleDashboardProps) {
     const [currentStep, setCurrentStep] = useState(0);
 
-    const successRate = result?.summary.successRate ?? 0;
-    const retirementAsset = result?.summary.retirementPoint?.totalAssetsReal ?? result?.summary.terminalStats?.totalAssetsReal.p50 ?? 0;
-    const finalAsset = result?.summary.terminalStats?.totalAssetsReal.p50 ?? result?.summary.finalTotalAssetsReal ?? 0;
-    const currentAsset = input.general.current_balance + input.private_pension.current_balance;
-    const yearsToRetire = Math.max(0, input.retire_age - input.current_age);
-    const clampedSuccessRate = Math.max(0, Math.min(1, successRate));
-    const gaugeColor = getGaugeColor(clampedSuccessRate);
-    const gaugeRadius = 70;
-    const gaugeLength = Math.PI * gaugeRadius;
-    const gaugeOffset = gaugeLength * (1 - clampedSuccessRate);
-    const feedback = getFeedback(successRate);
+    const {
+        successRate,
+        retirementAsset,
+        finalAsset,
+        currentAsset,
+        yearsToRetire,
+        gaugeColor,
+        gaugeLength,
+        gaugeOffset,
+        feedback,
+    } = deriveSimpleDashboardMetrics(input, result);
 
     const handlePreset = (preset: SimpleDashboardPreset) => {
         onInputChange({

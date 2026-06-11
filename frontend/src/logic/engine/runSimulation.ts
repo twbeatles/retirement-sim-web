@@ -6,7 +6,7 @@ import {
     type TimelineRow,
 } from "../types";
 import { getAvailableHistoricalScenarioCount } from "../historicalData";
-import { percentileSorted, meanTyped, randomNormal, setSeed } from "../math";
+import { percentileSorted, randomNormal, setSeed } from "../math";
 import {
     createDistributionStatsFromValue,
     createRuleMetadata,
@@ -16,7 +16,6 @@ import { buildSimulationContext } from "./context";
 import {
     buildSummaryBase,
     buildSurvivalSeriesFromDepletionMonths,
-    buildSurvivalStatsFromDepletionMonths,
 } from "./summary";
 import { simulateOnePath } from "./pathSimulation";
 import {
@@ -25,28 +24,25 @@ import {
     type DistributionPathSnapshot,
 } from "./pathSelection";
 import { replayHistoricalPath, replayMonteCarloPath } from "./pathReplay";
+import { assertSimulationInputCanRun } from "./modePolicy";
+import { resolveSimulationRunConfig } from "./runConfig";
+import { summarizeDistributionPaths } from "./distributionStats";
+
 export function runSimulation(
     input: SimulationInput,
     options?: SimulationRunOptions,
     runtimePlan?: SimulationPlanV3
 ): SimulationResult {
-    if (!Number.isFinite(input.current_age) || !Number.isFinite(input.retire_age) || !Number.isFinite(input.end_age)) {
-        throw new Error("나이 입력값은 유한한 숫자여야 합니다.");
-    }
-    if (input.end_age <= input.current_age) {
-        throw new Error("종료 나이는 현재 나이보다 커야 합니다.");
-    }
-    if (input.retire_age > input.end_age) {
-        throw new Error("은퇴 나이는 종료 나이보다 클 수 없습니다.");
-    }
-
-    const detailLevel = options?.detailLevel ?? "full";
-    const isPreview = detailLevel === "preview";
-    const includeSampleTimelines = options?.includeSampleTimelines ?? !isPreview;
-    const includeTrajectoryStats = options?.includeTrajectoryStats ?? !isPreview;
-    const includeSurvivalSeries = options?.includeSurvivalSeries ?? !isPreview;
-    const maxSampleTimelines = Math.max(0, options?.maxSampleTimelines ?? (isPreview ? 1 : 3));
-    const previewPathCap = options?.previewPathCap ?? 80;
+    assertSimulationInputCanRun(input);
+    const {
+        detailLevel,
+        isPreview,
+        includeSampleTimelines,
+        includeTrajectoryStats,
+        includeSurvivalSeries,
+        maxSampleTimelines,
+        previewPathCap
+    } = resolveSimulationRunConfig(options);
 
     // Initialize seed for reproducible simulations
     setSeed(input.simulation_settings.seed);
@@ -94,42 +90,25 @@ export function runSimulation(
             if (finalAssets[i] > 0) successes++;
         }
 
-        const sortedReal = Float64Array.from(finalAssetsReal);
-        sortedReal.sort();
-        const sortedNom = Float64Array.from(finalAssets);
-        sortedNom.sort();
-        const sortedRetNom = Float64Array.from(retirementAssets);
-        sortedRetNom.sort();
-        const sortedRetReal = Float64Array.from(retirementAssetsReal);
-        sortedRetReal.sort();
-        const meanNom = meanTyped(finalAssets);
-        const meanReal = meanTyped(finalAssetsReal);
-        const neverDepletedCount = Array.from(firstDepletionMonthByPath).filter((month) => month < 0).length;
-        const depletedAges = Array.from(firstDepletionAgeByPath).filter((age) => age >= 0).sort((a, b) => a - b);
-
-        const totalAssetsStats = {
-            p10: percentileSorted(sortedNom, 10),
-            p50: percentileSorted(sortedNom, 50),
-            p90: percentileSorted(sortedNom, 90),
-            mean: meanNom
-        };
-        const totalAssetsRealStats = {
-            p10: percentileSorted(sortedReal, 10),
-            p50: percentileSorted(sortedReal, 50),
-            p90: percentileSorted(sortedReal, 90),
-            mean: meanReal
-        };
-        const depletionStats = {
-            firstDepletionMonthByPath: Array.from(firstDepletionMonthByPath),
-            firstDepletionAgeByPath: Array.from(firstDepletionAgeByPath),
-            neverDepletedRate: neverDepletedCount / numScenarios,
-            medianDepletionAge: depletedAges.length > 0 ? percentileSorted(depletedAges, 50) : null
-        };
-        const survivalStats = buildSurvivalStatsFromDepletionMonths(
+        const {
+            sortedRetNom,
+            sortedRetReal,
+            meanNom,
+            meanReal,
+            totalAssetsStats,
+            totalAssetsRealStats,
+            depletionStats,
+            survivalStats
+        } = summarizeDistributionPaths(
+            input,
             totalMonths,
-            input.current_age,
+            numScenarios,
+            finalAssets,
+            finalAssetsReal,
+            retirementAssets,
+            retirementAssetsReal,
             firstDepletionMonthByPath,
-            numScenarios
+            firstDepletionAgeByPath
         );
         const survivalSeries = includeSurvivalSeries
             ? buildSurvivalSeriesFromDepletionMonths(
@@ -380,43 +359,25 @@ export function runSimulation(
                 }
             }
         }
-        const sortedNom = Float64Array.from(finalAssets);
-        sortedNom.sort();
-        const sortedReal = Float64Array.from(finalAssetsReal);
-        sortedReal.sort();
-        const sortedRetNom = Float64Array.from(retirementAssets);
-        sortedRetNom.sort();
-        const sortedRetReal = Float64Array.from(retirementAssetsReal);
-        sortedRetReal.sort();
-
-        const meanNom = meanTyped(finalAssets);
-        const meanReal = meanTyped(finalAssetsReal);
-        const neverDepletedCount = Array.from(firstDepletionMonthByPath).filter((month) => month < 0).length;
-        const depletedAges = Array.from(firstDepletionAgeByPath).filter((age) => age >= 0).sort((a, b) => a - b);
-
-        const totalAssetsStats = {
-            p10: percentileSorted(sortedNom, 10),
-            p50: percentileSorted(sortedNom, 50),
-            p90: percentileSorted(sortedNom, 90),
-            mean: meanNom
-        };
-        const totalAssetsRealStats = {
-            p10: percentileSorted(sortedReal, 10),
-            p50: percentileSorted(sortedReal, 50),
-            p90: percentileSorted(sortedReal, 90),
-            mean: meanReal
-        };
-        const depletionStats = {
-            firstDepletionMonthByPath: Array.from(firstDepletionMonthByPath),
-            firstDepletionAgeByPath: Array.from(firstDepletionAgeByPath),
-            neverDepletedRate: neverDepletedCount / paths,
-            medianDepletionAge: depletedAges.length > 0 ? percentileSorted(depletedAges, 50) : null
-        };
-        const survivalStats = buildSurvivalStatsFromDepletionMonths(
+        const {
+            sortedRetNom,
+            sortedRetReal,
+            meanNom,
+            meanReal,
+            totalAssetsStats,
+            totalAssetsRealStats,
+            depletionStats,
+            survivalStats
+        } = summarizeDistributionPaths(
+            input,
             totalMonths,
-            input.current_age,
+            paths,
+            finalAssets,
+            finalAssetsReal,
+            retirementAssets,
+            retirementAssetsReal,
             firstDepletionMonthByPath,
-            paths
+            firstDepletionAgeByPath
         );
         const summary: SimulationSummary = {
             ...buildSummaryBase(

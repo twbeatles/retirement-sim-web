@@ -17,6 +17,10 @@ type UseAutoSimulationParams = {
 const PREVIEW_DELAY_MS = 150;
 const FULL_IDLE_DELAY_MS = 900;
 
+function isAbortError(error: unknown): boolean {
+  return error instanceof Error && error.name === "AbortError";
+}
+
 function buildPreviewOptions(viewMode: ViewMode): SimulationRunOptions {
   return createPreviewSimulationOptions(viewMode === "simple" ? 64 : 80);
 }
@@ -98,6 +102,9 @@ export function useAutoSimulation({ input, viewMode, runSimulation, hasBlockingV
         if (lastPreviewFingerprintRef.current === previewFingerprint) {
           lastPreviewFingerprintRef.current = null;
         }
+        if (isAbortError(error)) {
+          return;
+        }
         console.error("Preview simulation failed:", error);
       });
     }, PREVIEW_DELAY_MS);
@@ -117,6 +124,9 @@ export function useAutoSimulation({ input, viewMode, runSimulation, hasBlockingV
       void runSimulation(input, fullOptions).catch((error) => {
         if (lastFullFingerprintRef.current === fullFingerprint) {
           lastFullFingerprintRef.current = null;
+        }
+        if (isAbortError(error)) {
+          return;
         }
         console.error("Full simulation failed:", error);
       });

@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { INITIAL_INPUT } from "./constants";
 import { legacyInputToPlan } from "./plan";
+import { MAX_FULL_MONTE_CARLO_PATHS, MAX_PLAN_COLLECTION_ITEMS } from "./runtimeLimits";
 import { validateSimulationInput, validateSimulationPlan } from "./validation";
 
 describe("validateSimulationInput", () => {
@@ -109,6 +110,32 @@ describe("validateSimulationInput", () => {
             )
         ).toBe(true);
     });
+
+    it("rejects invalid simulation mode, oversized path counts, and non-finite seeds", () => {
+        const input = structuredClone(INITIAL_INPUT);
+        input.simulation_settings.mode = "monteCarlo" as typeof input.simulation_settings.mode;
+        input.simulation_settings.mc_paths = MAX_FULL_MONTE_CARLO_PATHS + 1;
+        input.simulation_settings.seed = Number.NaN;
+
+        const warnings = validateSimulationInput(input);
+
+        expect(warnings.some((warning) => warning.field === "simulation_settings.mode" && warning.severity === "error")).toBe(true);
+        expect(warnings.some((warning) => warning.field === "simulation_settings" && warning.severity === "error")).toBe(true);
+        expect(warnings.some((warning) => warning.field === "simulation_settings.seed" && warning.severity === "error")).toBe(true);
+    });
+
+    it("rejects overly large imported collections", () => {
+        const input = structuredClone(INITIAL_INPUT);
+        input.events = Array.from({ length: MAX_PLAN_COLLECTION_ITEMS + 1 }, (_, index) => ({
+            month_index: index,
+            amount: 1,
+            name: `event-${index}`
+        }));
+
+        const warnings = validateSimulationInput(input);
+
+        expect(warnings.some((warning) => warning.field === "events" && warning.severity === "error")).toBe(true);
+    });
 });
 
 describe("validateSimulationPlan", () => {
@@ -180,5 +207,34 @@ describe("validateSimulationPlan", () => {
                     warning.severity === "error"
             )
         ).toBe(true);
+    });
+
+    it("rejects invalid V3 mode, oversized path counts, non-finite seed, and duplicate ids", () => {
+        const plan = legacyInputToPlan(structuredClone(INITIAL_INPUT));
+        plan.simulationSettings.mode = "monteCarlo" as typeof plan.simulationSettings.mode;
+        plan.simulationSettings.monteCarloPaths = MAX_FULL_MONTE_CARLO_PATHS + 1;
+        plan.simulationSettings.seed = Number.POSITIVE_INFINITY;
+        plan.accounts.push({ ...structuredClone(plan.accounts[0]), name: "Duplicate account" });
+        plan.incomeStreams.push({ ...structuredClone(plan.incomeStreams[0]), name: "Duplicate stream" });
+
+        const warnings = validateSimulationPlan(plan);
+
+        expect(warnings.some((warning) => warning.field === "plan.simulationSettings.mode" && warning.severity === "error")).toBe(true);
+        expect(warnings.some((warning) => warning.field === "plan.simulationSettings.monteCarloPaths" && warning.severity === "error")).toBe(true);
+        expect(warnings.some((warning) => warning.field === "plan.simulationSettings.seed" && warning.severity === "error")).toBe(true);
+        expect(warnings.some((warning) => warning.field.endsWith(".id") && warning.message.includes("계정 ID") && warning.severity === "error")).toBe(true);
+        expect(warnings.some((warning) => warning.field.endsWith(".id") && warning.message.includes("소득 흐름 ID") && warning.severity === "error")).toBe(true);
+    });
+
+    it("returns validation errors instead of throwing for malformed V3 plan shapes", () => {
+        const malformed = {
+            planVersion: "v3",
+            profile: {},
+            accounts: "not-an-array"
+        } as unknown as ReturnType<typeof legacyInputToPlan>;
+
+        const warnings = validateSimulationPlan(malformed);
+
+        expect(warnings.some((warning) => warning.severity === "error")).toBe(true);
     });
 });

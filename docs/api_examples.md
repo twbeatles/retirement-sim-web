@@ -5,6 +5,7 @@
 ```ts
 import { runSimulation } from "../frontend/src/logic/engine";
 import { INITIAL_INPUT } from "../frontend/src/logic/constants";
+import { MAX_FULL_MONTE_CARLO_PATHS } from "../frontend/src/logic/runtimeLimits";
 
 const result = runSimulation(
   {
@@ -31,7 +32,10 @@ const result = runSimulation(
 console.log(result.summary.source);
 console.log(result.summary.retirementPoint.totalAssetsReal);
 console.log(result.summary.survivalStats.finalSurvivalRate);
+console.log(MAX_FULL_MONTE_CARLO_PATHS); // 10000
 ```
+
+Unknown simulation modes and Monte Carlo path counts above `MAX_FULL_MONTE_CARLO_PATHS` throw instead of falling back to deterministic execution.
 
 ## 2. Normalize To The Canonical Plan
 
@@ -66,6 +70,19 @@ const savingsRate = await requestSolveLaborSavingsRate(plan, 0.9);
 const retireAge = await requestSolveRetireAge(plan, 0.85);
 ```
 
+When a queued `requestSimulation()` payload is replaced by a newer payload in the same worker lane, the replaced promise rejects with an `AbortError`. Treat that as cancellation:
+
+```ts
+try {
+  await requestSimulation(plan, { detailLevel: "preview" });
+} catch (error) {
+  if (error instanceof Error && error.name === "AbortError") {
+    return;
+  }
+  throw error;
+}
+```
+
 Result option notes:
 
 - `includeSurvivalSeries` only controls chart payload size. `summary.survivalStats` remains populated from depletion data.
@@ -89,10 +106,15 @@ import {
   createPlanFileEnvelope,
   parseImportedPlanEnvelope,
 } from "../frontend/src/logic/plan";
+import { MAX_PLAN_IMPORT_BYTES } from "../frontend/src/logic/runtimeLimits";
 import { validateSimulationPlan } from "../frontend/src/logic/validation";
 
 const exported = createPlanFileEnvelope(plan);
 const json = JSON.stringify(exported, null, 2);
+
+if (new Blob([json]).size > MAX_PLAN_IMPORT_BYTES) {
+  throw new Error("Plan file is too large");
+}
 
 const parsed = JSON.parse(json);
 const importedPlan = parseImportedPlanEnvelope(parsed);
@@ -105,6 +127,8 @@ if (warnings.some((warning) => warning.severity === "error")) {
   throw new Error("Invalid plan");
 }
 ```
+
+The UI import flow additionally separates file read, abort, parse, schema, and validation failures so users can choose retry, repair, or reset/export fallback paths.
 
 ## 5. Representative And Sample Paths
 
@@ -280,3 +304,4 @@ In this plan shape:
 - `taxable` determines whether the stream contributes to detailed taxable income.
 - `healthInsuranceIncluded` determines whether the stream contributes to detailed health-insurance assessable income.
 - `withdrawalPriority` controls supported liquid account drawdown order.
+- Imported arrays such as accounts, income streams, events, stage adjustments, and medical shocks are bounded by shared collection limits before simulation.

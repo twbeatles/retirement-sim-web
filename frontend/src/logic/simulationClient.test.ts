@@ -227,12 +227,16 @@ describe("simulationClient queueing", () => {
         expect(batchResults).toHaveLength(1);
     });
 
-    it("applies latest-wins queue coalescing and promise fan-out for preview requests", async () => {
+    it("rejects replaced queued preview requests and resolves only the latest queued payload", async () => {
         const client = await import("./simulationClient");
 
         const first = client.requestSimulation(legacyInputToPlan(createInput(101)), { detailLevel: "preview" });
         const second = client.requestSimulation(legacyInputToPlan(createInput(202)), { detailLevel: "preview" });
         const third = client.requestSimulation(legacyInputToPlan(createInput(303)), { detailLevel: "preview" });
+        const secondRejection = expect(second).rejects.toMatchObject({
+            name: "AbortError",
+            message: "Simulation request replaced by a newer request"
+        });
 
         expect(MockWorker.instances).toHaveLength(1);
         const interactiveWorker = MockWorker.instances[0];
@@ -253,10 +257,10 @@ describe("simulationClient queueing", () => {
         const latestResult = createResult("preview", 0.9);
         interactiveWorker.respondSuccess(1, latestResult);
 
-        const [firstResult, secondResult, thirdResult] = await Promise.all([first, second, third]);
+        const [firstResult, thirdResult] = await Promise.all([first, third]);
+        await secondRejection;
 
         expect(firstResult.summary.successRate).toBeCloseTo(0.1, 8);
-        expect(secondResult).toBe(latestResult);
         expect(thirdResult).toBe(latestResult);
     });
 

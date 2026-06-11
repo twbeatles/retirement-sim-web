@@ -24,6 +24,11 @@ Retirement planning simulator for Korea-focused scenarios, built with React, Typ
 - `includeSampleTimelines=false` or `maxSampleTimelines=0` also suppresses `display.samples[]`.
 - Exported plan files and IndexedDB storage use `schemaVersion: 3`.
 - Older or unavailable local IndexedDB storage surfaces a reset/fallback notice, and JSON import/export remains available.
+- Full Monte Carlo runs are capped at `10,000` paths. UI controls, validation, and the engine share the same defensive limit.
+- JSON import accepts UTF-8 V2/V3 plan envelopes up to `1MB`.
+- Large imported plan collections are blocked at validation time before they can fan out into expensive UI or engine work.
+- In latest-wins `requestSimulation()` coalescing, a queued request replaced by a newer queued request rejects with `AbortError`. UI consumers treat this as cancellation, not a user-visible failure.
+- Corrupt IndexedDB scenario records are skipped record-by-record when possible, while valid records remain available.
 
 ## Supported Data And Rules
 
@@ -48,19 +53,29 @@ frontend/
     components/
       plan-editor/      # V3 plan editor sections
       scenario-manager/ # scenario presets/helpers
+      scenario-comparison/
+      risk-dashboard/
+      what-if/
+      income-manager/
       simple-dashboard/ # dashboard display helpers
     hooks/
     logic/
       engine/
         runSimulation.ts
+        runConfig.ts
+        modePolicy.ts
+        distributionStats.ts
+        pathReturns.ts
         pathSimulation.ts
         pathReplay.ts
         pathSelection.ts
         summary.ts
+      featureTypes.ts    # Phase 1-7 extension types
+      types.ts           # public type facade
       plan/              # SimulationPlanV3 schema and converters
       planV2/            # v2 import migration helpers only
       rules/
-      validation/
+      validation/        # facade plus V3 shape/enum/runtime policy helpers
       simulation.worker.ts
       simulationClient.ts
       resultDisplay.ts
@@ -81,11 +96,21 @@ npm run dev
 
 ```bash
 cd frontend
+npm run lint
+npm run check:duplicates
 npm run typecheck
+npm run check:imports
 npm run test -- --run
 npm run build
 npm run verify:ci
 ```
+
+## Notes
+
+- Some UI state still starts from `SimulationInput`, but worker/client/storage/report boundaries normalize into `SimulationPlanV3`.
+- `logic/types.ts` is kept as a compatibility facade; extension domain types live in `logic/featureTypes.ts`.
+- Long UI components are split into feature folders while preserving the existing public component imports.
+- Imported or edited runtime values such as invalid simulation mode, invalid annual rates, excessive Monte Carlo paths, duplicate IDs, and oversized collections are blocking validation errors.
 
 ## Documentation
 

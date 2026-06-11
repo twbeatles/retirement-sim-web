@@ -36,6 +36,7 @@ type SimulationClientModule = {
         parameter: "annual_return" | "annual_inflation" | "withdrawal_rate",
         variations: number[]
     ) => Promise<SensitivityResult>;
+    isSimulationAbortError?: (error: unknown) => boolean;
 };
 
 let simulationClientPromise: Promise<SimulationClientModule> | null = null;
@@ -58,9 +59,10 @@ export function useSimulation(): SimulationHookReturn {
         const seq = ++latestSimulationSeq.current;
         setIsCalculating(true);
         setError(null);
+        let client: SimulationClientModule | null = null;
 
         try {
-            const client = await loadSimulationClient();
+            client = await loadSimulationClient();
             const response = await client.requestSimulation(legacyInputToPlan(input), options);
             if (seq === latestSimulationSeq.current) {
                 setResult(response);
@@ -68,6 +70,9 @@ export function useSimulation(): SimulationHookReturn {
             }
             return response;
         } catch (err) {
+            if (client?.isSimulationAbortError?.(err)) {
+                throw err;
+            }
             const message = err instanceof Error ? err.message : String(err);
             if (seq === latestSimulationSeq.current) {
                 setError(message);

@@ -206,22 +206,34 @@ export function createPlanFileEnvelope(plan: SimulationPlanV3): SimulationPlanFi
     };
 }
 
+function isRecord(value: unknown): value is Record<string, unknown> {
+    return !!value && typeof value === "object" && !Array.isArray(value);
+}
+
 export function parseImportedPlanEnvelope(value: unknown): SimulationPlanV3 | null {
-    if (!value || typeof value !== "object") {
+    if (!isRecord(value)) {
         return null;
     }
 
     const maybeEnvelope = value as {
         schemaVersion?: number;
-        plan?: SimulationPlanV2 | SimulationPlanV3;
+        plan?: unknown;
     };
 
-    if (maybeEnvelope.schemaVersion === 3 && maybeEnvelope.plan?.planVersion === "v3") {
-        return structuredClone(maybeEnvelope.plan);
+    if (!isRecord(maybeEnvelope.plan)) {
+        return null;
     }
 
-    if (maybeEnvelope.schemaVersion === 2 && maybeEnvelope.plan?.planVersion === "v2") {
-        return migratePlanV2ToV3(maybeEnvelope.plan);
+    if (maybeEnvelope.schemaVersion === 3 && maybeEnvelope.plan.planVersion === "v3") {
+        return structuredClone(maybeEnvelope.plan as SimulationPlanV3);
+    }
+
+    if (maybeEnvelope.schemaVersion === 2 && maybeEnvelope.plan.planVersion === "v2") {
+        try {
+            return migratePlanV2ToV3(maybeEnvelope.plan as SimulationPlanV2);
+        } catch {
+            return null;
+        }
     }
 
     return null;

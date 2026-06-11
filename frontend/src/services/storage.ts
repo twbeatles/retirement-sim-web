@@ -1,5 +1,6 @@
 import type { SimulationInput } from "../logic/types";
 import { legacyInputToPlan, planToLegacyInput, type SimulationPlanV3 } from "../logic/plan";
+import { validateSimulationPlan } from "../logic/validation";
 
 interface StoredScenarioData {
     name: string;
@@ -31,7 +32,11 @@ function writeResetNotice(notice: StorageResetNotice): void {
         return;
     }
 
-    window.localStorage.setItem(RESET_NOTICE_KEY, JSON.stringify(notice));
+    try {
+        window.localStorage.setItem(RESET_NOTICE_KEY, JSON.stringify(notice));
+    } catch (error) {
+        console.warn("Failed to write storage reset notice", error);
+    }
 }
 
 function readResetNotice(): StorageResetNotice | null {
@@ -39,7 +44,13 @@ function readResetNotice(): StorageResetNotice | null {
         return null;
     }
 
-    const raw = window.localStorage.getItem(RESET_NOTICE_KEY);
+    let raw: string | null = null;
+    try {
+        raw = window.localStorage.getItem(RESET_NOTICE_KEY);
+    } catch (error) {
+        console.warn("Failed to read storage reset notice", error);
+        return null;
+    }
     if (!raw) {
         return null;
     }
@@ -47,7 +58,11 @@ function readResetNotice(): StorageResetNotice | null {
     try {
         return JSON.parse(raw) as StorageResetNotice;
     } catch {
-        window.localStorage.removeItem(RESET_NOTICE_KEY);
+        try {
+            window.localStorage.removeItem(RESET_NOTICE_KEY);
+        } catch (error) {
+            console.warn("Failed to clear invalid storage reset notice", error);
+        }
         return null;
     }
 }
@@ -57,7 +72,11 @@ function clearResetNotice(): void {
         return;
     }
 
-    window.localStorage.removeItem(RESET_NOTICE_KEY);
+    try {
+        window.localStorage.removeItem(RESET_NOTICE_KEY);
+    } catch (error) {
+        console.warn("Failed to clear storage reset notice", error);
+    }
 }
 
 function hydrateScenario(record: StoredScenarioData & { id: number }): SavedScenario {
@@ -67,16 +86,39 @@ function hydrateScenario(record: StoredScenarioData & { id: number }): SavedScen
     };
 }
 
+function isValidStoredScenario(record: unknown): record is StoredScenarioData & { id: number } {
+    if (!record || typeof record !== "object") {
+        return false;
+    }
+    const candidate = record as Partial<StoredScenarioData & { id: number }>;
+    if (
+        typeof candidate.id !== "number" ||
+        typeof candidate.name !== "string" ||
+        candidate.schemaVersion !== 3 ||
+        candidate.plan?.planVersion !== "v3"
+    ) {
+        return false;
+    }
+    const errors = validateSimulationPlan(candidate.plan).filter((warning) => warning.severity === "error");
+    return errors.length === 0;
+}
+
 class ScenarioStorage {
     private db: IDBDatabase | null = null;
+    private lastCorruptRecordCount = 0;
 
     async init(): Promise<void> {
         return new Promise((resolve, reject) => {
             const request = indexedDB.open(DB_NAME, DB_VERSION);
 
             request.onerror = () => reject(request.error);
+            request.onblocked = () => reject(new Error("IndexedDB upgrade blocked by another open tab"));
             request.onsuccess = () => {
                 this.db = request.result;
+                this.db.onversionchange = () => {
+                    this.db?.close();
+                    this.db = null;
+                };
                 resolve();
             };
 
@@ -160,10 +202,25 @@ class ScenarioStorage {
             const store = this.getStore("readonly");
             const request = store.getAll();
             request.onsuccess = () => {
-                const records = (request.result as Array<StoredScenarioData & { id: number }>)
-                    .filter((scenario) => scenario.schemaVersion === 3 && scenario.plan?.planVersion === "v3")
-                    .sort((a, b) => b.updatedAt - a.updatedAt)
-                    .map(hydrateScenario);
+                const rawRecords = request.result as unknown[];
+                const records: SavedScenario[] = [];
+                let corruptCount = 0;
+
+                for (const record of rawRecords) {
+                    if (!isValidStoredScenario(record)) {
+                        corruptCount += 1;
+                        continue;
+                    }
+                    try {
+                        records.push(hydrateScenario(record));
+                    } catch (error) {
+                        corruptCount += 1;
+                        console.warn("Skipped corrupt scenario record", error);
+                    }
+                }
+
+                this.lastCorruptRecordCount = corruptCount;
+                records.sort((a, b) => b.updatedAt - a.updatedAt);
                 resolve(records);
             };
             request.onerror = () => reject(request.error);
@@ -188,6 +245,10 @@ class ScenarioStorage {
 
         clearResetNotice();
         return notice;
+    }
+
+    getLastCorruptRecordCount(): number {
+        return this.lastCorruptRecordCount;
     }
 }
 

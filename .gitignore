@@ -36,6 +36,9 @@ frontend/.vite/
 .env.*.local
 *.local
 
+# Local analysis indexes
+.codegraph/
+
 # Editor directories and files
 .idea/
 .vscode/

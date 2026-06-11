@@ -21,6 +21,16 @@ The product aims to model retirement cashflow durability for Korean households t
 
 Compatibility layers still exist for legacy inputs and `SimulationPlanV2` imports, but those are not the active runtime contract.
 
+## Runtime Guardrails
+
+- Full Monte Carlo runs are capped at `MAX_FULL_MONTE_CARLO_PATHS = 10_000` across UI, validation, and engine guard code.
+- Imported JSON plan files are capped at `MAX_PLAN_IMPORT_BYTES = 1MB` and must be UTF-8 V2/V3 plan envelopes.
+- Imported plan collections are capped at `MAX_PLAN_COLLECTION_ITEMS = 500` before deeper validation.
+- Unsupported simulation modes, invalid seeds, unsupported enum values, duplicate IDs, and broken plan references should fail validation instead of falling back.
+- Engine mode selection must throw for unknown modes; deterministic fallback is not acceptable.
+- `requestSimulation()` latest-wins coalescing rejects replaced queued callers with `AbortError`; UI consumers should treat that as cancellation.
+- IndexedDB reset notices are best-effort. Storage load should skip corrupt records when possible and keep healthy scenarios visible.
+
 ## Engine Model
 
 The engine still uses monthly portfolio projection with stochastic and historical variants. Core modeling areas:
@@ -86,6 +96,7 @@ These are still known modeling limits even after the v3 contract cleanup:
 - `interest_dividend` and `realized_capital_gain` are explicit fields but may remain zero when no detailed source model exists
 - bucket strategy still needs deeper stateful refill semantics beyond the current canonical ledger alignment
 - UI state still originates from `SimulationInput` in several places before canonical normalization
+- already-running worker computations are not forcibly terminated; the current cancellation guarantee covers queued request replacement and stale response suppression
 
 ## Preferred Future Direction
 

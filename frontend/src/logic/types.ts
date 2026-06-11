@@ -1,4 +1,50 @@
 import type { SimulationPlanV2 } from "./planV2";
+import type {
+    BucketSettings,
+    BusinessIncome,
+    GuardrailsSettings,
+    HealthInsurance,
+    HistoricalAssetType,
+    InflationScenario,
+    LaborIncomeSettings,
+    LongevityRisk,
+    MedicalShock,
+    PensionConfig,
+    RealEstateAsset,
+    RebalancingSettings,
+    ReverseAnnuity,
+    SeveranceSettings,
+    TaxCredit,
+} from "./featureTypes";
+export type {
+    BacktestResult,
+    BucketSettings,
+    BusinessIncome,
+    DepletionAnalysis,
+    FavoriteAsset,
+    GuardrailsSettings,
+    HealthInsurance,
+    HistoricalAssetType,
+    InflationScenario,
+    LaborIncomeEvent,
+    LaborIncomeSettings,
+    LongevityRisk,
+    MedicalShock,
+    OnboardingState,
+    PensionConfig,
+    PensionType,
+    RealEstateAsset,
+    RebalancingEvent,
+    RebalancingSettings,
+    ReverseAnnuity,
+    ScenarioComparisonResult,
+    SensitivityResult,
+    SeveranceSettings,
+    SoRRAnalysis,
+    TaxCredit,
+    ValidationWarning,
+    WhatIfParameter,
+} from "./featureTypes";
 
 export type AssetClass = {
     id: string;
@@ -164,68 +210,6 @@ export type SimulationInput = {
     additionalPensions?: PensionConfig[];
     businessIncome?: BusinessIncome[];
 };
-
-// --- Phase 6: Labor Income ---
-export type LaborIncomeEvent = {
-    id: string;              // Unique ID for UI handling
-    age: number;             // Age when income changes
-    netMonthlyIncome: number; // New Net Monthly Income (Real value)
-    savingsRate: number;      // Savings Rate (0.0 - 1.0)
-    description?: string;    // e.g. "Promotion", "Job Switch"
-};
-
-export type LaborIncomeSettings = {
-    enabled: boolean;
-    currentNetMonthlyIncome: number;
-    currentSavingsRate: number; // 0.0 - 1.0
-    events: LaborIncomeEvent[];
-};
-
-// --- Phase 1: New Assets & Pensions ---
-
-export type RealEstateAsset = {
-    id: string;
-    name: string;
-    currentValue: number;
-    growthRate: number;       // Annual appreciation (e.g., 0.03)
-    rentalYield: number;      // Annual rental income % (e.g., 0.04)
-    managementCost: number;   // Annual cost % (e.g., 0.01)
-    type: 'residential' | 'investment';
-};
-
-export type PensionType = 'national' | 'personal' | 'dc' | 'db';
-
-export type PensionConfig = {
-    id: string;
-    name: string;
-    type: PensionType;
-    currentValue: number;     // Current balance or accumulated amount
-    monthlyContribution: number;
-
-    // DC Specific
-    expectedReturn?: number;  // For DC/Personal
-
-    // DB Specific
-    startDate?: string;       // Employment start date (optional)
-    salaryGrowth?: number;    // Annual salary growth for DB projection
-    dbMultiplier?: number;    // e.g. 1/12
-
-    // Payout
-    startAge: number;
-    payoutType: 'lifetime' | 'fixed_period';
-    payoutYears?: number;     // If fixed_period
-    monthlyPayout?: number;   // NEW: Direct monthly payout amount (for DB)
-};
-
-export type BusinessIncome = {
-    id: string;
-    name: string;
-    monthlyIncome: number;
-    growthRate: number;       // Annual growth of income
-    startAge: number;
-    endAge: number;
-};
-
 
 export type TimelineRow = {
     month: number;
@@ -461,217 +445,4 @@ export type SimulationTrajectoryStats = {
     p50: number[];   // Median
     p75: number[];
     p90: number[];   // 90th percentile
-};
-
-// ============================================
-// NEW FEATURE TYPES (Phase 1-5)
-// ============================================
-
-// --- Phase 1: Core Simulation Extensions ---
-
-// 인플레이션 시나리오
-export type InflationScenario = {
-    type: 'normal' | 'high' | 'low' | 'custom' | 'spike';
-    baseRate: number;           // 기본 인플레이션율
-    spikeStartAge?: number;     // 스파이크 시작 연령
-    spikeDurationYears?: number; // 스파이크 기간 (년)
-    spikeRate?: number;         // 스파이크 기간 인플레이션율
-};
-
-// 건강보험료 (지역가입자)
-export type HealthInsurance = {
-    enabled: boolean;
-    mode: 'simple' | 'detailed'; // [NEW] Mode selector
-
-    // Simple Mode
-    monthlyPremium: number;     // 월 보험료 (은퇴 후)
-    inflationLinked: boolean;   // 물가 연동 여부
-
-    // Detailed Mode
-    propertyValue?: number;     // 주택/건물 과세표준액 (시세의 약 60~70%)
-    carValue?: number;          // 차량 가액
-    isDependent?: boolean;      // 피부양자 자격 여부 (True면 0원)
-};
-
-// 세액공제 설정
-export type TaxCredit = {
-    enabled: boolean;
-    mode: "manual" | "law_2026";
-    lawYear: 2026;
-    incomeBasis: "simulated_taxable_income";
-    pensionSavingsContribution: number;  // 연금저축 연간 납입액
-    irpContribution: number;              // IRP 연간 납입액
-    creditRate?: number;                  // manual 모드에서만 사용
-};
-
-// 퇴직금 설정
-export type SeveranceSettings = {
-    enabled: boolean;
-    estimatedAmount: number;    // 예상 퇴직금
-    payoutType: 'lump_sum' | 'annuity';  // 일시금 or 연금화
-    annuityYears?: number;      // 연금 수령 기간
-};
-
-// 주택연금 (역모기지)
-export type ReverseAnnuity = {
-    enabled: boolean;
-    houseValue: number;         // 주택 가치
-    startAge: number;           // 수령 시작 나이
-    monthlyPayment: number;     // 예상 월 수령액 (HF 계산기 기준)
-};
-
-// --- Phase 2: Advanced Withdrawal Strategies ---
-
-// Guardrails 전략 설정
-export type GuardrailsSettings = {
-    baseRate: number;           // 기본 인출률 (e.g., 0.04)
-    upperThreshold: number;     // 상한 (e.g., 0.05)
-    lowerThreshold: number;     // 하한 (e.g., 0.03)
-    adjustmentRate: number;     // 조정폭 (e.g., 0.10 = 10%)
-};
-
-// Bucket 전략 설정
-export type BucketSettings = {
-    shortTermYears: number;     // 단기 버킷 기간 (현금, 1-3년)
-    midTermYears: number;       // 중기 버킷 기간 (채권, 4-10년)
-    shortTermReturn: number;    // 단기 버킷 수익률
-    midTermReturn: number;      // 중기 버킷 수익률
-    rebalanceFrequency: 'annual' | 'semi-annual';
-};
-
-// --- Phase 3: Risk Analysis ---
-
-// 의료비/간병비 충격 시나리오
-export type MedicalShock = {
-    enabled: boolean;
-    occurrences: Array<{
-        age: number;            // 발생 연령
-        amount: number;         // 금액 (양수, 지출로 처리됨)
-        description?: string;   // 설명 (예: "암 치료비")
-    }>;
-};
-
-// 장수 리스크 설정
-export type LongevityRisk = {
-    useDistribution: boolean;   // 확률적 기대 수명 사용
-    averageLifeExpectancy: number; // 기대 수명 평균
-    stdDevYears: number;        // 표준편차 (년)
-};
-
-// 민감도 분석 결과
-export type SensitivityResult = {
-    parameter: string;          // 변경된 파라미터 이름
-    baseValue: number;          // 기본값
-    testValues: number[];       // 테스트 값들
-    successRates: number[];     // 각 값에 대한 성공률
-};
-
-// 자금 고갈 분석 결과
-export type DepletionAnalysis = {
-    depletionAges: number[];    // 각 경로의 고갈 연령 (-1 = 고갈 안됨)
-    histogram: Array<{
-        ageRange: string;       // "70-74", "75-79" 등
-        count: number;          // 해당 구간 경로 수
-        percentage: number;     // 비율
-    }>;
-    medianDepletionAge: number | null;  // 중위 고갈 연령
-    neverDepletedRate: number;  // 고갈되지 않은 비율
-};
-
-// Sequence of Returns Risk 분석 결과
-export type SoRRAnalysis = {
-    earlyRetirementImpact: number;  // 은퇴 초 5년 수익률이 나쁠 때의 영향
-    lateRetirementImpact: number;   // 은퇴 후 5년 수익률이 나쁠 때의 영향
-    scenarios: Array<{
-        name: string;
-        successRate: number;
-        finalAssetsMean: number;
-    }>;
-};
-
-// --- Phase 4: Comparison & What-If ---
-
-// 시나리오 비교 결과
-export type ScenarioComparisonResult = {
-    scenarios: Array<{
-        id: string;
-        name: string;
-        summary: SimulationSummary;
-        trajectoryP50: number[];  // 50th percentile trajectory
-    }>;
-};
-
-// What-If 분석 파라미터
-export type WhatIfParameter =
-    | 'retire_age'
-    | 'annual_return'
-    | 'withdrawal_rate'
-    | 'monthly_contribution'
-    | 'initial_balance';
-
-// --- Phase 5: UX Improvements ---
-
-// 입력 유효성 검사 결과
-export type ValidationWarning = {
-    field: string;
-    message: string;
-    severity: 'error' | 'warning' | 'info';
-};
-
-// 즐겨찾기 자산군
-export type FavoriteAsset = {
-    id: string;
-    name: string;
-    expectedAnnualReturn: number;
-    annualVolatility: number;
-    category: 'stock' | 'bond' | 'reit' | 'commodity' | 'cash' | 'other';
-};
-
-// 온보딩 상태
-export type OnboardingState = {
-    hasSeenIntro: boolean;
-    currentStep: number;
-    completedSteps: number[];
-};
-
-// --- Phase 7: Historical Backtesting & Auto-Rebalancing ---
-
-// 역사적 자산 유형 (historicalData.ts와 동기화)
-export type HistoricalAssetType =
-    | 'us_stock'
-    | 'global_stock'
-    | 'us_bond'
-    | 'korea_stock'
-    | 'cash'
-    | 'reit';
-
-// 리밸런싱 설정
-export type RebalancingSettings = {
-    enabled: boolean;
-    frequency: 'monthly' | 'quarterly' | 'semi-annual' | 'annual' | 'threshold';
-    thresholdPercent?: number;     // 목표 배분에서 이탈 허용 % (예: 0.05 = 5%)
-    taxEfficient?: boolean;        // 세금 효율적 리밸런싱 (매수만으로)
-    tradingCostPercent?: number;   // 거래 비용 % (기본 0.1%)
-};
-
-// 역사적 백테스팅 결과
-export type BacktestResult = {
-    scenarios: Array<{
-        startYear: number;
-        endYear: number;
-        successRate: number;
-        finalAssetsReal: number;
-        worstYear: number;
-        worstReturn: number;
-    }>;
-    overallSuccessRate: number;
-    averageFinalAssets: number;
-};
-
-// 리밸런싱 이벤트 (타임라인 추적용)
-export type RebalancingEvent = {
-    month: number;
-    beforeAllocations: Record<string, number>;
-    afterAllocations: Record<string, number>;
-    tradingCost: number;
 };

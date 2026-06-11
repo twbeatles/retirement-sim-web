@@ -21,6 +21,11 @@
 - `includeSampleTimelines=false` 또는 `maxSampleTimelines=0`이면 `display.samples[]`도 비워 둡니다.
 - 시나리오 저장소와 플랜 JSON은 `schemaVersion: 3`을 사용합니다.
 - IndexedDB 초기화/로드 실패 시 앱에서 안내를 표시하고 JSON 가져오기/내보내기 우회 경로를 제공합니다.
+- full Monte Carlo 경로 수는 최대 `10,000`개로 제한합니다. UI, validation, engine 방어선이 같은 상한을 사용합니다.
+- JSON 가져오기는 UTF-8 V2/V3 plan envelope만 지원하며 파일 크기는 최대 `1MB`입니다.
+- 외부 plan의 주요 배열은 validation 단계에서 과도한 크기를 차단합니다.
+- `requestSimulation()`의 latest-wins coalescing에서 교체된 queued 요청은 `AbortError`로 reject됩니다. UI는 이 오류를 사용자 오류로 표시하지 않습니다.
+- 저장소 로드 중 손상된 IndexedDB record는 가능한 경우 건너뛰고 정상 record를 계속 표시합니다.
 
 ## 규칙과 데이터
 
@@ -50,19 +55,29 @@ frontend/
     components/
       plan-editor/      # V3 플랜 편집 섹션
       scenario-manager/ # 저장 시나리오 preset/helper
+      scenario-comparison/
+      risk-dashboard/
+      what-if/
+      income-manager/
       simple-dashboard/ # 간편 대시보드 표시 helper
     hooks/
     logic/
       engine/
         runSimulation.ts
+        runConfig.ts
+        modePolicy.ts
+        distributionStats.ts
+        pathReturns.ts
         pathSimulation.ts
         pathReplay.ts
         pathSelection.ts
         summary.ts
+      featureTypes.ts    # Phase 1-7 확장 타입
+      types.ts           # 기존 public type facade
       plan/              # SimulationPlanV3 스키마와 converter
       planV2/            # v2 가져오기 마이그레이션 helper
       rules/
-      validation/
+      validation/        # facade + V3 shape/enum/runtime policy helper
       simulation.worker.ts
       simulationClient.ts
       resultDisplay.ts
@@ -92,6 +107,8 @@ npm run verify:ci
 ## 참고
 
 - 일부 UI 상태는 아직 `SimulationInput`에서 시작하지만 worker/client/storage/report 경계에서는 `SimulationPlanV3`로 정규화됩니다.
+- `logic/types.ts`는 기존 import 호환을 위한 facade입니다. 확장 기능 타입은 `logic/featureTypes.ts`에 분리되어 있습니다.
+- 긴 UI 컴포넌트는 feature 폴더의 presentational component/helper로 분리하되 기존 public component export는 유지합니다.
 - `PlanV2Editor.tsx`처럼 과거 이름을 유지한 파일이 있어도 현재 동작은 canonical v3 플랜 편집을 기준으로 합니다.
 - `annualRate <= -1`, `stressTest.annualDeclineRate >= 1` 같은 비정상 연율은 blocking validation error로 처리됩니다.
 

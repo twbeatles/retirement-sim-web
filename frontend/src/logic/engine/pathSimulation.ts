@@ -1,7 +1,6 @@
 import type { SimulationInput, TimelineRow } from "../types";
 import {
     randomNormal,
-    randomNormalArray,
     annuityPayment,
     calculateVPWRate,
 } from "../math";
@@ -16,6 +15,7 @@ import type {
     PathSimulationResult,
     SimulationContext,
 } from "./types";
+import { createMonthlyGeneralReturns } from "./pathReturns";
 type TaxableSource = keyof NonNullable<SimulationContext["incomeTreatmentBySource"]>;
 
 function isSourceTaxable(ctx: SimulationContext, source: TaxableSource): boolean {
@@ -42,7 +42,7 @@ export function simulateOnePath(
     runOptions: PathSimulationOptions = {}
 ): PathSimulationResult {
     const { current_age } = input;
-    const { mu_m, sig_m, r_private, infl_m, eventsMap, monthsToRetire, totalMonths, initialDebt, debtMonthlyRate, contributionByMonth } = ctx;
+    const { mu_m, r_private, infl_m, eventsMap, monthsToRetire, totalMonths, initialDebt, debtMonthlyRate, contributionByMonth } = ctx;
     const captureTimeline = runOptions.captureTimeline ?? true;
 
     if (totalMonths <= 0) {
@@ -65,37 +65,9 @@ export function simulateOnePath(
         trajectorySink && trajectoryPathIndex >= 0
             ? trajectoryPathIndex * trajectoryLength
             : -1;
-
-    let r_general: number[] | Float64Array;
-
     const historicalOffset = historicalPathIndex !== undefined ? historicalPathIndex * 12 : 0;
 
-    // Phase 7: Historical Mode - use actual historical returns
-    if (ctx.historicalReturns && ctx.historicalReturns.length > 0 && historicalPathIndex !== undefined) {
-        r_general = new Float64Array(totalMonths);
-        for (let m = 0; m < totalMonths; m++) {
-            const idx = (historicalOffset + m) % ctx.historicalReturns.length;
-            r_general[m] = ctx.historicalReturns[idx];
-        }
-    } else if (stochastic) {
-        r_general = randomNormalArray(totalMonths, mu_m, sig_m);
-        if (input.stress_test?.enabled) {
-            // Apply Stress Test: Override returns for a specific period
-            const st = input.stress_test;
-            const startM = st.startFromRetirement ? monthsToRetire : 0;
-            const endM = Math.min(totalMonths, startM + st.durationMonths);
-
-            // Calculate monthly stress rate: (1 - annualDecline)^(1/12) - 1
-            // e.g. 20% decline => (0.8)^(1/12) - 1
-            const factor = Math.pow(1 - st.annualDeclineRate, 1.0 / 12.0) - 1;
-
-            for (let m = startM; m < endM; m++) {
-                r_general[m] = factor;
-            }
-        }
-    } else {
-        r_general = new Float64Array(totalMonths).fill(mu_m);
-    }
+    const r_general = createMonthlyGeneralReturns(input, ctx, stochastic, historicalPathIndex);
 
     // Initial State
     let balGeneral = input.general.current_balance;

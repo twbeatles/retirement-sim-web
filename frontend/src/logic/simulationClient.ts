@@ -63,6 +63,16 @@ const coalescing: Record<SimulationRequestPriority, CoalescingState> = {
     }
 };
 
+function createCoalescedRequestAbortError(): Error {
+    const error = new Error("Simulation request replaced by a newer request");
+    error.name = "AbortError";
+    return error;
+}
+
+export function isSimulationAbortError(error: unknown): boolean {
+    return error instanceof Error && error.name === "AbortError";
+}
+
 function nextRequestId(kind: WorkerRequestKind, lane: WorkerLane): string {
     sequence += 1;
     return `${lane}-${kind}-${Date.now()}-${sequence}`;
@@ -241,9 +251,15 @@ function requestSimulationCoalesced(
             return;
         }
 
-        // latest-wins coalescing: keep one queued simulation and fan-out promises.
+        // latest-wins coalescing: replace the queued payload and reject older queued callers.
+        const replaced = state.queued;
+        const abortError = createCoalescedRequestAbortError();
+        for (const replacedConsumer of replaced.consumers) {
+            replacedConsumer.reject(abortError);
+        }
+        replaced.consumers.length = 0;
         state.queued.payload = payload;
-        state.queued.consumers.push(consumer);
+        state.queued.consumers = [consumer];
     });
 }
 

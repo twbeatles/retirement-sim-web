@@ -1,5 +1,6 @@
 import React from "react";
 import { Section, Field } from "../../common/UIComponents";
+import { clampMonteCarloPaths } from "../../../logic/runtimeLimits";
 import { num } from "../../../utils/format";
 import type { SimulationInput } from "../../../logic/types";
 
@@ -36,7 +37,7 @@ export function BasicSection({ input, setInput }: BasicSectionProps) {
                                 ...input,
                                 simulation_settings: {
                                     ...input.simulation_settings,
-                                    mc_paths: Math.max(1, Math.floor(num(v)))
+                                    mc_paths: clampMonteCarloPaths(num(v))
                                 }
                             })
                         }
@@ -44,7 +45,7 @@ export function BasicSection({ input, setInput }: BasicSectionProps) {
                     />
                 </div>
                 <p className="text-xs text-slate-500 dark:text-slate-400 mt-3 font-medium">
-                    💡 1,000회 이상 권장. 높을수록 정확하지만 계산 시간이 길어집니다.
+                    💡 1,000회 이상 권장. 최대 10,000회까지 입력할 수 있습니다.
                 </p>
             </Section>
         </>

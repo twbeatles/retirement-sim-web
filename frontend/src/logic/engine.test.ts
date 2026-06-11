@@ -1,5 +1,6 @@
 import { describe, it, expect } from 'vitest';
 import { runSimulation } from './engine';
+import { MAX_FULL_MONTE_CARLO_PATHS } from './runtimeLimits';
 import { type SimulationInput } from './types';
 
 // Minimal Helper for creating input
@@ -480,6 +481,23 @@ describe('Simulation Engine', () => {
         input.end_age = 65;
 
         expect(() => runSimulation(input)).toThrow();
+    });
+
+    it('throws for unknown simulation modes instead of falling back to deterministic', () => {
+        const input = createBaseInput();
+        input.simulation_settings.mode = 'monteCarlo' as SimulationInput['simulation_settings']['mode'];
+
+        expect(() => runSimulation(input)).toThrow('시뮬레이션 모드');
+    });
+
+    it('throws when a full montecarlo run exceeds the configured path limit', () => {
+        const input = createBaseInput();
+        input.simulation_settings = {
+            mode: 'montecarlo',
+            mc_paths: MAX_FULL_MONTE_CARLO_PATHS + 1
+        };
+
+        expect(() => runSimulation(input)).toThrow('시뮬레이션 횟수');
     });
 
     it('keeps detailed health insurance premium at zero when dependent is true', () => {

@@ -1,4 +1,5 @@
 import { getHistoricalYearRange } from "../historicalData";
+import { MAX_FULL_MONTE_CARLO_PATHS } from "../runtimeLimits";
 import type { SimulationInput, ValidationWarning } from "../types";
 import {
     isFiniteNumber,
@@ -9,6 +10,7 @@ import {
     requireNonNegative,
     requireRatio,
 } from "./shared";
+import { requireCollectionLimit, VALID_SIMULATION_MODES } from "./runtimePolicy";
 
 export function validateLegacySimulationInput(
     input: SimulationInput,
@@ -94,13 +96,31 @@ export function validateLegacySimulationInput(
         pushWarning(warnings, "debt.monthly_payment", "부채가 있을 때 월 상환액이 0원입니다.");
     }
 
+    if (!VALID_SIMULATION_MODES.has(input.simulation_settings.mode)) {
+        pushError(warnings, "simulation_settings.mode", "시뮬레이션 모드가 유효하지 않습니다.");
+    }
+    if (input.simulation_settings.seed !== undefined && !Number.isFinite(input.simulation_settings.seed)) {
+        pushError(warnings, "simulation_settings.seed", "시뮬레이션 시드는 유한한 숫자여야 합니다.");
+    }
     if (!Number.isFinite(input.simulation_settings.mc_paths) || !Number.isInteger(input.simulation_settings.mc_paths)) {
         pushError(warnings, "simulation_settings", "시뮬레이션 횟수는 정수여야 합니다.");
     } else if (input.simulation_settings.mc_paths < 1) {
         pushError(warnings, "simulation_settings", "시뮬레이션 횟수는 1 이상이어야 합니다.");
-    } else if (input.simulation_settings.mc_paths > 20000) {
-        pushWarning(warnings, "simulation_settings", "시뮬레이션 횟수가 매우 큽니다. 성능 저하 가능성이 있습니다.");
+    } else if (input.simulation_settings.mc_paths > MAX_FULL_MONTE_CARLO_PATHS) {
+        pushError(
+            warnings,
+            "simulation_settings",
+            `시뮬레이션 횟수는 ${MAX_FULL_MONTE_CARLO_PATHS.toLocaleString()}회 이하여야 합니다.`
+        );
     }
+
+    requireCollectionLimit(warnings, "events", "일회성 이벤트", input.events);
+    requireCollectionLimit(warnings, "expense_definitions", "지출 정의", input.expense_definitions);
+    requireCollectionLimit(warnings, "realEstate", "부동산 자산", input.realEstate);
+    requireCollectionLimit(warnings, "additionalPensions", "추가 연금", input.additionalPensions);
+    requireCollectionLimit(warnings, "businessIncome", "사업소득", input.businessIncome);
+    requireCollectionLimit(warnings, "labor_income.events", "근로소득 이벤트", input.labor_income?.events);
+    requireCollectionLimit(warnings, "medical_shocks.occurrences", "의료비 쇼크", input.medical_shocks?.occurrences);
 
     if (!input.portfolio.assetClasses || input.portfolio.assetClasses.length === 0) {
         pushError(warnings, "portfolio", "포트폴리오에 최소 하나의 자산군이 포함되어야 합니다.");

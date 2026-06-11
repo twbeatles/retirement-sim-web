@@ -1,30 +1,22 @@
 import React from 'react';
 import type { SimulationInput, LaborIncomeEvent } from '../logic/types';
 import { ResponsiveContainer, AreaChart, Area, XAxis, YAxis, Tooltip } from 'recharts';
+import {
+    buildLaborChartData,
+    generateIncomeEventId,
+    parseIncomeNumber,
+    resolveLaborIncome,
+} from './income-manager/helpers';
 
 interface IncomeManagerProps {
     input: SimulationInput;
     onChange: (input: SimulationInput) => void;
 }
 
-function num(v: string) {
-    const n = Number(v);
-    return isNaN(n) ? 0 : n;
-}
-
-function generateId() {
-    return Math.random().toString(36).substr(2, 9);
-}
-
 export const IncomeManager = React.memo(function IncomeManager({ input, onChange }: IncomeManagerProps) {
     const labor = React.useMemo(
-        () => input.labor_income || {
-            enabled: false,
-            currentNetMonthlyIncome: 3000000,
-            currentSavingsRate: 0.5,
-            events: []
-        },
-        [input.labor_income]
+        () => resolveLaborIncome(input),
+        [input]
     );
 
     const handleEnableToggle = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -51,7 +43,7 @@ export const IncomeManager = React.memo(function IncomeManager({ input, onChange
 
     const addEvent = () => {
         const newEvent: LaborIncomeEvent = {
-            id: generateId(),
+            id: generateIncomeEventId(),
             age: input.current_age + 5,
             netMonthlyIncome: labor.currentNetMonthlyIncome * 1.2,
             savingsRate: labor.currentSavingsRate,
@@ -75,27 +67,10 @@ export const IncomeManager = React.memo(function IncomeManager({ input, onChange
     };
 
     // Visualization Data
-    const chartData = React.useMemo(() => {
-        const data = [];
-        const sortedEvents = [...labor.events].sort((a, b) => a.age - b.age);
-        let currentIncome = labor.currentNetMonthlyIncome;
-        let currentRate = labor.currentSavingsRate;
-        let eventIdx = 0;
-
-        for (let age = input.current_age; age < input.retire_age; age++) {
-            while (eventIdx < sortedEvents.length && age >= sortedEvents[eventIdx].age) {
-                currentIncome = sortedEvents[eventIdx].netMonthlyIncome;
-                currentRate = sortedEvents[eventIdx].savingsRate;
-                eventIdx++;
-            }
-            data.push({
-                age: Math.floor(age),
-                savings: currentIncome * currentRate,
-                income: currentIncome
-            });
-        }
-        return data;
-    }, [labor, input.current_age, input.retire_age]);
+    const chartData = React.useMemo(
+        () => buildLaborChartData(labor, input.current_age, input.retire_age),
+        [labor, input.current_age, input.retire_age]
+    );
 
     const currentMonthlySavings = Math.round((labor.currentNetMonthlyIncome * labor.currentSavingsRate) / 10000);
 
@@ -148,7 +123,7 @@ export const IncomeManager = React.memo(function IncomeManager({ input, onChange
                             className="w-full pl-3 pr-10 py-2 bg-white dark:bg-zinc-900 border border-slate-200 dark:border-zinc-700 rounded-lg text-sm font-bold text-slate-900 dark:text-white text-right focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-all"
                             type="number"
                             value={Math.round(labor.currentNetMonthlyIncome / 10000)}
-                            onChange={e => handleBaseChange('currentNetMonthlyIncome', num(e.target.value) * 10000)}
+                            onChange={e => handleBaseChange('currentNetMonthlyIncome', parseIncomeNumber(e.target.value) * 10000)}
                         />
                         <span className="absolute right-3 text-sm font-semibold text-slate-500 dark:text-slate-400 pointer-events-none select-none">만원</span>
                     </div>
@@ -161,7 +136,7 @@ export const IncomeManager = React.memo(function IncomeManager({ input, onChange
                             type="number"
                             step="5"
                             value={Math.round(labor.currentSavingsRate * 100)}
-                            onChange={e => handleBaseChange('currentSavingsRate', num(e.target.value) / 100)}
+                            onChange={e => handleBaseChange('currentSavingsRate', parseIncomeNumber(e.target.value) / 100)}
                         />
                         <span className="absolute right-3 text-sm font-semibold text-slate-500 dark:text-slate-400 pointer-events-none select-none">%</span>
                     </div>
@@ -206,7 +181,7 @@ export const IncomeManager = React.memo(function IncomeManager({ input, onChange
                                             type="number"
                                             className="w-8 bg-transparent border-none text-right font-bold text-slate-900 dark:text-white focus:outline-none p-0 text-sm"
                                             value={evt.age}
-                                            onChange={e => updateEvent(evt.id, { age: num(e.target.value) })}
+                                            onChange={e => updateEvent(evt.id, { age: parseIncomeNumber(e.target.value) })}
                                         />
                                         <span className="text-xs font-medium text-slate-500">세</span>
                                     </div>
@@ -218,7 +193,7 @@ export const IncomeManager = React.memo(function IncomeManager({ input, onChange
                                             type="number"
                                             className="w-10 bg-transparent border-none text-right font-bold text-slate-900 dark:text-white focus:outline-none p-0 text-sm"
                                             value={Math.round(evt.netMonthlyIncome / 10000)}
-                                            onChange={e => updateEvent(evt.id, { netMonthlyIncome: num(e.target.value) * 10000 })}
+                                            onChange={e => updateEvent(evt.id, { netMonthlyIncome: parseIncomeNumber(e.target.value) * 10000 })}
                                         />
                                         <span className="text-xs font-medium text-slate-500">만원</span>
                                     </div>
@@ -230,7 +205,7 @@ export const IncomeManager = React.memo(function IncomeManager({ input, onChange
                                             type="number"
                                             className="w-8 bg-transparent border-none text-right font-bold text-slate-900 dark:text-white focus:outline-none p-0 text-sm"
                                             value={Math.round(evt.savingsRate * 100)}
-                                            onChange={e => updateEvent(evt.id, { savingsRate: num(e.target.value) / 100 })}
+                                            onChange={e => updateEvent(evt.id, { savingsRate: parseIncomeNumber(e.target.value) / 100 })}
                                         />
                                         <span className="text-xs font-medium text-slate-500">%</span>
                                     </div>

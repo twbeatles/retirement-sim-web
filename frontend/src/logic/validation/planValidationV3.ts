@@ -1,4 +1,5 @@
 import type { SimulationPlanV3 } from "../plan";
+import { MAX_FULL_MONTE_CARLO_PATHS } from "../runtimeLimits";
 import type { ValidationWarning } from "../types";
 import { resolveSimulationRuleSet } from "../rules/kr";
 import {
@@ -10,6 +11,22 @@ import {
     requireNonNegative,
     requireRatio,
 } from "./shared";
+import { VALID_SIMULATION_MODES } from "./runtimePolicy";
+import {
+    pushEnumError,
+    VALID_ACCOUNT_TYPES,
+    VALID_BUCKET_REBALANCE_FREQUENCIES,
+    VALID_HEALTH_INSURANCE_TREATMENTS,
+    VALID_HOUSING_STATUSES,
+    VALID_INCOME_TYPES,
+    VALID_REBALANCING_FREQUENCIES,
+    VALID_SEVERANCE_PAYOUT_TYPES,
+    VALID_SIMPLE_DETAIL_MODES,
+    VALID_TAX_CREDIT_MODES,
+    VALID_TAX_TREATMENTS,
+    VALID_WITHDRAWAL_STRATEGIES,
+} from "./planV3Enums";
+import { ensurePlanShape, isRecord } from "./planV3Shape";
 
 type ValidatePlanOptions = {
     validateRulebook?: boolean;
@@ -22,8 +39,17 @@ export function validatePlanV3(
 ): void {
     const { validateRulebook = true } = options;
 
+    if (!isRecord(plan)) {
+        pushError(warnings, "plan", "플랜 구조가 유효하지 않습니다.");
+        return;
+    }
+
     if (plan.planVersion !== "v3") {
         pushError(warnings, "plan.planVersion", "지원되지 않는 플랜 스키마 버전입니다.");
+        return;
+    }
+
+    if (!ensurePlanShape(warnings, plan)) {
         return;
     }
 
@@ -60,10 +86,37 @@ export function validatePlanV3(
         pushError(warnings, "plan.profile.endAge", "종료 나이는 은퇴 나이보다 커야 합니다.");
     }
 
+    pushEnumError(
+        warnings,
+        "plan.profile.housingStatus",
+        VALID_HOUSING_STATUSES,
+        "주거 상태가 유효하지 않습니다.",
+        plan.profile.housingStatus
+    );
+
     const accountIds = new Set<string>();
     plan.accounts.forEach((account, index) => {
         const fieldBase = `plan.accounts.${index}`;
+        if (accountIds.has(account.id)) {
+            pushError(warnings, `${fieldBase}.id`, `계정 ID "${account.id}"가 중복됩니다.`);
+        }
         accountIds.add(account.id);
+
+        pushEnumError(warnings, `${fieldBase}.type`, VALID_ACCOUNT_TYPES, `계정 "${account.name}" 유형이 유효하지 않습니다.`, account.type);
+        pushEnumError(
+            warnings,
+            `${fieldBase}.taxTreatment`,
+            VALID_TAX_TREATMENTS,
+            `계정 "${account.name}" 세무 처리가 유효하지 않습니다.`,
+            account.taxTreatment
+        );
+        pushEnumError(
+            warnings,
+            `${fieldBase}.healthInsuranceTreatment`,
+            VALID_HEALTH_INSURANCE_TREATMENTS,
+            `계정 "${account.name}" 건강보험 처리가 유효하지 않습니다.`,
+            account.healthInsuranceTreatment
+        );
 
         requireFinite(warnings, `${fieldBase}.balance`, `계정 "${account.name}" 잔액`, account.balance);
         requireNonNegative(
@@ -180,8 +233,20 @@ export function validatePlanV3(
         }
     });
 
+    const streamIds = new Set<string>();
     plan.incomeStreams.forEach((stream, index) => {
         const fieldBase = `plan.incomeStreams.${index}`;
+        if (streamIds.has(stream.id)) {
+            pushError(warnings, `${fieldBase}.id`, `소득 흐름 ID "${stream.id}"가 중복됩니다.`);
+        }
+        streamIds.add(stream.id);
+        pushEnumError(
+            warnings,
+            `${fieldBase}.type`,
+            VALID_INCOME_TYPES,
+            `소득 흐름 "${stream.name}" 유형이 유효하지 않습니다.`,
+            stream.type
+        );
         requireFinite(
             warnings,
             `${fieldBase}.monthlyAmount`,
@@ -354,6 +419,92 @@ export function validatePlanV3(
             "plan.withdrawalPolicy.retirementSpendingTarget",
             "은퇴 생활비 목표가 필수 생활비 기준보다 낮습니다."
         );
+    }
+
+    pushEnumError(
+        warnings,
+        "plan.withdrawalPolicy.strategy.strategy",
+        VALID_WITHDRAWAL_STRATEGIES,
+        "인출 전략이 유효하지 않습니다.",
+        plan.withdrawalPolicy.strategy.strategy
+    );
+    pushEnumError(
+        warnings,
+        "plan.withdrawalPolicy.strategy.taxStrategy",
+        VALID_SIMPLE_DETAIL_MODES,
+        "세금 계산 방식이 유효하지 않습니다.",
+        plan.withdrawalPolicy.strategy.taxStrategy ?? "simple"
+    );
+    pushEnumError(
+        warnings,
+        "plan.withdrawalPolicy.healthInsurance.mode",
+        VALID_SIMPLE_DETAIL_MODES,
+        "건강보험 계산 방식이 유효하지 않습니다.",
+        plan.withdrawalPolicy.healthInsurance.mode
+    );
+    pushEnumError(
+        warnings,
+        "plan.withdrawalPolicy.taxCredit.mode",
+        VALID_TAX_CREDIT_MODES,
+        "세액공제 모드가 유효하지 않습니다.",
+        plan.withdrawalPolicy.taxCredit.mode
+    );
+    pushEnumError(
+        warnings,
+        "plan.withdrawalPolicy.rebalancing.frequency",
+        VALID_REBALANCING_FREQUENCIES,
+        "리밸런싱 주기가 유효하지 않습니다.",
+        plan.withdrawalPolicy.rebalancing.frequency
+    );
+    pushEnumError(
+        warnings,
+        "plan.withdrawalPolicy.bucket.rebalanceFrequency",
+        VALID_BUCKET_REBALANCE_FREQUENCIES,
+        "버킷 리밸런싱 주기가 유효하지 않습니다.",
+        plan.withdrawalPolicy.bucket.rebalanceFrequency
+    );
+    pushEnumError(
+        warnings,
+        "plan.withdrawalPolicy.severance.payoutType",
+        VALID_SEVERANCE_PAYOUT_TYPES,
+        "퇴직금 수령 방식이 유효하지 않습니다.",
+        plan.withdrawalPolicy.severance.payoutType
+    );
+
+    pushEnumError(
+        warnings,
+        "plan.simulationSettings.mode",
+        VALID_SIMULATION_MODES,
+        "시뮬레이션 모드가 유효하지 않습니다.",
+        plan.simulationSettings.mode
+    );
+    requireFinite(
+        warnings,
+        "plan.simulationSettings.monteCarloPaths",
+        "플랜 몬테카를로 경로 수",
+        plan.simulationSettings.monteCarloPaths
+    );
+    if (
+        isFiniteNumber(plan.simulationSettings.monteCarloPaths) &&
+        !Number.isInteger(plan.simulationSettings.monteCarloPaths)
+    ) {
+        pushError(warnings, "plan.simulationSettings.monteCarloPaths", "플랜 몬테카를로 경로 수는 정수여야 합니다.");
+    }
+    if (isFiniteNumber(plan.simulationSettings.monteCarloPaths) && plan.simulationSettings.monteCarloPaths < 1) {
+        pushError(warnings, "plan.simulationSettings.monteCarloPaths", "플랜 몬테카를로 경로 수는 1 이상이어야 합니다.");
+    }
+    if (
+        isFiniteNumber(plan.simulationSettings.monteCarloPaths) &&
+        plan.simulationSettings.monteCarloPaths > MAX_FULL_MONTE_CARLO_PATHS
+    ) {
+        pushError(
+            warnings,
+            "plan.simulationSettings.monteCarloPaths",
+            `플랜 몬테카를로 경로 수는 ${MAX_FULL_MONTE_CARLO_PATHS.toLocaleString()}개 이하여야 합니다.`
+        );
+    }
+    if (plan.simulationSettings.seed !== undefined && !Number.isFinite(plan.simulationSettings.seed)) {
+        pushError(warnings, "plan.simulationSettings.seed", "플랜 시뮬레이션 시드는 유한한 숫자여야 합니다.");
     }
 
     requireFinite(

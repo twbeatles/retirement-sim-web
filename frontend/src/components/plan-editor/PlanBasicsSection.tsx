@@ -1,5 +1,6 @@
 import type { HousingStatus } from "../../logic/types";
 import type { SimulationPlanV3 } from "../../logic/plan";
+import { clampMonteCarloPaths } from "../../logic/runtimeLimits";
 import { formatMoney } from "../../utils/format";
 import { Field, Section } from "../common/UIComponents";
 import { HOUSING_OPTIONS } from "./constants";
@@ -66,10 +67,7 @@ export function PlanBasicsSection({ plan, plannedMonthlySpending, applyPlan }: P
                         value={plan.simulationSettings.monteCarloPaths}
                         onChange={(value) =>
                             applyPlan((draft) => {
-                                draft.simulationSettings.monteCarloPaths = Math.max(
-                                    1,
-                                    Math.floor(Number(value))
-                                );
+                                draft.simulationSettings.monteCarloPaths = clampMonteCarloPaths(Number(value));
                             })
                         }
                         suffix="개"

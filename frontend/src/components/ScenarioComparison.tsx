@@ -3,26 +3,13 @@
  * Allows comparing multiple saved scenarios in a single chart
  */
 import React, { useCallback, useEffect, useMemo, useState } from "react";
-import { LineChart, Line, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid, Legend } from "recharts";
-import { getRepresentativeTimeline } from "../logic/resultDisplay";
 import type { SimulationResult } from "../logic/types";
 import { requestSimulationBatch } from "../logic/simulationClient";
 import { scenarioStorage, type SavedScenario } from "../services/storage";
-
-const COLORS = ["#8884d8", "#82ca9d", "#ffc658", "#ff7300", "#00C49F", "#FFBB28"];
-
-type ComparisonData = {
-    id: string;
-    name: string;
-    color: string;
-    result: SimulationResult;
-    trajectory: { month: number; value: number }[];
-};
-
-type ChartPoint = {
-    month: number;
-    [seriesId: string]: number | undefined;
-};
+import { buildComparisonChartData, getTrajectoryP50 } from "./scenario-comparison/helpers";
+import { ComparisonResults } from "./scenario-comparison/ComparisonResults";
+import { ScenarioSelector } from "./scenario-comparison/ScenarioSelector";
+import { COMPARISON_COLORS, type ComparisonData } from "./scenario-comparison/types";
 
 interface Props {
     currentResult: SimulationResult | null;
@@ -33,15 +20,18 @@ export function ScenarioComparison({ currentResult }: Props) {
     const [selectedIds, setSelectedIds] = useState<number[]>([]);
     const [comparisonData, setComparisonData] = useState<ComparisonData[]>([]);
     const [isComparing, setIsComparing] = useState(false);
+    const [comparisonError, setComparisonError] = useState<string | null>(null);
 
     const loadScenarios = useCallback(async (): Promise<SavedScenario[]> => {
         const scenarios = await scenarioStorage.getAllScenarios();
         setSavedScenarios(scenarios);
+        setComparisonError(null);
         return scenarios;
     }, []);
 
     useEffect(() => {
         void loadScenarios().catch((error) => {
+            setComparisonError("저장된 시나리오를 불러오지 못했습니다. 브라우저 저장소 설정을 확인해주세요.");
             console.error("Failed to load scenarios", error);
         });
     }, [loadScenarios]);
@@ -54,27 +44,9 @@ export function ScenarioComparison({ currentResult }: Props) {
         );
     };
 
-    const getTrajectoryP50 = (result: SimulationResult): { month: number; value: number }[] => {
-        if (result.mode !== "deterministic" && result.trajectoryStats) {
-            return result.trajectoryStats.month.map((month, index) => ({
-                month,
-                value: result.trajectoryStats!.p50[index]
-            }));
-        }
-
-        const representativeTimeline = getRepresentativeTimeline(result);
-        if (representativeTimeline.length > 0) {
-            return representativeTimeline.map((row) => ({
-                month: row.month,
-                value: row.totalAssetsReal
-            }));
-        }
-
-        return [];
-    };
-
     const runComparison = async () => {
         setIsComparing(true);
+        setComparisonError(null);
 
         try {
             // Refresh just-in-time to avoid stale scenario list during comparison.
@@ -85,7 +57,7 @@ export function ScenarioComparison({ currentResult }: Props) {
                 results.push({
                     id: "current",
                     name: "현재 설정",
-                    color: COLORS[0],
+                    color: COMPARISON_COLORS[0],
                     result: currentResult,
                     trajectory: getTrajectoryP50(currentResult)
                 });
@@ -117,7 +89,7 @@ export function ScenarioComparison({ currentResult }: Props) {
                     results.push({
                         id: `scenario-${scenario.id}`,
                         name: scenario.name,
-                        color: COLORS[(index + 1) % COLORS.length],
+                        color: COMPARISON_COLORS[(index + 1) % COMPARISON_COLORS.length],
                         result,
                         trajectory: getTrajectoryP50(result)
                     });
@@ -126,30 +98,14 @@ export function ScenarioComparison({ currentResult }: Props) {
 
             setComparisonData(results);
         } catch (error) {
+            setComparisonError("시나리오 비교를 완료하지 못했습니다. 저장된 시나리오를 확인한 뒤 다시 시도해주세요.");
             console.error("Scenario comparison failed:", error);
         } finally {
             setIsComparing(false);
         }
     };
 
-    const chartData = useMemo<ChartPoint[]>(() => {
-        if (comparisonData.length === 0) return [];
-
-        const pointByMonth = new Map<number, ChartPoint>();
-
-        for (const item of comparisonData) {
-            for (const row of item.trajectory) {
-                if (row.month % 12 !== 0) {
-                    continue;
-                }
-                const existing = pointByMonth.get(row.month) ?? { month: row.month };
-                existing[item.id] = row.value;
-                pointByMonth.set(row.month, existing);
-            }
-        }
-
-        return Array.from(pointByMonth.values()).sort((a, b) => a.month - b.month);
-    }, [comparisonData]);
+    const chartData = useMemo(() => buildComparisonChartData(comparisonData), [comparisonData]);
 
     return (
         <div className="bg-white dark:bg-zinc-900 rounded-2xl p-4 lg:p-6 shadow-sm border border-slate-100 dark:border-zinc-800 transition-all">
@@ -158,139 +114,20 @@ export function ScenarioComparison({ currentResult }: Props) {
                 현재 설정과 저장된 시나리오를 최대 5개까지 비교할 수 있습니다.
             </p>
 
-            {savedScenarios.length === 0 ? (
-                <div className="flex flex-col items-center justify-center py-10 px-4 bg-slate-50 dark:bg-zinc-800/30 rounded-xl border border-dashed border-slate-200 dark:border-zinc-700">
-                    <span className="text-3xl mb-3 opacity-40">📁</span>
-                    <p className="font-medium text-slate-500 dark:text-slate-400 text-sm m-0">저장된 시나리오가 없습니다.</p>
-                </div>
-            ) : (
-                <div className="animate-in fade-in duration-300">
-                    <div className="flex flex-col gap-3 mb-6 p-4 border border-slate-200 dark:border-zinc-700 rounded-xl bg-slate-50/50 dark:bg-zinc-800/30">
-                        <div className="text-sm font-bold text-slate-700 dark:text-slate-300 flex items-center gap-2">
-                            <span>📌</span> 시나리오 선택 (최대 5개)
-                        </div>
-                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
-                            {savedScenarios.map((scenario) => (
-                                <label key={scenario.id} className="flex items-center gap-3 p-2 rounded-lg hover:bg-white dark:hover:bg-zinc-800 cursor-pointer transition-colors group/cb">
-                                    <input
-                                        type="checkbox"
-                                        className="w-4 h-4 text-blue-600 bg-slate-100 border-slate-300 rounded focus:ring-blue-500 dark:focus:ring-blue-600 dark:ring-offset-zinc-800 focus:ring-2 dark:bg-zinc-700 dark:border-zinc-600"
-                                        checked={selectedIds.includes(scenario.id)}
-                                        onChange={() => toggleScenario(scenario.id)}
-                                    />
-                                    <div className="flex flex-col min-w-0">
-                                        <span className="text-sm font-semibold text-slate-800 dark:text-slate-200 group-hover/cb:text-slate-900 dark:group-hover/cb:text-white truncate">
-                                            {scenario.name}
-                                        </span>
-                                        <span className="text-xs font-medium text-slate-500 dark:text-slate-400">
-                                            ({new Date(scenario.updatedAt).toLocaleDateString()})
-                                        </span>
-                                    </div>
-                                </label>
-                            ))}
-                        </div>
-                    </div>
-
-                    <button
-                        onClick={runComparison}
-                        disabled={isComparing || selectedIds.length === 0}
-                        className="w-full sm:w-auto px-6 py-2.5 bg-blue-600 hover:bg-blue-700 disabled:bg-slate-300 disabled:dark:bg-zinc-700 text-white font-semibold rounded-xl text-sm transition-all focus:outline-none focus:ring-2 focus:ring-blue-500/50 shadow-sm disabled:cursor-not-allowed cursor-pointer mb-6"
-                    >
-                        {isComparing ? (
-                            <div className="flex items-center justify-center gap-2">
-                                <svg className="animate-spin h-4 w-4 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24"><circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle><path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path></svg>
-                                비교 중...
-                            </div>
-                        ) : "비교 실행"}
-                    </button>
-
-                    {comparisonData.length > 0 && (
-                        <div className="animate-in fade-in slide-in-from-bottom-4 duration-500">
-                            <div className="overflow-x-auto rounded-xl border border-slate-200 dark:border-zinc-700 mb-6">
-                                <table className="w-full text-sm text-left border-collapse">
-                                    <thead>
-                                        <tr className="bg-slate-50 dark:bg-zinc-800/80 text-slate-600 dark:text-slate-400 border-b border-slate-200 dark:border-zinc-700">
-                                            <th className="p-3 font-semibold text-xs uppercase tracking-wider">시나리오</th>
-                                            <th className="p-3 font-semibold text-xs uppercase tracking-wider text-right">성공률</th>
-                                            <th className="p-3 font-semibold text-xs uppercase tracking-wider text-right">최종 실질 자산 (중간값)</th>
-                                        </tr>
-                                    </thead>
-                                    <tbody className="bg-white dark:bg-zinc-900 divide-y divide-slate-100 dark:divide-zinc-800">
-                                        {comparisonData.map((item) => (
-                                            <tr key={item.id} className="hover:bg-slate-50 dark:hover:bg-zinc-800/50 transition-colors">
-                                                <td className="p-3 font-bold text-slate-800 dark:text-slate-200 flex items-center gap-2">
-                                                    <span className="w-3 h-3 rounded-full flex-shrink-0" style={{ backgroundColor: item.color }}></span>
-                                                    {item.name}
-                                                </td>
-                                                <td className={`p-3 font-bold text-right ${item.result.summary.successRate > 0.8 ? "text-emerald-600 dark:text-emerald-400" : item.result.summary.successRate > 0.5 ? "text-amber-500 dark:text-amber-400" : "text-red-600 dark:text-red-400"}`}>
-                                                    {(item.result.summary.successRate * 100).toFixed(1)}%
-                                                </td>
-                                                <td className="p-3 font-medium text-slate-600 dark:text-slate-400 text-right">
-                                                    {Math.round(
-                                                        (item.result.mode === "deterministic"
-                                                            ? item.result.summary.finalTotalAssetsReal
-                                                            : item.result.summary.terminalStats.totalAssetsReal.p50) / 10000
-                                                    ).toLocaleString()}만원
-                                                </td>
-                                            </tr>
-                                        ))}
-                                    </tbody>
-                                </table>
-                            </div>
-
-                            <div className="h-80 w-full p-4 bg-slate-50 dark:bg-zinc-800/30 rounded-xl border border-slate-100 dark:border-zinc-800/50">
-                                <p className="text-sm font-bold text-slate-700 dark:text-slate-300 mb-2 mt-0">시간에 따른 총 자산 추이 (중간값)</p>
-                                <ResponsiveContainer width="100%" height="90%">
-                                    <LineChart data={chartData} margin={{ top: 10, right: 10, left: 0, bottom: 0 }}>
-                                        <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#e2e8f0" opacity={0.5} />
-                                        <XAxis
-                                            dataKey="month"
-                                            tickFormatter={(m) => `${Math.floor(m / 12)}년`}
-                                            tick={{ fontSize: 11, fill: '#64748b' }}
-                                            axisLine={{ stroke: '#cbd5e1' }}
-                                            tickLine={false}
-                                        />
-                                        <YAxis
-                                            tickFormatter={(v) => `${Math.round(v / 10000).toLocaleString()}만`}
-                                            width={70}
-                                            tick={{ fontSize: 11, fill: '#64748b' }}
-                                            axisLine={false}
-                                            tickLine={false}
-                                        />
-                                        <Tooltip
-                                            formatter={(v: number) => `${Math.round(v / 10000).toLocaleString()}만원`}
-                                            labelFormatter={(m) => `${Math.floor(Number(m) / 12)}년`}
-                                            contentStyle={{
-                                                backgroundColor: 'rgba(255, 255, 255, 0.95)',
-                                                border: '1px solid #e2e8f0',
-                                                borderRadius: '8px',
-                                                boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.1)',
-                                                fontSize: '0.8rem',
-                                                fontWeight: 'bold',
-                                                color: '#0f172a'
-                                            }}
-                                        />
-                                        <Legend wrapperStyle={{ fontSize: '12px', paddingTop: '10px' }} />
-                                        {comparisonData.map((item) => (
-                                            <Line
-                                                key={item.id}
-                                                type="monotone"
-                                                dataKey={item.id}
-                                                name={item.name}
-                                                stroke={item.color}
-                                                strokeWidth={2.5}
-                                                dot={false}
-                                                activeDot={{ r: 6, strokeWidth: 0 }}
-                                                isAnimationActive={false}
-                                            />
-                                        ))}
-                                    </LineChart>
-                                </ResponsiveContainer>
-                            </div>
-                        </div>
-                    )}
+            {comparisonError && (
+                <div className="mb-4 rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm font-semibold text-red-700 dark:border-red-900/40 dark:bg-red-900/10 dark:text-red-200">
+                    {comparisonError}
                 </div>
             )}
+
+            <ScenarioSelector
+                scenarios={savedScenarios}
+                selectedIds={selectedIds}
+                isComparing={isComparing}
+                onToggleScenario={toggleScenario}
+                onRunComparison={runComparison}
+            />
+            <ComparisonResults comparisonData={comparisonData} chartData={chartData} />
         </div>
     );
 }

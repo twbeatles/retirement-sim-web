@@ -13,18 +13,11 @@ import { legacyInputToPlan } from "../logic/plan";
 import { analyzeDepletion } from "../logic/riskAnalysis";
 import { requestSensitivityAnalysis } from "../logic/simulationClient";
 import {
-    Bar,
-    BarChart,
-    CartesianGrid,
-    Legend,
-    Line,
-    LineChart,
-    ResponsiveContainer,
-    Tooltip as RechartsTooltip,
-    XAxis,
-    YAxis
-} from "recharts";
-import { Tooltip } from "./Tooltip";
+    DepletionPanel,
+    MedicalShockPanel,
+    SensitivityPanel,
+    SorrPanel,
+} from "./risk-dashboard/RiskDashboardPanels";
 
 interface Props {
     input: SimulationInput;
@@ -36,6 +29,7 @@ export const RiskDashboard = React.memo(function RiskDashboard({ input, result, 
     const [activeTab, setActiveTab] = useState<"depletion" | "sensitivity" | "sorr" | "medical">("depletion");
     const [runningAnalysis, setRunningAnalysis] = useState(false);
     const [sensitivityResults, setSensitivityResults] = useState<SensitivityResult[]>([]);
+    const [analysisError, setAnalysisError] = useState<string | null>(null);
 
     const depletionAnalysis = useMemo<DepletionAnalysis | null>(() => {
         if (!result) {
@@ -46,6 +40,7 @@ export const RiskDashboard = React.memo(function RiskDashboard({ input, result, 
 
     const handleRunSensitivity = async () => {
         setRunningAnalysis(true);
+        setAnalysisError(null);
         try {
             const variations = [-0.02, -0.01, 0, 0.01, 0.02];
             const [returnResult, inflationResult] = await Promise.all([
@@ -54,6 +49,7 @@ export const RiskDashboard = React.memo(function RiskDashboard({ input, result, 
             ]);
             setSensitivityResults([returnResult, inflationResult]);
         } catch (error) {
+            setAnalysisError("민감도 분석을 완료하지 못했습니다. 입력값을 확인한 뒤 다시 시도해주세요.");
             console.error("Sensitivity analysis failed:", error);
         } finally {
             setRunningAnalysis(false);
@@ -125,192 +121,30 @@ export const RiskDashboard = React.memo(function RiskDashboard({ input, result, 
             </div>
 
             {activeTab === "depletion" && (
-                <div className="animate-in fade-in duration-300">
-                    <p className="text-slate-500 dark:text-slate-400 text-sm mb-4">시뮬레이션 경로상 자산이 고갈되는 시점의 분포입니다.</p>
-                    {depletionAnalysis ? (
-                        <>
-                            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-4">
-                                <div className="bg-emerald-50 dark:bg-emerald-900/10 p-4 rounded-xl border border-emerald-100 dark:border-emerald-900/30">
-                                    <div className="text-xs uppercase tracking-wider font-semibold text-emerald-700 dark:text-emerald-400 mb-1">고갈되지 않음</div>
-                                    <div className="text-2xl font-extrabold text-emerald-600 dark:text-emerald-500">
-                                        {(depletionAnalysis.neverDepletedRate * 100).toFixed(1)}%
-                                    </div>
-                                </div>
-                                {depletionAnalysis.medianDepletionAge && (
-                                    <div className="bg-orange-50 dark:bg-orange-900/10 p-4 rounded-xl border border-orange-100 dark:border-orange-900/30">
-                                        <div className="text-xs uppercase tracking-wider font-semibold text-orange-700 dark:text-orange-400 mb-1">고갈 예상 중위 연령</div>
-                                        <div className="text-2xl font-extrabold text-orange-600 dark:text-orange-500">
-                                            {Math.round(depletionAnalysis.medianDepletionAge)}세
-                                        </div>
-                                    </div>
-                                )}
-                            </div>
-                            <div className="h-64 w-full">
-                                <ResponsiveContainer>
-                                    <BarChart data={depletionAnalysis.histogram.filter((bucket) => bucket.count > 0)}>
-                                        <CartesianGrid strokeDasharray="3 3" />
-                                        <XAxis dataKey="ageRange" />
-                                        <YAxis tickFormatter={(value) => `${(value * 100).toFixed(0)}%`} />
-                                        <RechartsTooltip formatter={(value: any) => `${(value * 100).toFixed(1)}%`} />
-                                        <Bar dataKey="percentage" fill="var(--primary)" name="비율" />
-                                    </BarChart>
-                                </ResponsiveContainer>
-                            </div>
-                        </>
-                    ) : (
-                        <div className="text-center text-slate-500 dark:text-slate-400 p-6 bg-slate-50 dark:bg-zinc-800/50 rounded-xl border border-slate-100 dark:border-zinc-800">
-                            자산 고갈 분석은 몬테카를로 시뮬레이션 모드에서만 지원됩니다.
-                        </div>
-                    )}
-                </div>
+                <DepletionPanel depletionAnalysis={depletionAnalysis} />
             )}
 
             {activeTab === "sensitivity" && (
-                <div className="animate-in fade-in duration-300">
-                    <p className="text-slate-500 dark:text-slate-400 text-sm mb-4 flex items-center gap-2">
-                        주요 변수 변동에 따른 목표 달성 확률 민감도입니다.
-                        <Tooltip content="변수를 ±2% 조정하여 성공률 변화를 분석합니다." />
-                    </p>
-                    <button onClick={handleRunSensitivity} disabled={runningAnalysis} className="inline-flex items-center justify-center gap-2 px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg font-semibold text-sm transition-all active:scale-[0.98] disabled:opacity-50 disabled:cursor-not-allowed mb-4">
-                        {runningAnalysis ? "분석 중..." : "민감도 분석 실행"}
-                    </button>
-
-                    {sensitivityResults.length > 0 && (
-                        <div className="h-80 w-full mt-4">
-                            <ResponsiveContainer>
-                                <LineChart>
-                                    <CartesianGrid strokeDasharray="3 3" />
-                                    <XAxis
-                                        dataKey="value"
-                                        type="number"
-                                        domain={["auto", "auto"]}
-                                        tickFormatter={(value) => `${(value * 100).toFixed(1)}%`}
-                                    />
-                                    <YAxis
-                                        tickFormatter={(value) => `${(value * 100).toFixed(0)}%`}
-                                        domain={[0, 1]}
-                                    />
-                                    <RechartsTooltip
-                                        formatter={(value: any) => `${(value * 100).toFixed(1)}%`}
-                                        labelFormatter={(value) => `입력값: ${(Number(value) * 100).toFixed(2)}%`}
-                                    />
-                                    <Legend />
-                                    {sensitivityResults.map((series, index) => (
-                                        <Line
-                                            key={series.parameter}
-                                            data={series.testValues.map((value, seriesIndex) => ({
-                                                value,
-                                                rate: series.successRates[seriesIndex]
-                                            }))}
-                                            dataKey="rate"
-                                            name={series.parameter === "annual_return" ? "수익률" : "물가상승률"}
-                                            stroke={index === 0 ? "var(--primary)" : "var(--warning)"}
-                                            strokeWidth={2}
-                                            dot
-                                        />
-                                    ))}
-                                </LineChart>
-                            </ResponsiveContainer>
-                        </div>
-                    )}
-                </div>
+                <SensitivityPanel
+                    runningAnalysis={runningAnalysis}
+                    sensitivityResults={sensitivityResults}
+                    analysisError={analysisError}
+                    onRunSensitivity={handleRunSensitivity}
+                />
             )}
 
             {activeTab === "sorr" && (
-                <div className="animate-in fade-in duration-300">
-                    <p className="text-slate-500 dark:text-slate-400 text-sm mb-4 flex items-center gap-2">
-                        <strong className="text-slate-900 dark:text-slate-100">수익률 순서 리스크 (SoRR)</strong>
-                        <Tooltip content="은퇴 초기 하락장은 후기 하락장보다 자산에 훨씬 치명적인 영향을 미칩니다." />
-                    </p>
-                    <div className="bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-900/30 rounded-xl p-3 flex items-start gap-2 mt-2 text-sm text-blue-800 dark:text-blue-300">
-                        <strong>팁:</strong> 은퇴 직후 몇 년간 방어적 자산 배분 비중을 높이면 이 리스크를 줄일 수 있습니다.
-                    </div>
-                    <div className="mt-6 flex items-center">
-                        <label className="flex items-center gap-3 text-sm cursor-pointer font-semibold text-slate-700 dark:text-slate-300 hover:text-slate-900 dark:hover:text-slate-100 group">
-                            <input
-                                type="checkbox"
-                                className="w-5 h-5 rounded border-slate-300 dark:border-zinc-700 text-blue-600 focus:ring-blue-500 dark:bg-zinc-800 transition-transform cursor-pointer group-hover:scale-110"
-                                checked={input.stress_test?.enabled ?? false}
-                                onChange={(event) =>
-                                    onInputChange({
-                                        ...input,
-                                        stress_test: {
-                                            ...(input.stress_test ?? {
-                                                startFromRetirement: true,
-                                                durationMonths: 60,
-                                                annualDeclineRate: 0.15
-                                            }),
-                                            enabled: event.target.checked
-                                        }
-                                    })
-                                }
-                            />
-                            은퇴 초기 스트레스 시나리오 (하락장) 활성화
-                        </label>
-                    </div>
-                </div>
+                <SorrPanel input={input} onInputChange={onInputChange} />
             )}
 
             {activeTab === "medical" && (
-                <div className="animate-in fade-in duration-300">
-                    <p className="text-slate-500 dark:text-slate-400 text-sm mb-4">
-                        특정 나이에 발생하는 일회성 대규모 의료비 한도를 설정합니다.
-                    </p>
-
-                    <div className="mb-6 flex items-center">
-                        <label className="flex items-center gap-3 text-sm cursor-pointer font-semibold text-slate-700 dark:text-slate-300 hover:text-slate-900 dark:hover:text-slate-100 group">
-                            <input
-                                type="checkbox"
-                                className="w-5 h-5 rounded border-slate-300 dark:border-zinc-700 text-blue-600 focus:ring-blue-500 dark:bg-zinc-800 transition-transform cursor-pointer group-hover:scale-110"
-                                checked={input.medical_shocks?.enabled ?? false}
-                                onChange={(event) => toggleMedicalShock(event.target.checked)}
-                            />
-                            의료비 쇼크 시나리오 활성화
-                        </label>
-                    </div>
-
-                    {input.medical_shocks?.enabled && (
-                        <div className="flex flex-col gap-3">
-                            {input.medical_shocks.occurrences.map((shock, index) => (
-                                <div key={index} className="flex flex-wrap items-center gap-2 bg-slate-50 dark:bg-zinc-800/50 p-2 lg:p-3 rounded-xl border border-slate-100 dark:border-zinc-800">
-                                    <input
-                                        type="number"
-                                        className="w-20 lg:w-24 px-3 py-2 bg-white dark:bg-zinc-900 border border-slate-200 dark:border-zinc-700 rounded-lg text-sm text-slate-900 dark:text-white focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20 outline-none transition-all"
-                                        value={shock.age}
-                                        onChange={(event) => updateMedicalShock(index, "age", Number(event.target.value))}
-                                        placeholder="연령"
-                                    />
-                                    <span className="text-slate-500 dark:text-slate-400 text-sm font-medium">세에</span>
-                                    <input
-                                        type="number"
-                                        className="w-32 lg:w-40 px-3 py-2 bg-white dark:bg-zinc-900 border border-slate-200 dark:border-zinc-700 rounded-lg text-sm text-slate-900 dark:text-white focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20 outline-none transition-all"
-                                        value={shock.amount}
-                                        onChange={(event) => updateMedicalShock(index, "amount", Number(event.target.value))}
-                                        placeholder="금액"
-                                    />
-                                    <span className="text-slate-500 dark:text-slate-400 text-sm font-medium">원 발생:</span>
-                                    <input
-                                        type="text"
-                                        className="flex-1 min-w-[120px] px-3 py-2 bg-white dark:bg-zinc-900 border border-slate-200 dark:border-zinc-700 rounded-lg text-sm text-slate-900 dark:text-white focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20 outline-none transition-all"
-                                        value={shock.description || ""}
-                                        onChange={(event) => updateMedicalShock(index, "description", event.target.value)}
-                                        placeholder="설명 (예: 수술비)"
-                                    />
-                                    <button
-                                        onClick={() => removeMedicalShock(index)}
-                                        className="p-2 text-slate-400 hover:text-red-500 hover:bg-red-50 dark:hover:bg-red-900/20 rounded-lg transition-colors cursor-pointer"
-                                        aria-label="항목 삭제"
-                                    >
-                                        ✕
-                                    </button>
-                                </div>
-                            ))}
-                            <button onClick={addMedicalShock} className="self-start mt-2 inline-flex items-center justify-center gap-2 px-3 py-1.5 bg-slate-50 dark:bg-zinc-800 text-slate-700 dark:text-slate-300 border border-slate-200 dark:border-zinc-700 hover:bg-slate-100 dark:hover:bg-zinc-700 hover:border-slate-300 dark:hover:border-zinc-600 rounded-lg text-sm font-semibold transition-all active:scale-[0.98] cursor-pointer">
-                                + 항목 추가
-                            </button>
-                        </div>
-                    )}
-                </div>
+                <MedicalShockPanel
+                    input={input}
+                    onToggleMedicalShock={toggleMedicalShock}
+                    onAddMedicalShock={addMedicalShock}
+                    onRemoveMedicalShock={removeMedicalShock}
+                    onUpdateMedicalShock={updateMedicalShock}
+                />
             )}
         </div>
     );

@@ -46,20 +46,23 @@ npm run verify:ci
 - `interactive` worker lane for preview simulations
 - `compute` worker lane for full simulation, batch runs, solver, sensitivity, and pension optimization
 - latest-wins coalescing for `SIMULATION`
+- replaced queued `SIMULATION` callers reject with `AbortError`; UI code should treat this as cancellation
 - representative-path consumers should use shared `resultDisplay` helpers instead of raw sample arrays
 - blocking validation errors clear the current result and invalidate stale in-flight simulation responses
 - `includeSampleTimelines=false` keeps both legacy sample timelines and `display.samples[]` out of the response payload
+- full Monte Carlo requests are capped at `10,000` paths across UI, validation, and engine guard code
+- JSON imports are capped at `1MB`, and imported plan collections are capped at `500` items
 
-## Latest Verification Snapshot (2026-04-28)
+## Latest Verification Snapshot (2026-06-11)
 
 From `frontend/` after `npm run verify:ci`:
 
-- Entry JS: `60.3 KiB`
-- Initial JS total (index plus modulepreload): `270.7 KiB`
+- Entry JS: `67.5 KiB`
+- Initial JS total (index plus modulepreload): `277.9 KiB`
 - `lint` passed
 - `check:duplicates` passed
 - `typecheck` passed
 - `check:imports` passed
-- `test` passed
+- `test` passed, 16 files / 82 tests
 - `build` passed
 - `perf:gate:hard` passed
