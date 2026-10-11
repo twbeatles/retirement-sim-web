@@ -27,7 +27,7 @@ export function calculateRegionalHealthInsurance(
 
     // Determine Income Score or Rate
     // Since 2022 (Stage 2), it's mostly flat rate for income.
-    let monthlyIncomePremium = 0;
+    let monthlyIncomePremium: number;
 
     // Logic:
     // If annual income > 3.36M: Income * 7.09% / 12

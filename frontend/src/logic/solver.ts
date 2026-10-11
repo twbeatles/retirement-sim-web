@@ -206,7 +206,7 @@ export function optimizePensionStartAge(
         const baseAmount = input.national_pension.expected_monthly_benefit_at_retirement || 0;
 
         // Calculate adjusted amount
-        let multiplier = 1;
+        let multiplier: number;
         const diff = age - 65;
         if (diff < 0) {
             multiplier = 1 + (diff * 0.06);
@@ -233,7 +233,7 @@ export function optimizePensionStartAge(
         }
         const discountRateMonthly = Math.pow(1 + discountRateAnnual, 1 / 12) - 1;
 
-        let npv = 0;
+        let npv: number;
         const startMonthIndex = (age - input.current_age) * 12;
         const totalMonths = (input.end_age - input.current_age) * 12;
 
@@ -258,7 +258,7 @@ export function optimizePensionStartAge(
             const inflationAnnual = input.annual_inflation;
             const inflationMonthly = Math.pow(1 + inflationAnnual, 1 / 12) - 1;
 
-            let effectiveRate = 0;
+            let effectiveRate: number;
             if (baseInput.national_pension.inflation_linked) {
                 // Real Discount Rate approx
                 const realReturn = (1 + discountRateMonthly) / (1 + inflationMonthly) - 1;

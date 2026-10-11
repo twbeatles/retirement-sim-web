@@ -464,7 +464,7 @@ export function simulateOnePath(
                     additionalPensionTotal += pensionValues[i];
                 } else {
                     // Payout Phase logic
-                    let payout = 0;
+                    let payout: number;
 
                     if (config.type === 'db' || config.type === 'national') {
                         // DB / National: Defined Benefit
@@ -686,7 +686,6 @@ export function simulateOnePath(
 
             const availableLiquidity = Math.max(0, balGeneral) + Math.max(0, balPrivate);
             withdrawalGross = Math.min(withdrawalGross, availableLiquidity);
-            withdrawalPrincipal = withdrawalGross;
             withdrawalGross = withdrawLiquidity(withdrawalGross);
             withdrawalPrincipal = withdrawalGross;
             lastWithdrawalGross = withdrawalGross;
@@ -771,7 +770,7 @@ export function simulateOnePath(
         }
 
         // Taxes
-        let taxPaid = 0;
+        let taxPaid: number;
         const taxStrategy = input.withdrawal.taxStrategy || "simple";
 
         if (taxStrategy === "simple") {

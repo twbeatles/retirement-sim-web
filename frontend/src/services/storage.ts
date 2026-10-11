@@ -44,7 +44,7 @@ function readResetNotice(): StorageResetNotice | null {
         return null;
     }
 
-    let raw: string | null = null;
+    let raw: string | null;
     try {
         raw = window.localStorage.getItem(RESET_NOTICE_KEY);
     } catch (error) {
