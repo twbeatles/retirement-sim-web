@@ -127,7 +127,7 @@ async function main() {
   for (const { version, file } of pinnedVersions) {
     const probe = toProbeVersion(version);
     for (const requirement of requirements) {
-      let ok = false;
+      let ok;
       try {
         ok = satisfies(probe, requirement.range);
       } catch {
