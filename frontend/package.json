@@ -3,6 +3,9 @@
   "private": true,
   "version": "0.1.0",
   "type": "module",
+  "engines": {
+    "node": ">=22.12.0"
+  },
   "scripts": {
     "dev": "vite",
     "build": "vite build",
@@ -13,13 +16,14 @@
     "lint:fix": "eslint src scripts vite.config.ts eslint.config.js --fix",
     "check:duplicates": "node scripts/check-duplicates.mjs",
     "check:imports": "node scripts/check-import-boundaries.mjs",
+    "check:node": "node scripts/check-node-version.mjs",
     "perf:report": "node scripts/check-bundle-size.mjs",
     "perf:gate:warn": "node scripts/check-bundle-size.mjs --warn",
     "perf:gate:hard": "node scripts/check-bundle-size.mjs --enforce",
     "perf:gate": "node scripts/check-bundle-size.mjs --enforce",
-    "verify:refactor": "npm run lint && npm run check:duplicates && npm run typecheck && npm run check:imports && npm run perf:report",
-    "verify:pr": "npm run lint && npm run check:duplicates && npm run typecheck && npm run check:imports && npm run test -- --run && npm run build && npm run perf:gate:warn",
-    "verify:ci": "npm run lint && npm run check:duplicates && npm run typecheck && npm run check:imports && npm run test -- --run && npm run build && npm run perf:gate:hard"
+    "verify:refactor": "npm run check:node && npm run lint && npm run check:duplicates && npm run typecheck && npm run check:imports && npm run perf:report",
+    "verify:pr": "npm run check:node && npm run lint && npm run check:duplicates && npm run typecheck && npm run check:imports && npm run test -- --run && npm run build && npm run perf:gate:warn",
+    "verify:ci": "npm run check:node && npm run lint && npm run check:duplicates && npm run typecheck && npm run check:imports && npm run test -- --run && npm run build && npm run perf:gate:hard"
   },
   "dependencies": {
     "react": "^19.3.0",
