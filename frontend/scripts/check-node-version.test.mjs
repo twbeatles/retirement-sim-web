@@ -1,3 +1,5 @@
+import { readFile } from "node:fs/promises";
+import path from "node:path";
 import { describe, expect, it } from "vitest";
 import { satisfies } from "./check-node-version.mjs";
 
@@ -32,5 +34,13 @@ describe("check:node version range", () => {
     expect(satisfies("v22.12.0", ">=22.12.0")).toBe(true);
     expect(satisfies("v24.0.0", ">=22.12.0")).toBe(true);
     expect(satisfies("v20.19.0", ">=22.12.0")).toBe(false);
+  });
+
+  it("tracks the vitest engines range in package-lock.json", async () => {
+    const lockfile = JSON.parse(
+      await readFile(path.join(process.cwd(), "package-lock.json"), "utf8")
+    );
+    const locked = lockfile.packages?.["node_modules/vitest"]?.engines?.node;
+    expect(locked).toBe(VITEST_RANGE);
   });
 });

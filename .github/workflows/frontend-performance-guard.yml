@@ -35,6 +35,9 @@ jobs:
       - name: Node version check
         run: npm run check:node
 
+      - name: CI contract check
+        run: npm run check:ci-contract
+
       - name: Lint
         run: npm run lint
 
