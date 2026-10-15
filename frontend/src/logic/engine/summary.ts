@@ -127,6 +127,34 @@ export function buildSurvivalStats(
     };
 }
 
+// Histogram of depletion months: alive(month) = totalPaths - depletedUpTo(month).
+// Semantics are identical to the previous per-month full scan:
+// depletionMonth < 0 (never) or >= totalMonths (beyond the horizon) counts as
+// alive for every month; depletionMonth === month counts as depleted from
+// that month on (legacy condition `depletionMonth > month`).
+// Input contract (verified at all producers): each entry is an integer
+// month index or -1 (never depleted); sources are Int32Array, so fractional
+// values and NaN cannot occur. No normalization is applied on purpose.
+function buildDepletedPrefixCounts(
+    totalMonths: number,
+    firstDepletionMonthByPath: ArrayLike<number>
+): Int32Array {
+    const depletedAtMonth = new Int32Array(totalMonths);
+    for (let path = 0; path < firstDepletionMonthByPath.length; path++) {
+        const depletionMonth = firstDepletionMonthByPath[path];
+        if (depletionMonth >= 0 && depletionMonth < totalMonths) {
+            depletedAtMonth[depletionMonth]++;
+        }
+    }
+    const depletedUpToMonth = new Int32Array(totalMonths);
+    let running = 0;
+    for (let month = 0; month < totalMonths; month++) {
+        running += depletedAtMonth[month];
+        depletedUpToMonth[month] = running;
+    }
+    return depletedUpToMonth;
+}
+
 export function buildSurvivalStatsFromDepletionMonths(
     totalMonths: number,
     currentAge: number,
@@ -141,24 +169,16 @@ export function buildSurvivalStatsFromDepletionMonths(
         };
     }
 
-    let finalAliveCount = 0;
+    const depletedUpToMonth = buildDepletedPrefixCounts(totalMonths, firstDepletionMonthByPath);
+    const divisor = Math.max(1, totalPaths);
+    // Legacy scans iterated firstDepletionMonthByPath.length; keep that base
+    // so behavior is identical even if it ever differs from totalPaths.
+    const scannedPaths = firstDepletionMonthByPath.length;
     let lowestSurvivalRate = 100;
     let firstBelowHundredPercentAge: number | null = null;
 
     for (let month = 0; month < totalMonths; month++) {
-        let aliveCount = 0;
-        for (let path = 0; path < firstDepletionMonthByPath.length; path++) {
-            const depletionMonth = firstDepletionMonthByPath[path];
-            if (depletionMonth < 0 || depletionMonth > month) {
-                aliveCount++;
-            }
-        }
-
-        if (month === totalMonths - 1) {
-            finalAliveCount = aliveCount;
-        }
-
-        const survivalRate = (aliveCount / Math.max(1, totalPaths)) * 100;
+        const survivalRate = ((scannedPaths - depletedUpToMonth[month]) / divisor) * 100;
         if (survivalRate < lowestSurvivalRate) {
             lowestSurvivalRate = survivalRate;
         }
@@ -168,7 +188,7 @@ export function buildSurvivalStatsFromDepletionMonths(
     }
 
     return {
-        finalSurvivalRate: (finalAliveCount / Math.max(1, totalPaths)) * 100,
+        finalSurvivalRate: ((scannedPaths - depletedUpToMonth[totalMonths - 1]) / divisor) * 100,
         lowestSurvivalRate,
         firstBelowHundredPercentAge
     };
@@ -180,22 +200,18 @@ export function buildSurvivalSeriesFromDepletionMonths(
     firstDepletionMonthByPath: Int32Array,
     totalPaths: number
 ) {
+    const depletedUpToMonth = buildDepletedPrefixCounts(totalMonths, firstDepletionMonthByPath);
+    const divisor = Math.max(1, totalPaths);
+    const scannedPaths = firstDepletionMonthByPath.length;
     const month: number[] = [];
     const age: number[] = [];
     const survivalRate: number[] = [];
 
     for (let currentMonth = 0; currentMonth < totalMonths; currentMonth++) {
-        let aliveCount = 0;
-        for (let path = 0; path < firstDepletionMonthByPath.length; path++) {
-            const depletionMonth = firstDepletionMonthByPath[path];
-            if (depletionMonth < 0 || depletionMonth > currentMonth) {
-                aliveCount++;
-            }
-        }
-
+        const aliveCount = scannedPaths - depletedUpToMonth[currentMonth];
         month.push(currentMonth);
         age.push(Math.floor(currentAge + currentMonth / 12));
-        survivalRate.push((aliveCount / Math.max(1, totalPaths)) * 100);
+        survivalRate.push((aliveCount / divisor) * 100);
     }
 
     return { month, age, survivalRate };

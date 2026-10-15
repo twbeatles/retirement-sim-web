@@ -1,5 +1,5 @@
 import type { SimulationInput } from "../types";
-import { randomNormalArray } from "../math";
+import { randomNormalTypedArray } from "../math";
 import type { SimulationContext } from "./types";
 
 export function createMonthlyGeneralReturns(
@@ -7,7 +7,7 @@ export function createMonthlyGeneralReturns(
     ctx: SimulationContext,
     stochastic: boolean,
     historicalPathIndex?: number
-): number[] | Float64Array {
+): Float64Array {
     const { mu_m, sig_m, monthsToRetire, totalMonths } = ctx;
     const historicalOffset = historicalPathIndex !== undefined ? historicalPathIndex * 12 : 0;
 
@@ -21,7 +21,7 @@ export function createMonthlyGeneralReturns(
     }
 
     if (stochastic) {
-        const returns = randomNormalArray(totalMonths, mu_m, sig_m);
+        const returns = randomNormalTypedArray(totalMonths, mu_m, sig_m);
         if (input.stress_test?.enabled) {
             const st = input.stress_test;
             const startM = st.startFromRetirement ? monthsToRetire : 0;

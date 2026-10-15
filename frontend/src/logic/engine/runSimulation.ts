@@ -6,7 +6,7 @@ import {
     type TimelineRow,
 } from "../types";
 import { getAvailableHistoricalScenarioCount } from "../historicalData";
-import { percentileSorted, randomNormal, setSeed } from "../math";
+import { percentileSorted, setSeed, snapshotRngState } from "../math";
 import {
     createDistributionStatsFromValue,
     createRuleMetadata,
@@ -23,7 +23,13 @@ import {
     selectSamplePathIndices,
     type DistributionPathSnapshot,
 } from "./pathSelection";
-import { replayHistoricalPath, replayMonteCarloPath } from "./pathReplay";
+import {
+    captureMonteCarloCheckpoints,
+    replayHistoricalPath,
+    replayMonteCarloPath,
+    simulateMonteCarloPathOnce,
+    type MonteCarloRngCheckpoints
+} from "./pathReplay";
 import { assertSimulationInputCanRun } from "./modePolicy";
 import { resolveSimulationRunConfig } from "./runConfig";
 import { summarizeDistributionPaths } from "./distributionStats";
@@ -267,22 +273,19 @@ export function runSimulation(
 
         let successCount = 0;
 
-        for (let i = 0; i < paths; i++) {
-            // Longevity Risk: Randomize end age per path if enabled
-            let pathEndAge = input.end_age;
-            if (input.longevity_risk?.useDistribution) {
-                const meanAge = input.longevity_risk.averageLifeExpectancy || 83.5;
-                const stdDev = input.longevity_risk.stdDevYears || 5;
-                pathEndAge = Math.round(meanAge + stdDev * randomNormal());
-                // Clamp to reasonable bounds
-                pathEndAge = Math.max(input.retire_age + 1, Math.min(pathEndAge, 120));
-            }
+        // RNG checkpoints let representative/sample replays re-execute a single
+        // path directly instead of re-running every preceding path. Captured
+        // only for full runs, the only mode that replays paths.
+        const rngCheckpoints: MonteCarloRngCheckpoints | undefined = !isPreview
+            ? captureMonteCarloCheckpoints(paths)
+            : undefined;
 
-            // Create modified context with adjusted totalMonths for this path
-            const pathTotalMonths = (pathEndAge - input.current_age) * 12;
-            const pathCtx = { ...ctx, totalMonths: pathTotalMonths };
+        for (let i = 0; i < paths; i++) {
+            if (rngCheckpoints) {
+                rngCheckpoints[i] = snapshotRngState();
+            }
             const shouldCaptureTimeline = MAX_SAMPLE_PATHS > 0 && i < MAX_SAMPLE_PATHS;
-            const simulation = simulateOnePath(input, pathCtx, true, undefined, {
+            const simulation = simulateMonteCarloPathOnce(input, ctx, {
                 captureTimeline: shouldCaptureTimeline,
                 trajectorySink: allTraj,
                 trajectoryPathIndex: i,
@@ -335,7 +338,10 @@ export function runSimulation(
                             aliveCount++;
                         }
                     }
-                    column!.sort((a, b) => a - b);
+                    // Float64Array default sort is numeric (-0 sorts before +0,
+                    // which cannot occur in trajectory balances). Faster than
+                    // a comparator callback; parity proven in the perf harness.
+                    column!.sort();
 
                     trajStats!.month.push(m);
                     trajStats!.p10.push(percentileSorted(column!, 10));
@@ -416,7 +422,7 @@ export function runSimulation(
                 depletionStats.medianDepletionAge
             );
         const representativeTimeline = representativeIndex >= 0
-            ? replayMonteCarloPath(input, ctx, representativeIndex)
+            ? replayMonteCarloPath(input, ctx, representativeIndex, rngCheckpoints)
             : undefined;
         const samplePathDefs = !isPreview && includeSampleTimelines && maxSampleTimelines > 0
             ? selectSamplePathIndices(pathSnapshots, totalAssetsRealStats, representativeIndex).slice(0, maxSampleTimelines)
@@ -432,7 +438,7 @@ export function runSimulation(
             samples: samplePathDefs.map((sample) => ({
                 label: sample.label,
                 pathIndex: sample.index,
-                timeline: replayMonteCarloPath(input, ctx, sample.index)
+                timeline: replayMonteCarloPath(input, ctx, sample.index, rngCheckpoints)
             }))
         };
 
