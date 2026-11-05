@@ -74,3 +74,10 @@ frontend/.vitest/
 frontend/vitest-report/
 frontend/playwright-report/
 frontend/test-results/
+
+# Local AI agent working files (machine-local, do not commit)
+.agents/
+.claude/
+.grok/
+.specify/
+AGENTS.md
