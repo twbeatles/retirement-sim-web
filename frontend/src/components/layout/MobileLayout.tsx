@@ -39,8 +39,8 @@ export const MobileLayout = React.memo(function MobileLayout({
     };
 
     return (
-        <div className="flex flex-col h-[calc(100vh-var(--spacing-header))] relative overflow-hidden">
-            <div className="flex-[1_1_auto] overflow-y-auto pb-[calc(70px+env(safe-area-inset-bottom))] scroll-smooth">
+        <div className="flex flex-col h-[calc(100vh-var(--spacing-header))] supports-[height:100dvh]:h-[calc(100dvh-var(--spacing-header))] relative overflow-hidden">
+            <div className="flex-[1_1_auto] overflow-y-auto pb-[calc(70px+env(safe-area-inset-bottom))] scroll-smooth motion-reduce:scroll-auto">
                 {isInputTab && (
                     <div className="p-4 bg-white/80 dark:bg-zinc-900/80 backdrop-blur-xl border-b border-slate-200/50 dark:border-zinc-800/50 sticky top-0 z-10 shadow-sm">
                         <ScenarioManager currentInput={input} onLoad={setInput} />
@@ -67,7 +67,7 @@ export const MobileLayout = React.memo(function MobileLayout({
                 </div>
 
                 {isInputTab && validationWarnings.length > 0 && (
-                    <div className="m-4 p-4 rounded-xl bg-orange-50 dark:bg-orange-900/20 border border-orange-200 dark:border-orange-900/30">
+                    <div role={validationWarnings.some((warning) => warning.severity === "error") ? "alert" : "status"} className="m-4 p-4 rounded-xl bg-orange-50 dark:bg-orange-900/20 border border-orange-200 dark:border-orange-900/30">
                         <h4 className="text-sm font-semibold text-orange-800 dark:text-orange-400 mb-2 flex items-center gap-2">⚠️ 입력값 확인</h4>
                         <div className="flex flex-col gap-2">
                             {validationWarnings.map((warning, index) => (

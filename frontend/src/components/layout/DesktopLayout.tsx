@@ -47,7 +47,7 @@ export const DesktopLayout = React.memo(function DesktopLayout({
                 </div>
 
                 {validationWarnings.length > 0 && (
-                    <div className="mt-4 p-4 rounded-xl bg-orange-50 dark:bg-orange-900/20 border border-orange-200 dark:border-orange-900/30">
+                    <div role={validationWarnings.some((warning) => warning.severity === "error") ? "alert" : "status"} className="mt-4 p-4 rounded-xl bg-orange-50 dark:bg-orange-900/20 border border-orange-200 dark:border-orange-900/30">
                         <h4 className="text-sm font-semibold text-orange-800 dark:text-orange-400 mb-2 flex items-center gap-2">⚠️ 입력값 확인</h4>
                         <div className="flex flex-col gap-2">
                             {validationWarnings.map((warning, index) => (

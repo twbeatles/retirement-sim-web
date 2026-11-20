@@ -17,6 +17,9 @@ const STRATEGIES: { id: WithdrawalStrategy; label: string; desc: string }[] = [
 ];
 
 export function WithdrawalSettings({ withdrawal, onChange }: Props) {
+    const strategyId = React.useId();
+    const taxStrategyId = React.useId();
+    const taxRateId = React.useId();
 
     const updateField = (field: keyof WithdrawalPolicy, value: any) => {
         onChange({ ...withdrawal, [field]: value });
@@ -27,9 +30,10 @@ export function WithdrawalSettings({ withdrawal, onChange }: Props) {
             <h3 className="text-base font-bold text-slate-900 dark:text-white mb-4 pb-3 border-b border-slate-100 dark:border-zinc-800 mt-0">은퇴 후 인출 전략</h3>
 
             <div className="flex flex-col gap-1.5 mb-4">
-                <label className="text-sm font-semibold text-slate-700 dark:text-slate-300">전략 선택</label>
+                <label htmlFor={strategyId} className="text-sm font-semibold text-slate-700 dark:text-slate-300">전략 선택</label>
                 <div className="relative">
                     <select
+                        id={strategyId}
                         className="w-full appearance-none bg-slate-50 dark:bg-zinc-800 border border-slate-200 dark:border-zinc-700 rounded-lg py-2 pl-3 pr-10 text-sm font-medium text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-all cursor-pointer"
                         value={withdrawal.strategy}
                         onChange={(e) => updateField("strategy", e.target.value)}
@@ -152,9 +156,10 @@ export function WithdrawalSettings({ withdrawal, onChange }: Props) {
             <h4 className="text-sm font-bold text-slate-900 dark:text-white mb-4">세금 설정</h4>
             <div>
                 <div className="flex flex-col gap-1.5 mb-3">
-                    <label className="text-sm font-semibold text-slate-700 dark:text-slate-300">세금 방식</label>
+                    <label htmlFor={taxStrategyId} className="text-sm font-semibold text-slate-700 dark:text-slate-300">세금 방식</label>
                     <div className="relative">
                         <select
+                            id={taxStrategyId}
                             className="w-full appearance-none bg-slate-50 dark:bg-zinc-800 border border-slate-200 dark:border-zinc-700 rounded-lg py-2 pl-3 pr-10 text-sm font-medium text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-all cursor-pointer"
                             value={withdrawal.taxStrategy || "simple"}
                             onChange={(e) => updateField("taxStrategy", e.target.value)}
@@ -169,8 +174,9 @@ export function WithdrawalSettings({ withdrawal, onChange }: Props) {
 
                     {(!withdrawal.taxStrategy || withdrawal.taxStrategy === "simple") && (
                         <div className="mt-4 flex flex-col gap-1.5">
-                            <label className="text-sm font-semibold text-slate-700 dark:text-slate-300">인출 시 예상 실효세율 (0~1)</label>
+                            <label htmlFor={taxRateId} className="text-sm font-semibold text-slate-700 dark:text-slate-300">인출 시 예상 실효세율 (0~1)</label>
                             <input
+                                id={taxRateId}
                                 className="w-full px-3 py-2 bg-white dark:bg-zinc-900 border border-slate-200 dark:border-zinc-700 rounded-lg text-sm text-right font-medium text-slate-900 dark:text-white placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-all"
                                 type="number" step="0.01" max="0.5"
                                 value={withdrawal.taxRate}

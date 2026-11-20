@@ -24,6 +24,7 @@ export function IncomeStreamsSection({ plan, applyPlan }: Props) {
                             className="grid grid-cols-1 gap-2 rounded-2xl border border-slate-200/60 bg-slate-50/60 p-3 sm:grid-cols-2 xl:grid-cols-7 dark:border-zinc-700/60 dark:bg-zinc-800/40"
                         >
                             <select
+                                aria-label="소득원 유형"
                                 className="rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm font-medium dark:border-zinc-700 dark:bg-zinc-900"
                                 value={stream.type}
                                 onChange={(event) =>

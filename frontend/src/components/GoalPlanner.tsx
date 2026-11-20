@@ -1,4 +1,4 @@
-﻿import React, { useState } from 'react';
+﻿import React, { useId, useState } from 'react';
 import { type SimulationInput } from '../logic/types';
 import { useSimulation } from '../hooks/useSimulation';
 
@@ -9,6 +9,7 @@ type GoalPlannerProps = {
 
 export const GoalPlanner: React.FC<GoalPlannerProps> = ({ input, onApply }) => {
     const { solveContribution, solveLaborSavingsRate, solveRetireAge } = useSimulation();
+    const modeSelectId = useId();
     const [targetRate, setTargetRate] = useState(0.9);
     const [mode, setMode] = useState<'contribution' | 'retire_age'>('contribution');
     const [result, setResult] = useState<number | null>(null);
@@ -84,8 +85,9 @@ export const GoalPlanner: React.FC<GoalPlannerProps> = ({ input, onApply }) => {
                 </div>
 
                 <div className="flex flex-col gap-2">
-                    <label className="text-sm font-semibold text-slate-700 dark:text-slate-300">탐색 모드</label>
+                    <label htmlFor={modeSelectId} className="text-sm font-semibold text-slate-700 dark:text-slate-300">탐색 모드</label>
                     <select
+                        id={modeSelectId}
                         className="w-full px-3 py-2 bg-white dark:bg-zinc-900 border border-slate-200 dark:border-zinc-700 rounded-lg text-sm font-medium text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-all cursor-pointer appearance-none bg-[url('data:image/svg+xml;charset=US-ASCII,%3Csvg%20width%3D%2220%22%20height%3D%2220%22%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%3E%3Cpath%20d%3D%22M5%208l5%205%205-5%22%20stroke%3D%22%2364748b%22%20stroke-width%3D%222%22%20fill%3D%22none%22%20stroke-linecap%3D%22round%22%20stroke-linejoin%3D%22round%22%2F%3E%3C%2Fsvg%3E')] bg-no-repeat bg-[position:right_0.5rem_center]"
                         value={mode}
                         onChange={(e) => {

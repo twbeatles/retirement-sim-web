@@ -125,3 +125,144 @@
     margin-bottom: 4px;
   }
 }
+
+:root {
+  /* MANDATORY: apply color-scheme to the root so viewport chrome,
+     scrollbars, and native form controls follow the site theme. */
+  color-scheme: light dark;
+}
+
+/* MANDATORY (modal dialogs): without these, scrolling over the backdrop or
+   inside the dialog chains to the page behind it. Never lock scrolling with
+   overflow: hidden on html/body instead. */
+dialog:modal {
+  overscroll-behavior: contain;
+}
+
+dialog::backdrop {
+  overflow: hidden;
+  overscroll-behavior: contain;
+  background-color: rgba(2, 6, 23, 0.45);
+}
+
+/* Toggletip popovers: anchor to the trigger only where anchor positioning
+   is supported. Inset/margin overrides stay inside @supports so unsupported
+   browsers keep a usable fallback placement instead of stranding the
+   popover at (0, 0). */
+@supports (position-area: block-start) {
+  [data-toggletip-popover] {
+    inset: auto;
+    margin: 0;
+    position-area: block-start;
+    position-try-fallbacks: flip-block;
+  }
+}
+
+@supports not (position-area: block-start) {
+  [data-toggletip-popover] {
+    position: fixed;
+    inset: auto 1rem 1rem 1rem;
+    width: auto;
+    max-width: none;
+    margin: 0;
+  }
+}
+
+/* Sticky table headers keep column context while scrolling long reports.
+   border-collapse: separate is required for sticky thead cells to paint
+   reliably. */
+.yearly-report-table {
+  border-collapse: separate;
+  border-spacing: 0;
+}
+
+.yearly-report-table thead th {
+  position: sticky;
+  top: 0;
+  z-index: 1;
+  background-color: #f8fafc;
+}
+
+[data-theme="dark"] .yearly-report-table thead th {
+  background-color: #27272a;
+}
+
+/* Stacked card layout for narrow containers: the table wrapper is a
+   container, so the table adapts to its own width (e.g. sidebar panels),
+   not just the viewport. */
+.yearly-report-container {
+  container-type: inline-size;
+}
+
+@container (width < 600px) {
+  .yearly-report-container .yearly-report-table,
+  .yearly-report-container .yearly-report-table thead,
+  .yearly-report-container .yearly-report-table tbody,
+  .yearly-report-container .yearly-report-table tr,
+  .yearly-report-container .yearly-report-table th,
+  .yearly-report-container .yearly-report-table td {
+    display: block;
+  }
+
+  .yearly-report-container .yearly-report-table {
+    white-space: normal;
+  }
+
+  .yearly-report-container .yearly-report-table thead {
+    /* MANDATORY: hide column headers from layout and screen readers;
+       each cell carries its own label below. */
+    display: none;
+  }
+
+  .yearly-report-container .yearly-report-table tr {
+    margin-block-end: 1rem;
+    border: 1px solid var(--color-border);
+    border-radius: var(--radius-base);
+  }
+
+  /* Row header (age) sticks to the top of each card. */
+  .yearly-report-container .yearly-report-table tbody th {
+    position: sticky;
+    inset-block-start: 0;
+    z-index: 2;
+    background-color: var(--color-secondary-bg);
+    border-start-start-radius: var(--radius-base);
+    border-start-end-radius: var(--radius-base);
+  }
+
+  [data-theme="dark"] .yearly-report-container .yearly-report-table tbody th {
+    background-color: #27272a;
+  }
+
+  /* Column labels injected per cell. */
+  .yearly-report-container .yearly-report-table {
+    --label-status: "상태";
+    --label-assets: "총자산(물가반영)";
+    --label-nat: "국민연금(연)";
+    --label-priv: "개인연금(연)";
+    --label-withdraw: "자산인출(세후)";
+    --label-tax: "세금";
+    --label-total: "총 가처분소득(연)";
+    --label-monthly: "월 평균소득";
+  }
+
+  .yearly-report-container .yearly-report-table td::before {
+    content: var(--cell-label, "");
+    display: block;
+    font-size: 0.72rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+    color: var(--color-text-muted);
+  }
+
+  /* MANDATORY: map each column to its label. */
+  .yearly-report-container .yearly-report-table td:nth-child(2) { --cell-label: var(--label-status); }
+  .yearly-report-container .yearly-report-table td:nth-child(3) { --cell-label: var(--label-assets); }
+  .yearly-report-container .yearly-report-table td:nth-child(4) { --cell-label: var(--label-nat); }
+  .yearly-report-container .yearly-report-table td:nth-child(5) { --cell-label: var(--label-priv); }
+  .yearly-report-container .yearly-report-table td:nth-child(6) { --cell-label: var(--label-withdraw); }
+  .yearly-report-container .yearly-report-table td:nth-child(7) { --cell-label: var(--label-tax); }
+  .yearly-report-container .yearly-report-table td:nth-child(8) { --cell-label: var(--label-total); }
+  .yearly-report-container .yearly-report-table td:nth-child(9) { --cell-label: var(--label-monthly); }
+}

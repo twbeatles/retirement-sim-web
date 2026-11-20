@@ -13,13 +13,14 @@ export function ComparisonResults({ comparisonData, chartData }: ComparisonResul
 
     return (
         <div className="animate-in fade-in slide-in-from-bottom-4 duration-500">
-            <div className="overflow-x-auto rounded-xl border border-slate-200 dark:border-zinc-700 mb-6">
+            <div tabIndex={0} role="region" aria-label="시나리오 비교 결과 표. 좌우로 스크롤할 수 있습니다." className="overflow-x-auto rounded-xl border border-slate-200 dark:border-zinc-700 mb-6">
                 <table className="w-full text-sm text-left border-collapse">
+                    <caption className="sr-only">시나리오별 성공률과 최종 실질 자산 중간값 비교표</caption>
                     <thead>
                         <tr className="bg-slate-50 dark:bg-zinc-800/80 text-slate-600 dark:text-slate-400 border-b border-slate-200 dark:border-zinc-700">
-                            <th className="p-3 font-semibold text-xs uppercase tracking-wider">시나리오</th>
-                            <th className="p-3 font-semibold text-xs uppercase tracking-wider text-right">성공률</th>
-                            <th className="p-3 font-semibold text-xs uppercase tracking-wider text-right">최종 실질 자산 (중간값)</th>
+                            <th scope="col" className="p-3 font-semibold text-xs uppercase tracking-wider">시나리오</th>
+                            <th scope="col" className="p-3 font-semibold text-xs uppercase tracking-wider text-right">성공률</th>
+                            <th scope="col" className="p-3 font-semibold text-xs uppercase tracking-wider text-right">최종 실질 자산 (중간값)</th>
                         </tr>
                     </thead>
                     <tbody className="bg-white dark:bg-zinc-900 divide-y divide-slate-100 dark:divide-zinc-800">

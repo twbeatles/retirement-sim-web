@@ -2,6 +2,7 @@ import type { HousingStatus } from "../../logic/types";
 import type { SimulationPlanV3 } from "../../logic/plan";
 import { clampMonteCarloPaths } from "../../logic/runtimeLimits";
 import { formatMoney } from "../../utils/format";
+import { useId } from "react";
 import { Field, Section } from "../common/UIComponents";
 import { HOUSING_OPTIONS } from "./constants";
 import type { ApplyPlan } from "./types";
@@ -13,6 +14,7 @@ type Props = {
 };
 
 export function PlanBasicsSection({ plan, plannedMonthlySpending, applyPlan }: Props) {
+    const housingStatusId = useId();
     return (
         <Section title="플랜 편집기">
                 <div className="mb-4 text-sm font-medium leading-relaxed text-slate-600 dark:text-slate-300">
@@ -73,10 +75,11 @@ export function PlanBasicsSection({ plan, plannedMonthlySpending, applyPlan }: P
                         suffix="개"
                     />
                     <div className="mb-3 flex w-full min-w-0 flex-col gap-1.5">
-                        <label className="shrink-0 whitespace-nowrap text-sm font-semibold text-slate-700 dark:text-slate-300">
+                        <label htmlFor={housingStatusId} className="shrink-0 whitespace-nowrap text-sm font-semibold text-slate-700 dark:text-slate-300">
                             주거 상태
                         </label>
                         <select
+                            id={housingStatusId}
                             className="w-full rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm font-medium text-slate-900 dark:border-zinc-700 dark:bg-zinc-900 dark:text-white"
                             value={plan.profile.housingStatus}
                             onChange={(event) =>

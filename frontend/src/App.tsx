@@ -16,11 +16,20 @@ export default function App() {
     const [analysisTab, setAnalysisTab] = useState<AnalysisTabType>("risk");
     const [viewMode, setViewMode] = useState<"simple" | "pro">("simple");
     const [sidebarTab, setSidebarTab] = useState<SidebarSectionId>("basic");
-    const [theme, setTheme] = useState<"light" | "dark">("light");
+    // Default to the OS color scheme; the header toggle overrides it per site.
+    const [theme, setTheme] = useState<"light" | "dark">(() =>
+        typeof window !== "undefined" &&
+            typeof window.matchMedia === "function" &&
+            window.matchMedia("(prefers-color-scheme: dark)").matches
+            ? "dark"
+            : "light"
+    );
     const [showPrintView, setShowPrintView] = useState(false);
 
     useEffect(() => {
         document.documentElement.setAttribute("data-theme", theme);
+        // Keep native controls, scrollbars, and form UI on the same scheme.
+        document.documentElement.style.colorScheme = theme;
     }, [theme]);
 
     useEffect(() => {
@@ -111,7 +120,7 @@ export default function App() {
                     <div className="text-lg lg:text-xl font-extrabold bg-gradient-to-br from-blue-500 to-purple-500 bg-clip-text text-transparent flex items-center gap-2">
                         <span className="text-current">🏦</span> 은퇴 자산 시뮬레이터 Pro
                     </div>
-                    {isCalculating && <span className="text-xs text-slate-400 dark:text-slate-500 animate-pulse">계산 중...</span>}
+                    {isCalculating && <span className="text-xs text-slate-400 dark:text-slate-500 animate-pulse motion-reduce:animate-none">계산 중...</span>}
                     {resultStatusLabel && <span className="text-xs text-blue-600 dark:text-blue-400 font-semibold">{resultStatusLabel}</span>}
                 </div>
 

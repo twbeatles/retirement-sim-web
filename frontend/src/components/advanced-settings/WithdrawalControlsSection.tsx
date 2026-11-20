@@ -1,3 +1,4 @@
+import { useId } from "react";
 import type { BucketSettings, GuardrailsSettings, RebalancingSettings, SimulationInput } from "../../logic/types";
 import { CollapsibleSection } from "./CollapsibleSection";
 
@@ -32,6 +33,8 @@ export function WithdrawalControlsSection({
     onUpdateBucket,
     onUpdateRebalancing
 }: WithdrawalControlsSectionProps) {
+    const bucketCycleId = useId();
+    const rebalancingCycleId = useId();
     return (
         <>
             {withdrawalStrategy === "guardrails" && (
@@ -131,8 +134,9 @@ export function WithdrawalControlsSection({
                             />
                         </div>
                         <div className="flex flex-col gap-1.5 sm:col-span-2">
-                            <label className="text-sm font-semibold text-slate-700 dark:text-slate-300">버킷 리밸런싱 주기</label>
+                            <label htmlFor={bucketCycleId} className="text-sm font-semibold text-slate-700 dark:text-slate-300">버킷 리밸런싱 주기</label>
                             <select
+                                id={bucketCycleId}
                                 className="w-full appearance-none bg-white dark:bg-zinc-900 border border-slate-200 dark:border-zinc-700 rounded-lg py-2 px-3 text-sm font-medium text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-all cursor-pointer"
                                 value={bucket?.rebalanceFrequency || "annual"}
                                 onChange={(e) => onUpdateBucket({ rebalanceFrequency: e.target.value as BucketSettings["rebalanceFrequency"] })}
@@ -162,9 +166,10 @@ export function WithdrawalControlsSection({
                 {rebalancing?.enabled && (
                     <div className="flex flex-col gap-4 p-4 bg-slate-50 dark:bg-zinc-800/50 border border-slate-100 dark:border-zinc-700/50 rounded-xl">
                         <div className="flex flex-col gap-1.5">
-                            <label className="text-sm font-semibold text-slate-700 dark:text-slate-300">리밸런싱 주기</label>
+                            <label htmlFor={rebalancingCycleId} className="text-sm font-semibold text-slate-700 dark:text-slate-300">리밸런싱 주기</label>
                             <div className="relative">
                                 <select
+                                    id={rebalancingCycleId}
                                     className="w-full appearance-none bg-white dark:bg-zinc-900 border border-slate-200 dark:border-zinc-700 rounded-lg py-2 pl-3 pr-10 text-sm font-medium text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-all cursor-pointer"
                                     value={rebalancing.frequency || "annual"}
                                     onChange={(e) => onUpdateRebalancing({ frequency: e.target.value as RebalancingSettings["frequency"] })}

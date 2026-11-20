@@ -153,6 +153,7 @@ export const BacktestingPanel: React.FC<BacktestingPanelProps> = ({ input, onInp
                                     <div key={asset.id} className="grid grid-cols-1 sm:grid-cols-[1fr_220px] gap-2 items-center">
                                         <div className="text-sm font-semibold text-slate-700 dark:text-slate-300">{asset.name}</div>
                                         <select
+                                            aria-label={`"${asset.name}" 매핑 대상 역사적 자산`}
                                             className="w-full appearance-none bg-white dark:bg-zinc-900 border border-slate-200 dark:border-zinc-700 rounded-lg py-2 pl-3 pr-8 text-sm font-medium text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-all cursor-pointer"
                                             value={selected}
                                             onChange={(event) => handleMappingChange(asset.id, event.target.value as HistoricalAssetType)}

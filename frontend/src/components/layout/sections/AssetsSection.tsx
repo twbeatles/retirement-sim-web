@@ -81,6 +81,7 @@ export function AssetsSection({ input, setInput }: AssetsSectionProps) {
                                 placeholder="자산 이름"
                             />
                             <select
+                                aria-label={`"${asset.name || "무제"}" 부동산 용도`}
                                 className={inputClassName}
                                 value={asset.type}
                                 onChange={(e) => updateRealEstateItem(idx, { type: e.target.value as "residential" | "investment" })}
@@ -169,6 +170,7 @@ export function AssetsSection({ input, setInput }: AssetsSectionProps) {
                                     placeholder="연금 이름"
                                 />
                                 <select
+                                    aria-label={`"${pension.name || "무제"}" 연금 종류`}
                                     className={inputClassName}
                                     value={pension.type}
                                     onChange={(e) => {
@@ -209,6 +211,7 @@ export function AssetsSection({ input, setInput }: AssetsSectionProps) {
                                     placeholder="수령 시작 나이"
                                 />
                                 <select
+                                    aria-label={`"${pension.name || "무제"}" 연금 수령 방식`}
                                     className={inputClassName}
                                     value={pension.payoutType}
                                     onChange={(e) => {

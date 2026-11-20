@@ -19,6 +19,8 @@ export const MoneyInput = React.memo(function MoneyInput({
     placeholder,
     hint
 }: MoneyInputProps) {
+    const inputId = React.useId();
+    const hintId = React.useId();
     const displayValue = displayUnit === "man" ? Math.round(value / 10000) : value;
     const multiplier = displayUnit === "man" ? 10000 : 1;
     const [inputValue, setInputValue] = useState(displayValue.toLocaleString());
@@ -53,11 +55,13 @@ export const MoneyInput = React.memo(function MoneyInput({
 
     return (
         <div className="flex flex-col gap-2 w-full max-w-[400px]">
-            {label && <label className="text-sm font-bold text-slate-700 dark:text-slate-300">{label}</label>}
+            {label && <label htmlFor={inputId} className="text-sm font-bold text-slate-700 dark:text-slate-300">{label}</label>}
             <div className="relative flex items-center bg-white dark:bg-zinc-900 border border-slate-200 dark:border-zinc-700 rounded-xl overflow-hidden shadow-sm transition-all focus-within:ring-2 focus-within:ring-blue-500/20 focus-within:border-blue-500 hover:border-slate-300 dark:hover:border-zinc-600">
                 <input
+                    id={inputId}
                     type="text"
                     inputMode="numeric"
+                    aria-describedby={hint ? hintId : undefined}
                     value={inputValue}
                     onChange={handleChange}
                     onBlur={handleBlur}
@@ -81,7 +85,7 @@ export const MoneyInput = React.memo(function MoneyInput({
                     ))}
                 </div>
             )}
-            {hint && <p className="text-xs text-slate-500 dark:text-slate-400 mt-1">{hint}</p>}
+            {hint && <p id={hintId} className="text-xs text-slate-500 dark:text-slate-400 mt-1">{hint}</p>}
         </div>
     );
 });

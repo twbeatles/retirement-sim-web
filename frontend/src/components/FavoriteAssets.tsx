@@ -2,7 +2,7 @@
  * FavoriteAssets Component
  * Save and quickly add frequently used asset classes
  */
-import React, { useState, useEffect } from 'react';
+import React, { useId, useState, useEffect } from 'react';
 import { type AssetClass, type FavoriteAsset, type PortfolioModel } from '../logic/types';
 
 const FAVORITES_KEY = 'retirement_sim_favorite_assets_v1';
@@ -46,6 +46,8 @@ interface Props {
 
 export const FavoriteAssets = React.memo(function FavoriteAssets({ portfolio, onChange }: Props) {
     const [favorites, setFavorites] = useState<FavoriteAsset[]>(DEFAULT_FAVORITES);
+    const expectedReturnId = useId();
+    const volatilityId = useId();
     const [showAddForm, setShowAddForm] = useState(false);
     const [newAsset, setNewAsset] = useState<Partial<FavoriteAsset>>({
         category: 'stock',
@@ -178,6 +180,7 @@ export const FavoriteAssets = React.memo(function FavoriteAssets({ portfolio, on
                     <div className="flex flex-col gap-3">
                         <input
                             type="text"
+                            aria-label="커스텀 자산명"
                             className="w-full px-3 py-2 bg-white dark:bg-zinc-900 border border-slate-200 dark:border-zinc-700 rounded-lg text-sm text-slate-900 dark:text-white placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-all font-medium"
                             placeholder="자산명 (예: 비트코인)"
                             value={newAsset.name || ''}
@@ -185,8 +188,9 @@ export const FavoriteAssets = React.memo(function FavoriteAssets({ portfolio, on
                         />
                         <div className="flex gap-3">
                             <div className="flex-1">
-                                <label className="block text-xs font-semibold text-slate-500 dark:text-slate-400 mb-1">기대수익률</label>
+                                <label htmlFor={expectedReturnId} className="block text-xs font-semibold text-slate-500 dark:text-slate-400 mb-1">기대수익률</label>
                                 <input
+                                    id={expectedReturnId}
                                     type="number"
                                     className="w-full px-3 py-2 bg-white dark:bg-zinc-900 border border-slate-200 dark:border-zinc-700 rounded-lg text-sm text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-all font-medium text-right"
                                     step="0.01"
@@ -195,8 +199,9 @@ export const FavoriteAssets = React.memo(function FavoriteAssets({ portfolio, on
                                 />
                             </div>
                             <div className="flex-1">
-                                <label className="block text-xs font-semibold text-slate-500 dark:text-slate-400 mb-1">변동성</label>
+                                <label htmlFor={volatilityId} className="block text-xs font-semibold text-slate-500 dark:text-slate-400 mb-1">변동성</label>
                                 <input
+                                    id={volatilityId}
                                     type="number"
                                     className="w-full px-3 py-2 bg-white dark:bg-zinc-900 border border-slate-200 dark:border-zinc-700 rounded-lg text-sm text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-all font-medium text-right"
                                     step="0.01"
@@ -206,6 +211,7 @@ export const FavoriteAssets = React.memo(function FavoriteAssets({ portfolio, on
                             </div>
                         </div>
                         <select
+                            aria-label="커스텀 자산 분류"
                             className="w-full px-3 py-2 bg-white dark:bg-zinc-900 border border-slate-200 dark:border-zinc-700 rounded-lg text-sm font-medium text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-all cursor-pointer appearance-none"
                             value={newAsset.category}
                             onChange={e => setNewAsset({ ...newAsset, category: e.target.value as FavoriteAsset['category'] })}
